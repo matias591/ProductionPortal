@@ -2,7 +2,7 @@
 import { useState, useEffect, use } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Plus, Trash2, Calendar, Ship, Box } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Calendar, Ship, Box, CheckCircle2, Circle } from 'lucide-react';
 
 export default function OrderDetails({ params }) {
   const unwrappedParams = use(params);
@@ -13,7 +13,6 @@ export default function OrderDetails({ params }) {
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Initialize Supabase inside component
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -26,217 +25,207 @@ export default function OrderDetails({ params }) {
   async function fetchData() {
     const { data: orderData } = await supabase.from('orders').select('*').eq('id', orderId).single();
     const { data: itemData } = await supabase.from('order_items').select('*').eq('order_id', orderId).order('created_at', { ascending: true });
-    
     setOrder(orderData);
     setItems(itemData || []);
     setLoading(false);
   }
 
-  // Update Order Meta Data (Status, Vessel, etc)
   async function updateOrder(field, value) {
-    setOrder({ ...order, [field]: value }); // Optimistic UI
+    setOrder({ ...order, [field]: value });
     await supabase.from('orders').update({ [field]: value }).eq('id', orderId);
   }
 
-  // Update a Line Item
   async function updateItem(itemId, field, value) {
     const newItems = items.map(i => i.id === itemId ? { ...i, [field]: value } : i);
     setItems(newItems);
     await supabase.from('order_items').update({ [field]: value }).eq('id', itemId);
   }
 
-  // Add a new Item
   async function addItem() {
-    const newItem = {
-      order_id: orderId,
-      piece: 'New Item',
-      quantity: 1,
-      serial: '',
-      is_done: false
-    };
-    
-    // Optimistic add to UI
+    const newItem = { order_id: orderId, piece: '', quantity: 1, serial: '', is_done: false };
     const tempId = Math.random(); 
     setItems([...items, { ...newItem, id: tempId }]);
-
-    // Save to DB and refresh to get real ID
     const { data } = await supabase.from('order_items').insert([newItem]).select().single();
-    if(data) {
-        // Replace temp item with real DB item
-        setItems(prev => prev.map(i => i.id === tempId ? data : i));
-    }
+    if(data) setItems(prev => prev.map(i => i.id === tempId ? data : i));
   }
 
-  // Delete an Item
   async function deleteItem(itemId) {
-    if(!confirm('Delete this item?')) return;
+    if(!confirm('Are you sure?')) return;
     setItems(items.filter(i => i.id !== itemId));
     await supabase.from('order_items').delete().eq('id', itemId);
   }
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center text-gray-400 text-sm">Loading details...</div>;
+  if (loading) return <div className="p-10 text-slate-500">Loading...</div>;
 
   return (
-    <div className="min-h-screen bg-gray-50/50 text-gray-900 font-sans">
-      <div className="max-w-5xl mx-auto px-6 py-10">
-        
-        {/* Navigation */}
-        <button onClick={() => router.push('/')} className="group flex items-center text-sm text-gray-500 hover:text-black mb-8 transition-colors">
-          <ArrowLeft size={16} className="mr-2 group-hover:-translate-x-1 transition-transform"/> 
-          Back to Dashboard
-        </button>
-
-        {/* Editable Order Header */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 mb-8">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-6 pb-6 border-b border-gray-100">
-            <div>
-              <label className="block text-xs font-bold text-gray-400 uppercase tracking-wide mb-1">Order Number</label>
-              <h1 className="text-3xl font-bold tracking-tight text-gray-900">#{order.order_number}</h1>
-            </div>
-            
-            {/* Status Dropdown */}
-            <div>
-              <label className="block text-xs font-bold text-gray-400 uppercase tracking-wide mb-1">Status</label>
-              <select 
-                value={order.status || 'New'} 
-                onChange={(e) => updateOrder('status', e.target.value)}
-                className="bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-lg focus:ring-black focus:border-black block w-40 p-2.5 font-medium"
-              >
-                <option value="New">New</option>
-                <option value="In preparation">In preparation</option>
-                <option value="Ready for Pickup">Ready for Pickup</option>
-                <option value="Shipped">Shipped</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="group">
-              <label className="flex items-center gap-2 text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">
-                <Ship size={14} /> Vessel Name
-              </label>
-              <input 
-                type="text" 
-                value={order.vessel || ''} 
-                onChange={(e) => updateOrder('vessel', e.target.value)}
-                className="w-full border-b border-gray-200 py-1 text-sm font-medium focus:border-black focus:outline-none bg-transparent transition-colors hover:border-gray-300"
-              />
-            </div>
-            <div className="group">
-              <label className="flex items-center gap-2 text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">
-                <Box size={14} /> Type / Kit
-              </label>
-              <select 
-                value={order.type || ''} 
-                onChange={(e) => updateOrder('type', e.target.value)}
-                className="w-full border-b border-gray-200 py-1 text-sm font-medium focus:border-black focus:outline-none bg-transparent"
-              >
-                <option>Full system</option>
-                <option>Upgrade - Seapod</option>
-                <option>Replacement</option>
-                <option>Spare Parts</option>
-              </select>
-            </div>
-            <div className="group">
-              <label className="flex items-center gap-2 text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">
-                <Calendar size={14} /> Pickup Date
-              </label>
-              <input 
-                type="date" 
-                value={order.pickup_date || ''} 
-                onChange={(e) => updateOrder('pickup_date', e.target.value)}
-                className="w-full border-b border-gray-200 py-1 text-sm font-medium focus:border-black focus:outline-none bg-transparent text-gray-600"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Items Table */}
-        <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
-            <h3 className="font-semibold text-gray-900">Order Items</h3>
-            <span className="text-xs text-gray-500">{items.length} items</span>
-          </div>
-          
-          <table className="w-full text-left border-collapse">
-            <thead className="bg-white border-b border-gray-100">
-              <tr>
-                <th className="px-6 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">Piece</th>
-                <th className="px-6 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider w-24">Qty</th>
-                <th className="px-6 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">Serial Number</th>
-                <th className="px-6 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">Orca ID</th>
-                <th className="px-6 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider text-center">Done</th>
-                <th className="w-10"></th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {items.map((item) => (
-                <tr key={item.id} className="group hover:bg-gray-50 transition-colors">
-                  <td className="px-6 py-3">
-                    <input 
-                      type="text" 
-                      value={item.piece || ''} 
-                      onChange={(e) => updateItem(item.id, 'piece', e.target.value)}
-                      className="w-full bg-transparent font-medium text-gray-900 text-sm focus:outline-none border-b border-transparent focus:border-black placeholder-gray-300"
-                      placeholder="Item Name"
-                    />
-                  </td>
-                  <td className="px-6 py-3">
-                    <input 
-                      type="number" 
-                      value={item.quantity || 1} 
-                      onChange={(e) => updateItem(item.id, 'quantity', e.target.value)}
-                      className="w-full bg-transparent text-sm focus:outline-none border-b border-transparent focus:border-black"
-                    />
-                  </td>
-                  <td className="px-6 py-3">
-                    <input 
-                      type="text" 
-                      value={item.serial || ''} 
-                      onChange={(e) => updateItem(item.id, 'serial', e.target.value)}
-                      className="w-full bg-transparent text-sm focus:outline-none border-b border-transparent focus:border-blue-500 text-blue-600 placeholder-gray-300"
-                      placeholder="---"
-                    />
-                  </td>
-                  <td className="px-6 py-3">
-                    <input 
-                      type="text" 
-                      value={item.orca_id || ''} 
-                      onChange={(e) => updateItem(item.id, 'orca_id', e.target.value)}
-                      className="w-full bg-transparent text-sm focus:outline-none border-b border-transparent focus:border-blue-500 placeholder-gray-300"
-                      placeholder="---"
-                    />
-                  </td>
-                  <td className="px-6 py-3 text-center">
-                    <input 
-                      type="checkbox"
-                      checked={item.is_done || false}
-                      onChange={(e) => updateItem(item.id, 'is_done', e.target.checked)}
-                      className="w-4 h-4 text-black rounded border-gray-300 focus:ring-black accent-black cursor-pointer"
-                    />
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <button 
-                      onClick={() => deleteItem(item.id)}
-                      className="text-gray-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          
-          {/* Add Item Button */}
-          <button 
-            onClick={addItem}
-            className="w-full py-3 bg-gray-50 hover:bg-gray-100 text-gray-500 text-sm font-medium transition-colors flex items-center justify-center gap-2 border-t border-gray-100"
-          >
-            <Plus size={14} /> Add Line Item
+    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans">
+      
+      {/* Highlights Panel (Header) */}
+      <div className="bg-white border-b border-slate-200 shadow-sm sticky top-0 z-10">
+        <div className="max-w-[1600px] mx-auto px-6 py-4">
+          <button onClick={() => router.push('/')} className="text-xs font-bold text-blue-600 hover:underline mb-3 flex items-center gap-1">
+            <ArrowLeft size={12} /> BACK TO LIST
           </button>
+          
+          <div className="flex flex-col md:flex-row justify-between items-start gap-4">
+            <div className="flex items-center gap-4">
+               <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded flex items-center justify-center">
+                 <Box size={24} />
+               </div>
+               <div>
+                 <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-3">
+                   {order.vessel || 'Unknown Vessel'}
+                   <span className="text-lg font-normal text-slate-400">#{order.order_number}</span>
+                 </h1>
+                 <p className="text-sm text-slate-500 mt-1">Type: {order.type} • Created {new Date(order.created_at).toLocaleDateString()}</p>
+               </div>
+            </div>
+
+            {/* Status Actions */}
+            <div className="flex items-center gap-3 bg-slate-50 p-1.5 rounded-lg border border-slate-200">
+               {['New', 'In preparation', 'Ready for Pickup', 'Shipped'].map((status) => (
+                 <button
+                   key={status}
+                   onClick={() => updateOrder('status', status)}
+                   className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${
+                     order.status === status 
+                     ? 'bg-blue-600 text-white shadow-sm' 
+                     : 'text-slate-500 hover:bg-slate-200'
+                   }`}
+                 >
+                   {status}
+                 </button>
+               ))}
+            </div>
+          </div>
         </div>
       </div>
+
+      <main className="max-w-[1600px] mx-auto p-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        {/* Left Col: Details Card */}
+        <div className="lg:col-span-1 space-y-6">
+          <div className="bg-white border border-slate-200 rounded-lg shadow-sm">
+            <div className="px-4 py-3 border-b border-slate-200 bg-slate-50">
+              <h3 className="text-sm font-bold text-slate-700">Order Details</h3>
+            </div>
+            <div className="p-4 space-y-4">
+               <div>
+                 <label className="block text-xs font-bold text-slate-500 mb-1">Vessel Name</label>
+                 <input 
+                   className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-blue-500 outline-none" 
+                   value={order.vessel || ''} 
+                   onChange={(e) => updateOrder('vessel', e.target.value)}
+                 />
+               </div>
+               <div>
+                 <label className="block text-xs font-bold text-slate-500 mb-1">Pickup Date</label>
+                 <input 
+                   type="date"
+                   className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-blue-500 outline-none text-slate-600" 
+                   value={order.pickup_date || ''} 
+                   onChange={(e) => updateOrder('pickup_date', e.target.value)}
+                 />
+               </div>
+               <div>
+                 <label className="block text-xs font-bold text-slate-500 mb-1">Kit Type</label>
+                 <select 
+                   className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-blue-500 outline-none bg-white" 
+                   value={order.type || ''} 
+                   onChange={(e) => updateOrder('type', e.target.value)}
+                 >
+                   <option>Full system</option>
+                   <option>Upgrade</option>
+                   <option>Replacement</option>
+                 </select>
+               </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Right Col: Related List (Items) */}
+        <div className="lg:col-span-2">
+           <div className="bg-white border border-slate-200 rounded-lg shadow-sm">
+              <div className="px-4 py-3 border-b border-slate-200 bg-slate-50 flex justify-between items-center">
+                <h3 className="text-sm font-bold text-slate-700">Order Line Items ({items.length})</h3>
+                <button onClick={addItem} className="text-xs font-bold text-blue-600 hover:underline flex items-center gap-1">
+                   <Plus size={14}/> Add New
+                </button>
+              </div>
+              
+              <table className="w-full text-left">
+                <thead className="text-xs text-slate-500 uppercase bg-slate-50 border-b border-slate-200">
+                  <tr>
+                    <th className="px-4 py-2 font-semibold">Done</th>
+                    <th className="px-4 py-2 font-semibold">Item / Piece</th>
+                    <th className="px-4 py-2 font-semibold w-20">Qty</th>
+                    <th className="px-4 py-2 font-semibold">Serial #</th>
+                    <th className="px-4 py-2 font-semibold">Orca ID</th>
+                    <th className="w-8"></th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {items.map((item) => (
+                    <tr key={item.id} className="group hover:bg-slate-50">
+                       <td className="px-4 py-3 w-10">
+                          <button 
+                            onClick={() => updateItem(item.id, 'is_done', !item.is_done)}
+                            className={item.is_done ? "text-green-600" : "text-slate-300 hover:text-slate-400"}
+                          >
+                            {item.is_done ? <CheckCircle2 size={20}/> : <Circle size={20}/>}
+                          </button>
+                       </td>
+                       <td className="px-4 py-2">
+                          <input 
+                            className="w-full bg-transparent border border-transparent hover:border-slate-300 focus:bg-white focus:border-blue-500 rounded px-2 py-1 text-sm outline-none transition-all"
+                            value={item.piece || ''}
+                            onChange={(e) => updateItem(item.id, 'piece', e.target.value)}
+                            placeholder="Item Name"
+                          />
+                       </td>
+                       <td className="px-4 py-2">
+                          <input 
+                            type="number"
+                            className="w-full bg-transparent border border-transparent hover:border-slate-300 focus:bg-white focus:border-blue-500 rounded px-2 py-1 text-sm outline-none transition-all"
+                            value={item.quantity || 1}
+                            onChange={(e) => updateItem(item.id, 'quantity', e.target.value)}
+                          />
+                       </td>
+                       <td className="px-4 py-2">
+                          <input 
+                            className="w-full bg-transparent border border-transparent hover:border-slate-300 focus:bg-white focus:border-blue-500 rounded px-2 py-1 text-sm outline-none transition-all text-blue-600 font-medium"
+                            value={item.serial || ''}
+                            onChange={(e) => updateItem(item.id, 'serial', e.target.value)}
+                            placeholder="Enter Serial"
+                          />
+                       </td>
+                       <td className="px-4 py-2">
+                          <input 
+                            className="w-full bg-transparent border border-transparent hover:border-slate-300 focus:bg-white focus:border-blue-500 rounded px-2 py-1 text-sm outline-none transition-all"
+                            value={item.orca_id || ''}
+                            onChange={(e) => updateItem(item.id, 'orca_id', e.target.value)}
+                            placeholder="O-xxxx"
+                          />
+                       </td>
+                       <td className="px-4 py-2 text-right">
+                          <button onClick={() => deleteItem(item.id)} className="text-slate-300 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Trash2 size={14}/>
+                          </button>
+                       </td>
+                    </tr>
+                  ))}
+                  {items.length === 0 && (
+                     <tr>
+                       <td colSpan={6} className="px-4 py-8 text-center text-slate-400 text-sm italic">
+                         No items yet. Click "Add New" to start.
+                       </td>
+                     </tr>
+                  )}
+                </tbody>
+              </table>
+           </div>
+        </div>
+      </main>
     </div>
   );
 }
