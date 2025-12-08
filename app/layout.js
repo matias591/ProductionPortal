@@ -1,17 +1,19 @@
-import './globals.css'; // <--- THIS WAS LIKELY MISSING OR BROKEN
+import './globals.css';
 import { Inter } from 'next/font/google';
 
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata = {
-  title: 'Orca AI | Production',
-  description: 'Production Management System',
+  title: 'Production Portal',
+  description: 'Orca AI Vendor System',
 };
 
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
-      <body className={inter.className}>{children}</body>
+      <body className={`${inter.className} bg-slate-50 text-slate-900 antialiased`}>
+        {children}
+      </body>
     </html>
   );
 }

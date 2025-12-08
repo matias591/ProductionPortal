@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { useRouter } from 'next/navigation';
-import { LogOut, RefreshCw, Plus, Search, Ship, Calendar, ChevronRight } from 'lucide-react';
+import { LogOut, Plus, Search, RefreshCw, ChevronRight, User } from 'lucide-react';
 
 export default function Dashboard() {
   const [orders, setOrders] = useState([]);
@@ -17,18 +17,20 @@ export default function Dashboard() {
   );
 
   useEffect(() => {
-    checkUser();
-    fetchOrders();
+    // Check if user is logged in
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) router.push('/login');
+      else fetchOrders();
+    });
   }, []);
 
-  async function checkUser() {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) router.push('/login');
-  }
-
   async function fetchOrders() {
-    // Supabase sorts numbers correctly now
-    const { data } = await supabase.from('orders').select('*').order('order_number', { ascending: false });
+    const { data, error } = await supabase
+      .from('orders')
+      .select('*')
+      .order('created_at', { ascending: false });
+      
+    if (error) console.error("Error fetching:", error);
     setOrders(data || []);
     setLoading(false);
   }
@@ -37,20 +39,20 @@ export default function Dashboard() {
     e.preventDefault();
     const formData = new FormData(e.target);
     
-    // We DO NOT send order_number. The database generates it now (1001, 1002...)
+    // We send minimal data. The DB handles the ID and Order # automatically.
     const newOrder = {
-      vessel: formData.get('vessel') || null, // Sends null if empty
+      vessel: formData.get('vessel') || 'Unknown Vessel',
       type: formData.get('type'),
       status: 'New',
-      kit: 'Standard'
     };
 
     const { error } = await supabase.from('orders').insert([newOrder]);
-    if (!error) {
-      setShowCreateModal(false);
-      fetchOrders();
+    
+    if (error) {
+      alert("Failed to create: " + error.message);
     } else {
-      alert("Error: " + error.message);
+      setShowCreateModal(false);
+      fetchOrders(); // Refresh the list
     }
   }
 
@@ -59,143 +61,137 @@ export default function Dashboard() {
     router.push('/login');
   }
 
+  // Filter Logic
   const filteredOrders = orders.filter(o => 
     o.order_number?.toString().includes(searchTerm) || 
     o.vessel?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
-    <div className="min-h-screen bg-white text-slate-900 font-sans">
+    <div className="min-h-screen bg-[#F3F4F6]">
       
-      {/* Professional Header */}
-      <header className="border-b border-slate-100 bg-white h-16 sticky top-0 z-20">
-        <div className="max-w-7xl mx-auto px-6 h-full flex items-center justify-between">
-          <div className="flex items-center gap-3">
-             {/* New Minimal Logo */}
-             <div className="w-8 h-8 bg-black rounded flex items-center justify-center">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12h20"/><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-6"/><path d="M12 2L2 12h20L12 2z"/></svg>
-             </div>
-             <span className="font-bold text-lg tracking-tight text-slate-900">Orca Production</span>
+      {/* Top Navigation */}
+      <nav className="bg-white border-b border-gray-200 px-6 h-16 flex items-center justify-between sticky top-0 z-20">
+        <div className="flex items-center gap-3">
+          <div className="bg-[#0176D3] text-white p-1.5 rounded-md">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M2 12h20"/><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-6"/><path d="M12 2L2 12h20L12 2z"/></svg>
           </div>
-          <button onClick={handleLogout} className="text-sm font-medium text-slate-500 hover:text-black">
-            Log Out
+          <span className="font-bold text-lg text-slate-800 tracking-tight">Production Portal</span>
+        </div>
+        <button onClick={handleLogout} className="text-sm font-semibold text-slate-500 hover:text-red-600 flex items-center gap-2">
+           <LogOut size={16}/> Sign Out
+        </button>
+      </nav>
+
+      <main className="max-w-7xl mx-auto px-6 py-8">
+        
+        {/* Header Section */}
+        <div className="flex justify-between items-end mb-6">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900">Orders</h1>
+            <p className="text-slate-500 text-sm mt-1">{orders.length} Active Shipments</p>
+          </div>
+          <button 
+            onClick={() => setShowCreateModal(true)}
+            className="bg-[#0176D3] hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-bold shadow-sm flex items-center gap-2 transition-colors"
+          >
+            <Plus size={18} /> New Order
           </button>
         </div>
-      </header>
 
-      <main className="max-w-7xl mx-auto px-6 py-10">
-        
-        {/* Actions Bar */}
-        <div className="flex flex-col md:flex-row justify-between items-end mb-8 gap-4">
-          <div>
-            <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Orders</h1>
-            <p className="text-slate-500 mt-1 text-sm">Manage production queue and shipments.</p>
+        {/* Search Bar */}
+        <div className="bg-white p-4 rounded-t-lg border border-gray-200 border-b-0 flex items-center gap-4">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+            <input 
+              type="text" 
+              placeholder="Search by Order # or Vessel..." 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md text-sm focus:border-[#0176D3] focus:ring-1 focus:ring-[#0176D3] outline-none"
+            />
           </div>
-          <div className="flex items-center gap-3">
-            <button className="px-4 py-2 border border-slate-200 text-slate-600 text-sm font-medium rounded-lg hover:bg-slate-50 transition-all flex items-center gap-2">
-              <RefreshCw size={14} /> Sync
-            </button>
-            <button 
-              onClick={() => setShowCreateModal(true)}
-              className="px-4 py-2 bg-black text-white text-sm font-medium rounded-lg hover:bg-slate-800 transition-all shadow-lg shadow-slate-200 flex items-center gap-2"
-            >
-              <Plus size={16} /> Create Order
-            </button>
-          </div>
+          <button onClick={fetchOrders} className="text-gray-500 hover:text-[#0176D3] p-2 bg-gray-50 rounded border border-gray-200">
+            <RefreshCw size={16}/>
+          </button>
         </div>
 
-        {/* Search Filter */}
-        <div className="mb-6 relative max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-          {/* Added pl-10 to prevent overlapping text */}
-          <input 
-            type="text" 
-            placeholder="Search by ID or Vessel..." 
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-black/5 focus:border-slate-400 transition-all"
-          />
-        </div>
-
-        {/* Clean Table */}
-        <div className="border border-slate-100 rounded-xl shadow-sm overflow-hidden">
+        {/* Data Table */}
+        <div className="bg-white border border-gray-200 rounded-b-lg shadow-sm overflow-hidden">
           <table className="w-full text-left border-collapse">
-            <thead className="bg-slate-50/50 border-b border-slate-100">
+            <thead className="bg-gray-50 text-xs font-bold text-gray-500 uppercase border-b border-gray-200">
               <tr>
-                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Order ID</th>
-                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Vessel</th>
-                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Type</th>
-                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
-                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider text-right"></th>
+                <th className="px-6 py-3 w-32">Order #</th>
+                <th className="px-6 py-3">Vessel</th>
+                <th className="px-6 py-3">Type</th>
+                <th className="px-6 py-3">Created</th>
+                <th className="px-6 py-3">Status</th>
+                <th className="px-6 py-3 text-right">Action</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-50">
+            <tbody className="divide-y divide-gray-100">
               {filteredOrders.map((order) => (
                 <tr 
                   key={order.id} 
                   onClick={() => router.push(`/order/${order.id}`)}
-                  className="group hover:bg-slate-50 cursor-pointer transition-all"
+                  className="hover:bg-blue-50 cursor-pointer group transition-colors"
                 >
-                  <td className="px-6 py-4">
-                    <span className="font-mono font-medium text-slate-900">#{order.order_number}</span>
+                  <td className="px-6 py-4 font-bold text-[#0176D3]">
+                    #{order.order_number}
                   </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-2 text-sm text-slate-700 font-medium">
-                      {order.vessel ? (
-                        <>
-                          <Ship size={14} className="text-slate-400" />
-                          {order.vessel}
-                        </>
-                      ) : (
-                        <span className="text-slate-400 italic">No Vessel Name</span>
-                      )}
-                    </div>
+                  <td className="px-6 py-4 font-medium text-slate-700">
+                    {order.vessel}
                   </td>
                   <td className="px-6 py-4 text-sm text-slate-600">
                     {order.type}
                   </td>
+                  <td className="px-6 py-4 text-sm text-slate-500">
+                    {new Date(order.created_at).toLocaleDateString()}
+                  </td>
                   <td className="px-6 py-4">
-                    <div className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border
-                      ${order.status === 'New' ? 'bg-blue-50 text-blue-700 border-blue-100' : 'bg-slate-50 text-slate-600 border-slate-100'}`}>
+                    <span className="bg-gray-100 text-gray-700 border border-gray-200 px-2 py-1 rounded text-xs font-bold">
                       {order.status}
-                    </div>
+                    </span>
                   </td>
                   <td className="px-6 py-4 text-right">
-                    <ChevronRight size={18} className="text-slate-300 group-hover:text-black transition-colors" />
+                    <ChevronRight className="text-gray-300 group-hover:text-[#0176D3] ml-auto" size={18} />
                   </td>
                 </tr>
               ))}
+              {filteredOrders.length === 0 && (
+                <tr><td colSpan={6} className="p-8 text-center text-gray-400">No orders found.</td></tr>
+              )}
             </tbody>
           </table>
-          {orders.length === 0 && !loading && (
-             <div className="p-12 text-center text-slate-400 text-sm">No orders found.</div>
-          )}
         </div>
       </main>
 
-      {/* Clean Create Modal */}
+      {/* Modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 bg-white/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-2xl border border-slate-100 max-w-md w-full p-6 animate-in fade-in zoom-in duration-200">
-            <h3 className="font-bold text-xl text-slate-900 mb-6">Create New Order</h3>
-            <form onSubmit={handleCreateOrder} className="space-y-4">
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+              <h3 className="font-bold text-gray-800">New Production Order</h3>
+              <button onClick={() => setShowCreateModal(false)} className="text-gray-400 hover:text-black">✕</button>
+            </div>
+            <form onSubmit={handleCreateOrder} className="p-6 space-y-4">
               <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Vessel Name <span className="text-slate-300 font-normal">(Optional)</span></label>
-                <input name="vessel" className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:border-black focus:ring-1 focus:ring-black outline-none transition-all" placeholder="e.g. Evergreen" />
+                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Vessel Name</label>
+                <input name="vessel" className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:border-[#0176D3] outline-none" placeholder="Optional" />
               </div>
               <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Type</label>
-                <select name="type" className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:border-black outline-none bg-white">
+                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Order Type</label>
+                <select name="type" className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:border-[#0176D3] outline-none bg-white">
                   <option>Full system</option>
                   <option>Upgrade</option>
                   <option>Replacement</option>
                   <option>Spare Parts</option>
                 </select>
               </div>
-              
-              <div className="flex gap-3 mt-8">
-                <button type="button" onClick={() => setShowCreateModal(false)} className="flex-1 px-4 py-2.5 border border-slate-200 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50">Cancel</button>
-                <button type="submit" className="flex-1 px-4 py-2.5 bg-black text-white rounded-lg text-sm font-bold hover:bg-slate-800">Create</button>
+              <div className="pt-4">
+                <button type="submit" className="w-full bg-[#0176D3] text-white font-bold py-2.5 rounded-md hover:bg-blue-700 transition-colors">
+                  Create Order
+                </button>
               </div>
             </form>
           </div>
