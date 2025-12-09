@@ -2,7 +2,7 @@
 import { useState, useEffect, use } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Plus, Trash2, Box, Calendar, Ship, Upload, FileText, Paperclip, Check } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Box, Calendar, Ship, Upload, FileText, Paperclip, Lock } from 'lucide-react';
 
 export default function OrderDetails({ params }) {
   const unwrappedParams = use(params);
@@ -18,6 +18,7 @@ export default function OrderDetails({ params }) {
   // Admin/File State
   const [isAdmin, setIsAdmin] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [shipping, setShipping] = useState(false); // New state for loading spinner
 
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -36,13 +37,9 @@ export default function OrderDetails({ params }) {
        if (profile?.role === 'admin') setIsAdmin(true);
     }
 
-    // 2. Fetch Order Data
+    // 2. Fetch Data
     const { data: orderData } = await supabase.from('orders').select('*').eq('id', orderId).single();
-    
-    // 3. Fetch Items
     const { data: itemData } = await supabase.from('order_items').select('*').eq('order_id', orderId).order('created_at', { ascending: true });
-    
-    // 4. Fetch Files
     const { data: fileData } = await supabase.from('order_files').select('*').eq('order_id', orderId).order('created_at', { ascending: false });
 
     setOrder(orderData);
@@ -51,26 +48,59 @@ export default function OrderDetails({ params }) {
     setLoading(false);
   }
 
+  // --- LOGIC: LOCKING ---
+  // Locked if Status is 'Shipped' AND User is NOT Admin
+  const isLocked = order?.status === 'Shipped' && !isAdmin;
+
   // --- ORDER LOGIC ---
   async function updateOrder(field, value) {
-    setOrder({ ...order, [field]: value });
-    await supabase.from('orders').update({ [field]: value }).eq('id', orderId);
+    if (isLocked) return; // Prevent edits
+
+    // SPECIAL HANDLING FOR "SHIPPED"
+    if (field === 'status' && value === 'Shipped') {
+        const confirmShip = confirm("Marking as Shipped will lock this order and send data to the system. Continue?");
+        if (!confirmShip) return;
+
+        setShipping(true);
+        // Call our new API Route
+        const res = await fetch('/api/trigger-shipping', {
+            method: 'POST',
+            body: JSON.stringify({ orderId: orderId })
+        });
+        
+        const json = await res.json();
+        setShipping(false);
+
+        if (json.error) {
+            alert("Error sending to n8n: " + json.error);
+            return; 
+        }
+        // If success, update local state
+        setOrder({ ...order, status: 'Shipped' });
+    } else {
+        // Normal Update
+        setOrder({ ...order, [field]: value });
+        await supabase.from('orders').update({ [field]: value }).eq('id', orderId);
+    }
   }
 
   // --- ITEM LOGIC ---
   async function updateItem(itemId, field, value) {
+    if (isLocked) return;
     const newItems = items.map(i => i.id === itemId ? { ...i, [field]: value } : i);
     setItems(newItems);
     await supabase.from('order_items').update({ [field]: value }).eq('id', itemId);
   }
 
   async function addItem() {
+    if (isLocked) return;
     const newItem = { order_id: orderId, piece: '', quantity: 1, serial: '', is_done: false };
     const { data } = await supabase.from('order_items').insert([newItem]).select().single();
     if(data) setItems([...items, data]);
   }
 
   async function deleteItem(itemId) {
+    if (isLocked) return;
     if(!confirm('Remove this item?')) return;
     setItems(items.filter(i => i.id !== itemId));
     await supabase.from('order_items').delete().eq('id', itemId);
@@ -78,19 +108,16 @@ export default function OrderDetails({ params }) {
 
   // --- FILE LOGIC ---
   async function handleFileUpload(e) {
+    if (isLocked) return;
     if (!e.target.files || e.target.files.length === 0) return;
     setUploading(true);
     
     const file = e.target.files[0];
-    // Sanitize filename
     const fileExt = file.name.split('.').pop();
     const fileName = `${Date.now()}_${Math.floor(Math.random()*1000)}.${fileExt}`;
     const filePath = `${orderId}/${fileName}`;
 
-    // 1. Upload to Storage
-    const { error: uploadError } = await supabase.storage
-        .from('order-attachments')
-        .upload(filePath, file);
+    const { error: uploadError } = await supabase.storage.from('order-attachments').upload(filePath, file);
 
     if (uploadError) {
         alert("Upload failed: " + uploadError.message);
@@ -98,12 +125,11 @@ export default function OrderDetails({ params }) {
         return;
     }
 
-    // 2. Save Metadata to DB
-    const { data: fileRecord, error: dbError } = await supabase.from('order_files').insert([{
+    const { data: fileRecord } = await supabase.from('order_files').insert([{
         order_id: orderId,
         file_name: file.name,
         file_path: filePath,
-        uploaded_by: 'Admin' 
+        uploaded_by: isAdmin ? 'Admin' : 'Vendor' 
     }]).select().single();
 
     if (fileRecord) setFiles([fileRecord, ...files]);
@@ -120,7 +146,7 @@ export default function OrderDetails({ params }) {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans pb-20">
       
-      {/* Header Panel (Sticky) */}
+      {/* Header Panel */}
       <div className="bg-white border-b border-slate-200 shadow-sm sticky top-0 z-10">
         <div className="max-w-[1600px] mx-auto px-6 py-4">
           <button onClick={() => router.push('/')} className="text-xs font-bold text-[#0176D3] hover:underline mb-3 flex items-center gap-1 uppercase tracking-wide">
@@ -135,6 +161,7 @@ export default function OrderDetails({ params }) {
                <div>
                  <div className="flex items-center gap-2">
                     <h1 className="text-2xl font-bold text-slate-900">{order.vessel || 'No Vessel Name'}</h1>
+                    {isLocked && <Lock size={18} className="text-red-500" title="Order Locked" />}
                  </div>
                  <div className="flex items-center gap-3 text-sm text-slate-500 mt-1">
                     <span className="font-mono bg-slate-100 px-2 py-0.5 rounded text-xs border border-slate-200 text-slate-600">
@@ -148,16 +175,22 @@ export default function OrderDetails({ params }) {
             {/* Status Dropdown */}
             <div className="flex flex-col items-end">
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Status</label>
-                <select 
-                  value={order.status || 'New'} 
-                  onChange={(e) => updateOrder('status', e.target.value)}
-                  className="bg-white border border-slate-300 text-slate-900 text-sm font-bold rounded-md shadow-sm focus:ring-2 focus:ring-[#0176D3] focus:border-transparent block w-44 p-2 cursor-pointer outline-none transition-all"
-                >
-                  <option value="New">New</option>
-                  <option value="In preparation">In preparation</option>
-                  <option value="Ready for Pickup">Ready for Pickup</option>
-                  <option value="Shipped">Shipped</option>
-                </select>
+                {shipping ? (
+                    <div className="text-sm font-bold text-[#0176D3] animate-pulse">Processing Ship...</div>
+                ) : (
+                    <select 
+                    value={order.status || 'New'} 
+                    onChange={(e) => updateOrder('status', e.target.value)}
+                    disabled={isLocked && !isAdmin} // Disable if locked (unless admin)
+                    className={`bg-white border border-slate-300 text-slate-900 text-sm font-bold rounded-md shadow-sm focus:ring-2 focus:ring-[#0176D3] block w-44 p-2 cursor-pointer outline-none transition-all
+                        ${isLocked ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`}
+                    >
+                    <option value="New">New</option>
+                    <option value="In preparation">In preparation</option>
+                    <option value="Ready for Pickup">Ready for Pickup</option>
+                    <option value="Shipped">Shipped (Lock & Send)</option>
+                    </select>
+                )}
             </div>
           </div>
         </div>
@@ -167,7 +200,6 @@ export default function OrderDetails({ params }) {
         
         {/* Left Column: Details & Files */}
         <div className="lg:col-span-1 space-y-6">
-            
             {/* Order Details Card */}
             <div className="bg-white border border-slate-200 rounded-lg shadow-sm">
                 <div className="px-5 py-3 border-b border-slate-100 bg-slate-50/50">
@@ -179,9 +211,10 @@ export default function OrderDetails({ params }) {
                             <Ship size={14} /> Vessel Name
                         </label>
                         <input 
-                        className="w-full text-sm font-medium border border-slate-200 rounded px-3 py-2 focus:border-[#0176D3] focus:ring-1 focus:ring-[#0176D3] outline-none text-slate-900 placeholder-slate-300"
+                        className="w-full text-sm font-medium border border-slate-200 rounded px-3 py-2 focus:border-[#0176D3] focus:ring-1 focus:ring-[#0176D3] outline-none text-slate-900"
                         placeholder="Optional"
                         value={order.vessel || ''} 
+                        disabled={isLocked}
                         onChange={(e) => updateOrder('vessel', e.target.value)}
                         />
                     </div>
@@ -193,6 +226,7 @@ export default function OrderDetails({ params }) {
                         type="date"
                         className="w-full text-sm font-medium border border-slate-200 rounded px-3 py-2 focus:border-[#0176D3] focus:ring-1 focus:ring-[#0176D3] outline-none text-slate-700"
                         value={order.pickup_date || ''} 
+                        disabled={isLocked}
                         onChange={(e) => updateOrder('pickup_date', e.target.value)}
                         />
                     </div>
@@ -201,6 +235,7 @@ export default function OrderDetails({ params }) {
                         <select 
                         className="w-full text-sm font-medium border border-slate-200 rounded px-3 py-2 focus:border-[#0176D3] outline-none bg-white" 
                         value={order.type || ''} 
+                        disabled={isLocked}
                         onChange={(e) => updateOrder('type', e.target.value)}
                         >
                         <option>Full system</option>
@@ -218,11 +253,10 @@ export default function OrderDetails({ params }) {
                     <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wide flex items-center gap-2">
                         <Paperclip size={14}/> Attachments ({files.length})
                     </h3>
-                    {/* Only Admin can see Upload Button */}
-                    {isAdmin && (
+                    {isAdmin && !isLocked && (
                         <label className="cursor-pointer text-xs font-bold text-[#0176D3] hover:underline flex items-center gap-1">
                             {uploading ? 'Uploading...' : '+ Upload'}
-                            <input type="file" className="hidden" onChange={handleFileUpload} disabled={uploading} />
+                            <input type="file" className="hidden" onChange={handleFileUpload} disabled={uploading || isLocked} />
                         </label>
                     )}
                 </div>
@@ -242,11 +276,7 @@ export default function OrderDetails({ params }) {
                             </div>
                         </div>
                     ))}
-                    {files.length === 0 && (
-                        <div className="p-6 text-center text-slate-400 text-xs italic">
-                            No files attached yet.
-                        </div>
-                    )}
+                    {files.length === 0 && <div className="p-6 text-center text-slate-400 text-xs italic">No files attached.</div>}
                 </div>
             </div>
         </div>
@@ -280,6 +310,7 @@ export default function OrderDetails({ params }) {
                              type="checkbox"
                              checked={item.is_done || false}
                              onChange={(e) => updateItem(item.id, 'is_done', e.target.checked)}
+                             disabled={isLocked}
                              className="w-5 h-5 rounded border-slate-300 text-[#0176D3] focus:ring-[#0176D3] accent-[#0176D3] cursor-pointer"
                            />
                         </td>
@@ -287,6 +318,7 @@ export default function OrderDetails({ params }) {
                            <input 
                              className="w-full bg-transparent border border-transparent hover:border-slate-300 focus:bg-white focus:border-[#0176D3] rounded px-2 py-1.5 text-sm font-medium text-slate-900 outline-none transition-all placeholder-slate-300"
                              value={item.piece || ''}
+                             disabled={isLocked}
                              onChange={(e) => updateItem(item.id, 'piece', e.target.value)}
                              placeholder="Item Name"
                            />
@@ -296,6 +328,7 @@ export default function OrderDetails({ params }) {
                              type="number"
                              className="w-full bg-transparent border border-transparent hover:border-slate-300 focus:bg-white focus:border-[#0176D3] rounded px-2 py-1.5 text-sm outline-none transition-all"
                              value={item.quantity || 1}
+                             disabled={isLocked}
                              onChange={(e) => updateItem(item.id, 'quantity', e.target.value)}
                            />
                         </td>
@@ -303,6 +336,7 @@ export default function OrderDetails({ params }) {
                            <input 
                              className="w-full bg-transparent border border-transparent hover:border-slate-300 focus:bg-white focus:border-[#0176D3] rounded px-2 py-1.5 text-sm font-medium text-[#0176D3] outline-none transition-all placeholder-slate-300"
                              value={item.serial || ''}
+                             disabled={isLocked}
                              onChange={(e) => updateItem(item.id, 'serial', e.target.value)}
                              placeholder="---"
                            />
@@ -311,40 +345,36 @@ export default function OrderDetails({ params }) {
                            <input 
                              className="w-full bg-transparent border border-transparent hover:border-slate-300 focus:bg-white focus:border-[#0176D3] rounded px-2 py-1.5 text-sm text-slate-600 outline-none transition-all placeholder-slate-300"
                              value={item.orca_id || ''}
+                             disabled={isLocked}
                              onChange={(e) => updateItem(item.id, 'orca_id', e.target.value)}
                              placeholder="---"
                            />
                         </td>
                         <td className="px-4 py-3 text-right">
-                           <button 
-                             onClick={() => deleteItem(item.id)} 
-                             className="p-2 text-slate-300 hover:text-red-600 hover:bg-red-50 rounded transition-all opacity-0 group-hover:opacity-100"
-                             title="Remove Item"
-                           >
-                             <Trash2 size={16}/>
-                           </button>
+                           {!isLocked && (
+                               <button 
+                                onClick={() => deleteItem(item.id)} 
+                                className="p-2 text-slate-300 hover:text-red-600 hover:bg-red-50 rounded transition-all opacity-0 group-hover:opacity-100"
+                               >
+                                <Trash2 size={16}/>
+                               </button>
+                           )}
                         </td>
                      </tr>
                    ))}
-                   {items.length === 0 && (
-                      <tr>
-                        <td colSpan={6} className="p-8 text-center text-slate-400 text-sm italic">
-                          No items in this order.
-                        </td>
-                      </tr>
-                   )}
                  </tbody>
                </table>
                
-               <button 
-                 onClick={addItem}
-                 className="w-full py-4 text-sm font-bold text-slate-500 hover:bg-slate-50 hover:text-[#0176D3] transition-colors flex items-center justify-center gap-2 border-t border-slate-200"
-               >
-                 <Plus size={16} /> Add New Line Item
-               </button>
+               {!isLocked && (
+                   <button 
+                     onClick={addItem}
+                     className="w-full py-4 text-sm font-bold text-slate-500 hover:bg-slate-50 hover:text-[#0176D3] transition-colors flex items-center justify-center gap-2 border-t border-slate-200"
+                   >
+                     <Plus size={16} /> Add New Line Item
+                   </button>
+               )}
             </div>
         </div>
-
       </main>
     </div>
   );
