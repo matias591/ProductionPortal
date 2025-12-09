@@ -2,7 +2,40 @@ import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 
 export async function POST(request) {
-  // 1. Initialize SUPER ADMIN Client
+  // 1. Setup Standard Client (To check who is asking)
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  );
+
+  // 2. Get the current session from the request headers
+  // This verifies the user is actually logged in
+  const authHeader = request.headers.get('Authorization');
+  if (!authHeader) {
+      return NextResponse.json({ error: 'Missing Authorization header' }, { status: 401 });
+  }
+
+  // 3. Verify User and Role
+  const { data: { user }, error: authError } = await supabase.auth.getUser(authHeader.replace('Bearer ', ''));
+  
+  if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  // Check if they are actually an Admin in the database
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single();
+
+  if (profile?.role !== 'admin') {
+      return NextResponse.json({ error: 'Forbidden: Admins only' }, { status: 403 });
+  }
+
+  // --- SECURITY CHECK PASSED ---
+
+  // 4. Initialize SUPER ADMIN Client (To actually do the work)
   const supabaseAdmin = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
     process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -12,23 +45,16 @@ export async function POST(request) {
     const body = await request.json();
     const { email, password, role } = body;
 
-    // 2. Create the User in Supabase Auth
-    const { data: user, error: createError } = await supabaseAdmin.auth.admin.createUser({
-      email: email,
-      password: password,
+    const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
+      email,
+      password,
       email_confirm: true
     });
 
     if (createError) throw createError;
 
-    // 3. Update their Role in the Profiles table
-    if (user && user.user) {
-        const { error: profileError } = await supabaseAdmin
-            .from('profiles')
-            .update({ role: role })
-            .eq('id', user.user.id);
-        
-        if (profileError) throw profileError;
+    if (newUser && newUser.user) {
+        await supabaseAdmin.from('profiles').update({ role }).eq('id', newUser.user.id);
     }
 
     return NextResponse.json({ message: 'User created successfully' });

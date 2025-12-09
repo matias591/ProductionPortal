@@ -50,31 +50,39 @@ export default function UserManagement() {
     e.preventDefault();
     setCreating(true);
 
+    // 1. GET CURRENT SESSION TOKEN (Security)
+    const { data: { session } } = await supabase.auth.getSession();
+
+    if (!session) {
+        alert("You are not logged in.");
+        setCreating(false);
+        return;
+    }
+
+    // 2. CALL API WITH TOKEN
     const res = await fetch('/api/admin/create-user', {
       method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}` // <--- THIS IS THE SECURITY KEY
+      },
       body: JSON.stringify({ email: newUserEmail, password: newUserPassword, role: newUserRole }),
     });
 
     const json = await res.json();
+    
     if (json.error) {
-      alert(json.error);
+      alert("Error: " + json.error);
     } else {
-      alert("User Created!");
+      alert("User Created Successfully!");
       setNewUserEmail('');
       setNewUserPassword('');
-      fetchUsers();
+      fetchUsers(); // Refresh list
     }
     setCreating(false);
   }
 
-  async function deleteUser(id) {
-    if(!confirm("Are you sure? This cannot be undone.")) return;
-    // Note: Deleting users requires Service Role client-side or another API route. 
-    // For this POC, we will just remove them from the profile list view locally or you need an API delete route.
-    alert("To fully delete a user, please use the Supabase Dashboard for security.");
-  }
-
-  if (!isAdmin) return <div className="p-10">Checking permissions...</div>;
+  if (!isAdmin) return <div className="p-10 text-slate-500">Checking permissions...</div>;
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans p-6">
@@ -84,30 +92,30 @@ export default function UserManagement() {
 
        <div className="max-w-4xl mx-auto">
          <h1 className="text-2xl font-bold text-slate-800 mb-8 flex items-center gap-2">
-            <Shield className="text-blue-600"/> User Management
+            <Shield className="text-[#0176D3]"/> User Management
          </h1>
 
          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {/* Create User Form */}
             <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 h-fit">
-               <h3 className="font-bold text-lg mb-4 flex items-center gap-2"><UserPlus size={18}/> Create New User</h3>
+               <h3 className="font-bold text-lg mb-4 flex items-center gap-2 text-slate-700"><UserPlus size={18}/> Create New User</h3>
                <form onSubmit={handleCreateUser} className="space-y-4">
                   <div>
                     <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Email</label>
-                    <input type="email" required className="w-full border border-slate-200 rounded px-3 py-2 text-sm" value={newUserEmail} onChange={e => setNewUserEmail(e.target.value)} />
+                    <input type="email" required className="w-full border border-slate-200 rounded px-3 py-2 text-sm focus:border-[#0176D3] outline-none" value={newUserEmail} onChange={e => setNewUserEmail(e.target.value)} />
                   </div>
                   <div>
                     <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Password</label>
-                    <input type="password" required className="w-full border border-slate-200 rounded px-3 py-2 text-sm" value={newUserPassword} onChange={e => setNewUserPassword(e.target.value)} />
+                    <input type="password" required className="w-full border border-slate-200 rounded px-3 py-2 text-sm focus:border-[#0176D3] outline-none" value={newUserPassword} onChange={e => setNewUserPassword(e.target.value)} />
                   </div>
                   <div>
                     <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Role</label>
-                    <select className="w-full border border-slate-200 rounded px-3 py-2 text-sm bg-white" value={newUserRole} onChange={e => setNewUserRole(e.target.value)}>
+                    <select className="w-full border border-slate-200 rounded px-3 py-2 text-sm bg-white focus:border-[#0176D3] outline-none" value={newUserRole} onChange={e => setNewUserRole(e.target.value)}>
                         <option value="vendor">Vendor</option>
                         <option value="admin">Admin</option>
                     </select>
                   </div>
-                  <button type="submit" disabled={creating} className="w-full bg-blue-600 text-white font-bold py-2 rounded hover:bg-blue-700 transition-colors">
+                  <button type="submit" disabled={creating} className="w-full bg-[#0176D3] text-white font-bold py-2 rounded hover:bg-blue-700 transition-colors shadow-sm">
                      {creating ? 'Creating...' : 'Create User'}
                   </button>
                </form>
@@ -120,11 +128,11 @@ export default function UserManagement() {
                </div>
                <div className="divide-y divide-slate-100">
                   {users.map(u => (
-                      <div key={u.id} className="px-6 py-4 flex justify-between items-center">
+                      <div key={u.id} className="px-6 py-4 flex justify-between items-center group hover:bg-slate-50">
                           <div>
                              <div className="font-bold text-sm text-slate-800">{u.email}</div>
-                             <div className={`text-xs inline-block px-2 py-0.5 rounded mt-1 font-medium capitalize
-                                ${u.role === 'admin' ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-600'}`}>
+                             <div className={`text-xs inline-block px-2 py-0.5 rounded mt-1 font-bold uppercase tracking-wider
+                                ${u.role === 'admin' ? 'bg-purple-100 text-purple-700' : 'bg-slate-100 text-slate-500'}`}>
                                 {u.role}
                              </div>
                           </div>
