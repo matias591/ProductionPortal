@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { useRouter } from 'next/navigation';
-import { LogOut, RefreshCw, Plus, Search, Ship, ChevronRight, UserCog, UserCircle, Filter, LayoutGrid } from 'lucide-react';
+import { LogOut, RefreshCw, Plus, Search, Ship, ChevronRight, UserCog, UserCircle, Filter, LayoutGrid, Package } from 'lucide-react';
 
 export default function Dashboard() {
   const [orders, setOrders] = useState([]);
@@ -10,9 +10,13 @@ export default function Dashboard() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   
+  // Kit List State (Now from DB)
+  const [kitOptions, setKitOptions] = useState([]);
+  const [loadingKits, setLoadingKits] = useState(true);
+
   // User State
   const [userEmail, setUserEmail] = useState('');
-  const [isAdmin, setIsAdmin] = useState(false); // <--- Controls what buttons they see
+  const [isAdmin, setIsAdmin] = useState(false);
   
   const router = useRouter();
 
@@ -24,7 +28,15 @@ export default function Dashboard() {
   useEffect(() => {
     checkUser();
     fetchOrders();
+    fetchKitsFromDB(); 
   }, []);
+
+  // --- FETCH KITS FROM DATABASE ---
+  async function fetchKitsFromDB() {
+    const { data } = await supabase.from('kits').select('*').order('name');
+    setKitOptions(data || []);
+    setLoadingKits(false);
+  }
 
   async function checkUser() {
     const { data: { session } } = await supabase.auth.getSession();
@@ -32,25 +44,13 @@ export default function Dashboard() {
       router.push('/login');
     } else {
       setUserEmail(session.user.email);
-      
-      // CHECK ROLE FROM PROFILES TABLE
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', session.user.id)
-        .single();
-      
-      if (profile?.role === 'admin') {
-        setIsAdmin(true);
-      }
+      const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).single();
+      if (profile?.role === 'admin') setIsAdmin(true);
     }
   }
 
   async function fetchOrders() {
-    const { data } = await supabase
-      .from('orders')
-      .select('*')
-      .order('order_number', { ascending: false }); // Latest numbers first
+    const { data } = await supabase.from('orders').select('*').order('order_number', { ascending: false });
     setOrders(data || []);
     setLoading(false);
   }
@@ -59,21 +59,48 @@ export default function Dashboard() {
     e.preventDefault();
     const formData = new FormData(e.target);
     
-    // Auto-generate a random ID for the DB (The DB Serial will handle the official number)
+    // Get the selected Kit ID and Name
+    const selectedKitId = formData.get('kit'); // This is the UUID
+    // Find the name for display purposes
+    const selectedKitName = kitOptions.find(k => k.id === selectedKitId)?.name || 'Custom';
+
     const newOrder = {
       vessel: formData.get('vessel') || 'Unknown Vessel',
       type: formData.get('type'),
-      status: 'New',
-      kit: 'Standard'
+      kit: selectedKitName, // Save the Name in the order table
+      status: 'New'
     };
 
-    const { error } = await supabase.from('orders').insert([newOrder]);
-    if (!error) {
-      setShowCreateModal(false);
-      fetchOrders();
-    } else {
+    // 1. Create the Order
+    const { data: orderData, error } = await supabase.from('orders').insert([newOrder]).select().single();
+    
+    if (error) {
       alert("Error: " + error.message);
+      return;
     }
+
+    // 2. IF A KIT WAS SELECTED: Copy Items
+    if (selectedKitId) {
+        // A. Fetch items from the Kit Template
+        const { data: templateItems } = await supabase.from('kit_items').select('*').eq('kit_id', selectedKitId);
+        
+        if (templateItems && templateItems.length > 0) {
+            // B. Prepare them for the Order
+            const itemsToInsert = templateItems.map(item => ({
+                order_id: orderData.id,
+                piece: item.piece,
+                quantity: item.quantity,
+                serial: '',
+                is_done: false
+            }));
+
+            // C. Insert into Order Items
+            await supabase.from('order_items').insert(itemsToInsert);
+        }
+    }
+
+    setShowCreateModal(false);
+    fetchOrders();
   }
 
   async function handleLogout() {
@@ -125,7 +152,7 @@ export default function Dashboard() {
 
       <main className="max-w-[1600px] mx-auto p-6">
         
-        {/* Header Actions - HIDDEN FOR VENDORS */}
+        {/* Header Actions */}
         <div className="flex flex-col md:flex-row justify-between items-end mb-6 gap-4">
           <div>
             <div className="flex items-center gap-2 text-sm text-slate-500 mb-1">
@@ -138,17 +165,19 @@ export default function Dashboard() {
           </div>
           
           <div className="flex gap-3">
-            {/* ONLY ADMINS SEE THESE BUTTONS */}
             {isAdmin && (
               <>
+                <button 
+                  onClick={() => router.push('/admin/kits')}
+                  className="px-4 py-2 border border-slate-300 text-slate-700 text-sm font-semibold rounded-md hover:bg-slate-50 transition-all flex items-center gap-2"
+                >
+                  <Package size={16} /> Manage Kits
+                </button>
                 <button 
                   onClick={() => router.push('/admin/users')}
                   className="px-4 py-2 border border-slate-300 text-slate-700 text-sm font-semibold rounded-md hover:bg-slate-50 transition-all flex items-center gap-2"
                 >
                   <UserCog size={16} /> Users
-                </button>
-                <button className="px-4 py-2 border border-slate-300 text-slate-700 text-sm font-semibold rounded-md hover:bg-slate-50 shadow-sm flex items-center gap-2 transition-all">
-                  <RefreshCw size={14} /> Sync
                 </button>
                 <button 
                   onClick={() => setShowCreateModal(true)}
@@ -187,6 +216,7 @@ export default function Dashboard() {
                 <th className="px-4 py-3 w-32">Order #</th>
                 <th className="px-4 py-3">Vessel Name</th>
                 <th className="px-4 py-3">Type</th>
+                <th className="px-4 py-3">Kit</th>
                 <th className="px-4 py-3">Pickup Date</th>
                 <th className="px-4 py-3">Status</th>
                 <th className="px-4 py-3 text-right">Action</th>
@@ -211,6 +241,9 @@ export default function Dashboard() {
                   <td className="px-4 py-3 text-sm text-slate-600">
                     {order.type}
                   </td>
+                  <td className="px-4 py-3 text-sm text-slate-600 font-medium">
+                    {order.kit || '-'}
+                  </td>
                    <td className="px-4 py-3 text-sm text-slate-600">
                     {order.pickup_date || '-'}
                   </td>
@@ -228,7 +261,7 @@ export default function Dashboard() {
               ))}
               {filteredOrders.length === 0 && (
                 <tr>
-                    <td colSpan={6} className="p-10 text-center text-slate-400">
+                    <td colSpan={7} className="p-10 text-center text-slate-400">
                         No orders found.
                     </td>
                 </tr>
@@ -238,7 +271,7 @@ export default function Dashboard() {
         </div>
       </main>
 
-      {/* Create Modal (Only Admin can trigger this via button) */}
+      {/* Create Modal */}
       {showCreateModal && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-lg shadow-2xl max-w-lg w-full overflow-hidden border border-slate-200 animate-in fade-in zoom-in duration-200">
@@ -258,19 +291,35 @@ export default function Dashboard() {
                  <label className="block text-xs font-bold text-slate-500 mb-1">Vessel Name (Optional)</label>
                  <input name="vessel" className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-[#0176D3] focus:ring-1 focus:ring-[#0176D3] outline-none" placeholder="e.g. Evergreen A" />
               </div>
-              <div>
-                 <label className="block text-xs font-bold text-slate-500 mb-1">Type</label>
-                 <select name="type" className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-[#0176D3] outline-none bg-white">
-                   <option>Full system</option>
-                   <option>Upgrade</option>
-                   <option>Replacement</option>
-                   <option>Spare Parts</option>
-                 </select>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                    <label className="block text-xs font-bold text-slate-500 mb-1">Type</label>
+                    <select name="type" className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-[#0176D3] outline-none bg-white">
+                    <option>Full system</option>
+                    <option>Upgrade</option>
+                    <option>Replacement</option>
+                    <option>Spare Parts</option>
+                    </select>
+                </div>
+                
+                {/* DYNAMIC KIT LIST FROM DB */}
+                <div>
+                    <label className="block text-xs font-bold text-slate-500 mb-1">Kit Preset</label>
+                    <select name="kit" className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-[#0176D3] outline-none bg-white" disabled={loadingKits}>
+                    <option value="">- Custom (Empty) -</option>
+                    {loadingKits ? <option>Loading...</option> : (
+                        kitOptions.map((kit) => (
+                            <option key={kit.id} value={kit.id}>{kit.name}</option>
+                        ))
+                    )}
+                    </select>
+                </div>
               </div>
               
               <div className="pt-4 flex justify-end gap-2 border-t border-slate-100 mt-4">
                 <button type="button" onClick={() => setShowCreateModal(false)} className="px-4 py-2 border border-slate-300 rounded text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-all">Cancel</button>
-                <button type="submit" className="px-4 py-2 bg-[#0176D3] text-white rounded text-sm font-semibold hover:bg-blue-700 shadow-sm transition-all">Save Order</button>
+                <button type="submit" className="px-4 py-2 bg-[#0176D3] text-white rounded text-sm font-semibold hover:bg-blue-700 shadow-sm transition-all">Save & Create</button>
               </div>
             </form>
           </div>
