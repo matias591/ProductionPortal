@@ -2,29 +2,43 @@ import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 
 export async function POST(request) {
+  // Initialize Supabase with Service Role (Admin rights)
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_ROLE_KEY // Use Service Role to ensure we can read/write everything
+    process.env.SUPABASE_SERVICE_ROLE_KEY 
   );
 
   try {
     const { orderId } = await request.json();
 
-    // 1. Gather all Data
+    // 1. Gather Order & Items
     const { data: order } = await supabase.from('orders').select('*').eq('id', orderId).single();
     const { data: items } = await supabase.from('order_items').select('*').eq('order_id', orderId);
+    
+    // 2. Gather Files AND Generate URLs
     const { data: files } = await supabase.from('order_files').select('*').eq('order_id', orderId);
 
-    // 2. Prepare Payload for n8n
+    const filesWithUrls = files.map(file => {
+        // Generate the direct download link
+        const { data } = supabase.storage
+            .from('order-attachments') // Make sure this matches your bucket name exactly
+            .getPublicUrl(file.file_path);
+        
+        return {
+            ...file,
+            download_url: data.publicUrl // <--- n8n will use this to grab the file
+        };
+    });
+
+    // 3. Prepare Payload
     const payload = {
       order: order,
       items: items,
-      files: files,
+      files: filesWithUrls, // Sending the list with URLs
       triggered_at: new Date().toISOString()
     };
 
-    // 3. Send to n8n Webhook
-    // We utilize the env variable here
+    // 4. Send to n8n
     const webhookUrl = process.env.N8N_WEBHOOK_URL;
     
     if (webhookUrl) {
@@ -39,7 +53,7 @@ export async function POST(request) {
         }
     }
 
-    // 4. Update Status to 'Shipped' in Database
+    // 5. Update Status to 'Shipped' (Locking it)
     const { error: updateError } = await supabase
         .from('orders')
         .update({ status: 'Shipped' })
