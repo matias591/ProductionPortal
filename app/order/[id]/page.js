@@ -2,7 +2,7 @@
 import { useState, useEffect, use } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Plus, Trash2, Box, Calendar, Ship, Upload, FileText, Paperclip, Lock } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Box, Calendar, Ship, Upload, FileText, Paperclip, Lock, AlertTriangle } from 'lucide-react';
 
 export default function OrderDetails({ params }) {
   const unwrappedParams = use(params);
@@ -15,10 +15,11 @@ export default function OrderDetails({ params }) {
   const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Admin/File State
+  // UI State
   const [isAdmin, setIsAdmin] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [shipping, setShipping] = useState(false); // New state for loading spinner
+  const [shipping, setShipping] = useState(false); 
+  const [showShipModal, setShowShipModal] = useState(false); // <--- New Modal State
 
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -30,14 +31,12 @@ export default function OrderDetails({ params }) {
   }, []);
 
   async function fetchData() {
-    // 1. Get User Session & Role
     const { data: { session } } = await supabase.auth.getSession();
     if (session) {
        const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).single();
        if (profile?.role === 'admin') setIsAdmin(true);
     }
 
-    // 2. Fetch Data
     const { data: orderData } = await supabase.from('orders').select('*').eq('id', orderId).single();
     const { data: itemData } = await supabase.from('order_items').select('*').eq('order_id', orderId).order('created_at', { ascending: true });
     const { data: fileData } = await supabase.from('order_files').select('*').eq('order_id', orderId).order('created_at', { ascending: false });
@@ -49,39 +48,45 @@ export default function OrderDetails({ params }) {
   }
 
   // --- LOGIC: LOCKING ---
-  // Locked if Status is 'Shipped' AND User is NOT Admin
   const isLocked = order?.status === 'Shipped' && !isAdmin;
 
   // --- ORDER LOGIC ---
   async function updateOrder(field, value) {
-    if (isLocked) return; // Prevent edits
+    if (isLocked) return;
 
-    // SPECIAL HANDLING FOR "SHIPPED"
+    // INTERCEPT "SHIPPED" SELECTION
     if (field === 'status' && value === 'Shipped') {
-        const confirmShip = confirm("Marking as Shipped will lock this order and send data to the system. Continue?");
-        if (!confirmShip) return;
+        setShowShipModal(true); // Open the custom modal instead of freezing browser
+        return; 
+    }
 
-        setShipping(true);
-        // Call our new API Route
+    // Normal Update
+    setOrder({ ...order, [field]: value });
+    await supabase.from('orders').update({ [field]: value }).eq('id', orderId);
+  }
+
+  // NEW FUNCTION: Handle the API call when user clicks "Confirm" in modal
+  async function confirmShipping() {
+    setShipping(true);
+    try {
         const res = await fetch('/api/trigger-shipping', {
             method: 'POST',
             body: JSON.stringify({ orderId: orderId })
         });
         
         const json = await res.json();
-        setShipping(false);
-
+        
         if (json.error) {
-            alert("Error sending to n8n: " + json.error);
-            return; 
+            alert("System Error: " + json.error);
+        } else {
+            // Success: Update local state to Shipped
+            setOrder({ ...order, status: 'Shipped' });
+            setShowShipModal(false); // Close modal
         }
-        // If success, update local state
-        setOrder({ ...order, status: 'Shipped' });
-    } else {
-        // Normal Update
-        setOrder({ ...order, [field]: value });
-        await supabase.from('orders').update({ [field]: value }).eq('id', orderId);
+    } catch (e) {
+        alert("Network Error: " + e.message);
     }
+    setShipping(false);
   }
 
   // --- ITEM LOGIC ---
@@ -101,7 +106,7 @@ export default function OrderDetails({ params }) {
 
   async function deleteItem(itemId) {
     if (isLocked) return;
-    if(!confirm('Remove this item?')) return;
+    if(!confirm('Remove this item?')) return; // Simple confirm is fine for delete, usually
     setItems(items.filter(i => i.id !== itemId));
     await supabase.from('order_items').delete().eq('id', itemId);
   }
@@ -175,22 +180,20 @@ export default function OrderDetails({ params }) {
             {/* Status Dropdown */}
             <div className="flex flex-col items-end">
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Status</label>
-                {shipping ? (
-                    <div className="text-sm font-bold text-[#0176D3] animate-pulse">Processing Ship...</div>
-                ) : (
-                    <select 
-                    value={order.status || 'New'} 
-                    onChange={(e) => updateOrder('status', e.target.value)}
-                    disabled={isLocked && !isAdmin} // Disable if locked (unless admin)
-                    className={`bg-white border border-slate-300 text-slate-900 text-sm font-bold rounded-md shadow-sm focus:ring-2 focus:ring-[#0176D3] block w-44 p-2 cursor-pointer outline-none transition-all
-                        ${isLocked ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`}
-                    >
-                    <option value="New">New</option>
-                    <option value="In preparation">In preparation</option>
-                    <option value="Ready for Pickup">Ready for Pickup</option>
-                    <option value="Shipped">Shipped (Lock & Send)</option>
-                    </select>
-                )}
+                
+                <select 
+                value={order.status || 'New'} 
+                onChange={(e) => updateOrder('status', e.target.value)}
+                disabled={isLocked && !isAdmin} 
+                className={`bg-white border border-slate-300 text-slate-900 text-sm font-bold rounded-md shadow-sm focus:ring-2 focus:ring-[#0176D3] block w-44 p-2 cursor-pointer outline-none transition-all
+                    ${isLocked ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`}
+                >
+                <option value="New">New</option>
+                <option value="In preparation">In preparation</option>
+                <option value="Ready for Pickup">Ready for Pickup</option>
+                <option value="Shipped">Shipped (Lock & Send)</option>
+                </select>
+                
             </div>
           </div>
         </div>
@@ -200,7 +203,6 @@ export default function OrderDetails({ params }) {
         
         {/* Left Column: Details & Files */}
         <div className="lg:col-span-1 space-y-6">
-            {/* Order Details Card */}
             <div className="bg-white border border-slate-200 rounded-lg shadow-sm">
                 <div className="px-5 py-3 border-b border-slate-100 bg-slate-50/50">
                     <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wide">Order Details</h3>
@@ -247,7 +249,6 @@ export default function OrderDetails({ params }) {
                 </div>
             </div>
 
-            {/* Attachments Card */}
             <div className="bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden">
                 <div className="px-5 py-3 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
                     <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wide flex items-center gap-2">
@@ -376,6 +377,46 @@ export default function OrderDetails({ params }) {
             </div>
         </div>
       </main>
+
+      {/* --- SHIPPING MODAL (Replaces Browser Confirm) --- */}
+      {showShipModal && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-sm w-full p-6 animate-in fade-in zoom-in duration-200 border border-slate-200">
+            <div className="flex flex-col items-center text-center">
+              <div className="w-12 h-12 bg-blue-100 text-[#0176D3] rounded-full flex items-center justify-center mb-4">
+                <Ship size={24} />
+              </div>
+              <h3 className="text-lg font-bold text-slate-900">Confirm Shipment?</h3>
+              <p className="text-sm text-slate-500 mt-2 mb-6 leading-relaxed">
+                This will <strong className="text-slate-800">lock the order</strong> and send all data to the external system.
+                <br/><span className="text-xs text-red-500 mt-1 block"> This action cannot be undone by vendors.</span>
+              </p>
+              
+              <div className="flex gap-3 w-full">
+                <button 
+                  onClick={() => setShowShipModal(false)}
+                  disabled={shipping}
+                  className="flex-1 px-4 py-2.5 border border-slate-300 rounded-lg text-sm font-bold text-slate-700 hover:bg-slate-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={confirmShipping}
+                  disabled={shipping}
+                  className="flex-1 px-4 py-2.5 bg-[#0176D3] text-white rounded-lg text-sm font-bold hover:bg-blue-700 shadow-sm transition-colors flex items-center justify-center gap-2"
+                >
+                  {shipping ? (
+                    <>Processing...</>
+                  ) : (
+                    <>Confirm & Ship</>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
