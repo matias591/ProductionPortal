@@ -2,8 +2,8 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { useRouter } from 'next/navigation';
-import { RefreshCw, Plus, Search, Ship, ChevronRight, Filter, LayoutGrid } from 'lucide-react';
-import Sidebar from './components/Sidebar'; // <--- Import the Sidebar
+import { RefreshCw, Plus, Search, Ship, ChevronRight, Filter, LayoutGrid, Package } from 'lucide-react';
+import Sidebar from './components/Sidebar';
 
 export default function Dashboard() {
   const [orders, setOrders] = useState([]);
@@ -13,6 +13,7 @@ export default function Dashboard() {
   
   const [kitOptions, setKitOptions] = useState([]);
   const [loadingKits, setLoadingKits] = useState(true);
+  const [userEmail, setUserEmail] = useState('');
   const [isAdmin, setIsAdmin] = useState(false);
   
   const router = useRouter();
@@ -39,6 +40,7 @@ export default function Dashboard() {
     if (!session) {
       router.push('/login');
     } else {
+      setUserEmail(session.user.email);
       const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).single();
       if (profile?.role === 'admin') setIsAdmin(true);
     }
@@ -59,29 +61,31 @@ export default function Dashboard() {
     const newOrder = {
       vessel: formData.get('vessel') || 'Unknown Vessel',
       type: formData.get('type'),
-      kit: selectedKitName,
+      kit: selectedKitId ? selectedKitName : 'Custom', 
       status: 'New'
     };
 
     const { data: orderData, error } = await supabase.from('orders').insert([newOrder]).select().single();
-    
     if (error) { alert("Error: " + error.message); return; }
 
     if (selectedKitId) {
         const { data: templateItems } = await supabase.from('kit_items').select('*').eq('kit_id', selectedKitId);
         if (templateItems && templateItems.length > 0) {
-            const itemsToInsert = templateItems.map(item => ({
-                order_id: orderData.id,
-                piece: item.piece,
-                quantity: item.quantity,
-                serial: '',
-                is_done: false
-            }));
+            const { data: masterList } = await supabase.from('items').select('id, price');
+            const itemsToInsert = templateItems.map(item => {
+                const masterPrice = masterList?.find(m => m.id === item.item_id)?.price || 0;
+                return { order_id: orderData.id, piece: item.piece, quantity: item.quantity, serial: '', is_done: false, price: masterPrice };
+            });
             await supabase.from('order_items').insert(itemsToInsert);
         }
     }
     setShowCreateModal(false);
     fetchOrders();
+  }
+
+  async function handleLogout() {
+    await supabase.auth.signOut();
+    router.push('/login');
   }
 
   const filteredOrders = orders.filter(o => 
@@ -93,6 +97,7 @@ export default function Dashboard() {
     switch(status) {
       case 'New': return 'bg-blue-100 text-blue-700 border-blue-200';
       case 'In preparation': return 'bg-purple-100 text-purple-700 border-purple-200';
+      case 'In Box': return 'bg-orange-100 text-orange-700 border-orange-200'; // NEW COLOR
       case 'Shipped': return 'bg-green-100 text-green-700 border-green-200';
       default: return 'bg-gray-100 text-gray-700 border-gray-200';
     }
@@ -100,11 +105,7 @@ export default function Dashboard() {
 
   return (
     <div className="flex min-h-screen bg-[#F3F4F6] font-sans">
-      
-      {/* 1. Add The Sidebar */}
       <Sidebar />
-
-      {/* 2. Main Content (Pushed 64 units to right) */}
       <main className="flex-1 ml-64 p-8">
         
         <div className="flex flex-col md:flex-row justify-between items-end mb-6 gap-4">
@@ -112,17 +113,13 @@ export default function Dashboard() {
             <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Orders</h1>
             <p className="text-slate-500 mt-1 text-sm">{orders.length} items • Sorted by Date</p>
           </div>
-          
           <div className="flex gap-3">
             {isAdmin && (
               <>
                 <button className="px-4 py-2 bg-white border border-slate-300 text-slate-700 text-sm font-semibold rounded-md hover:bg-slate-50 shadow-sm flex items-center gap-2 transition-all">
                   <RefreshCw size={14} /> Sync
                 </button>
-                <button 
-                  onClick={() => setShowCreateModal(true)}
-                  className="px-4 py-2 bg-[#0176D3] text-white text-sm font-semibold rounded-md hover:bg-blue-700 shadow-md shadow-blue-200 flex items-center gap-2 transition-all"
-                >
+                <button onClick={() => setShowCreateModal(true)} className="px-4 py-2 bg-[#0176D3] text-white text-sm font-semibold rounded-md hover:bg-blue-700 shadow-md shadow-blue-200 flex items-center gap-2 transition-all">
                   <Plus size={16} /> New Order
                 </button>
               </>
@@ -133,13 +130,7 @@ export default function Dashboard() {
         <div className="bg-white p-3 rounded-t-lg border border-slate-200 border-b-0 flex justify-between items-center">
           <div className="relative max-w-md w-full">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-            <input 
-              type="text" 
-              placeholder="Search by ID or Vessel..." 
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 bg-white border border-slate-300 rounded-md text-sm focus:ring-2 focus:ring-[#0176D3] focus:border-transparent outline-none transition-all"
-            />
+            <input type="text" placeholder="Search by ID or Vessel..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-9 pr-4 py-2 bg-white border border-slate-300 rounded-md text-sm focus:ring-2 focus:ring-[#0176D3] focus:border-transparent outline-none transition-all" />
           </div>
           <div className="flex gap-2">
             <button className="p-2 text-slate-600 hover:bg-slate-100 rounded border border-slate-200"><Filter size={16}/></button>
@@ -162,44 +153,29 @@ export default function Dashboard() {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {filteredOrders.map((order) => (
-                <tr 
-                  key={order.id} 
-                  onClick={() => router.push(`/order/${order.id}`)}
-                  className="hover:bg-blue-50/50 cursor-pointer transition-colors group"
-                >
-                  <td className="px-6 py-4 font-semibold text-[#0176D3] hover:underline">
-                    {order.order_number}
-                  </td>
+                <tr key={order.id} onClick={() => router.push(`/order/${order.id}`)} className="hover:bg-blue-50/50 cursor-pointer transition-colors group">
+                  <td className="px-6 py-4 font-semibold text-[#0176D3] hover:underline">{order.order_number}</td>
                   <td className="px-6 py-4 text-sm text-slate-700 font-medium">
-                    <div className="flex items-center gap-2">
-                       {order.vessel ? <Ship size={14} className="text-slate-400"/> : null}
-                       {order.vessel || <span className="text-slate-400 italic">No Vessel Name</span>}
-                    </div>
+                    <div className="flex items-center gap-2">{order.vessel ? <Ship size={14} className="text-slate-400"/> : null}{order.vessel || <span className="text-slate-400 italic">No Vessel Name</span>}</div>
                   </td>
                   <td className="px-6 py-4 text-sm text-slate-600">{order.type}</td>
                   <td className="px-6 py-4 text-sm text-slate-600 font-medium">{order.kit || '-'}</td>
                    <td className="px-6 py-4 text-sm text-slate-600">{order.pickup_date || '-'}</td>
                   <td className="px-6 py-4">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded text-xs font-bold border ${getStatusColor(order.status)}`}>
-                      {order.status}
-                    </span>
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded text-xs font-bold border ${getStatusColor(order.status)}`}>{order.status}</span>
                   </td>
                   <td className="px-6 py-4 text-right">
-                    <span className="text-slate-400 text-xs group-hover:text-[#0176D3] font-bold uppercase flex items-center justify-end gap-1">
-                        View <ChevronRight size={14}/>
-                    </span>
+                    <span className="text-slate-400 text-xs group-hover:text-[#0176D3] font-bold uppercase flex items-center justify-end gap-1">View <ChevronRight size={14}/></span>
                   </td>
                 </tr>
               ))}
-              {filteredOrders.length === 0 && (
-                <tr><td colSpan={7} className="p-10 text-center text-slate-400">No orders found.</td></tr>
-              )}
+              {filteredOrders.length === 0 && (<tr><td colSpan={7} className="p-10 text-center text-slate-400">No orders found.</td></tr>)}
             </tbody>
           </table>
         </div>
       </main>
 
-      {/* Modal - Same as before */}
+      {/* Modal code remains the same */}
       {showCreateModal && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-lg shadow-2xl max-w-lg w-full overflow-hidden border border-slate-200 animate-in fade-in zoom-in duration-200">

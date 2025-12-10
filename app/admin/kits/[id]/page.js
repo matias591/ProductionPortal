@@ -8,7 +8,9 @@ export default function KitDetails({ params }) {
   const unwrappedParams = use(params);
   const kitId = unwrappedParams.id;
   const router = useRouter();
+  
   const [items, setItems] = useState([]);
+  const [masterItems, setMasterItems] = useState([]); // <--- Master List
   const [kitName, setKitName] = useState('');
 
   const supabase = createClient(
@@ -21,22 +23,45 @@ export default function KitDetails({ params }) {
   }, []);
 
   async function fetchData() {
+    // Fetch Kit & Items
     const { data: kit } = await supabase.from('kits').select('name').eq('id', kitId).single();
-    const { data: kitItems } = await supabase.from('kit_items').select('*').eq('kit_id', kitId).order('created_at', { ascending: true });
+    const { data: kitItems } = await supabase.from('kit_items').select('*').eq('kit_id', kitId).order('created_at');
+    
+    // Fetch Master Items List
+    const { data: allItems } = await supabase.from('items').select('*').order('name');
+    
     if (kit) setKitName(kit.name);
     setItems(kitItems || []);
+    setMasterItems(allItems || []);
   }
 
   async function addItem() {
-    const newItem = { kit_id: kitId, piece: '', quantity: 1 };
+    // Default to first master item or placeholder
+    const firstMaster = masterItems[0];
+    if (!firstMaster) return alert("Please create Master Items first!");
+
+    const newItem = { 
+        kit_id: kitId, 
+        piece: firstMaster.name, // Fallback name
+        item_id: firstMaster.id, // <--- Link to Master
+        quantity: 1 
+    };
     const { data } = await supabase.from('kit_items').insert([newItem]).select().single();
     if(data) setItems([...items, data]);
   }
 
   async function updateItem(id, field, value) {
-    const newItems = items.map(i => i.id === id ? { ...i, [field]: value } : i);
+    let updateData = { [field]: value };
+
+    // If changing the Item selection, update both name and item_id
+    if (field === 'item_id') {
+        const selectedMaster = masterItems.find(m => m.id === value);
+        updateData = { item_id: value, piece: selectedMaster.name };
+    }
+
+    const newItems = items.map(i => i.id === id ? { ...i, ...updateData } : i);
     setItems(newItems);
-    await supabase.from('kit_items').update({ [field]: value }).eq('id', id);
+    await supabase.from('kit_items').update(updateData).eq('id', id);
   }
 
   async function deleteItem(id) {
@@ -63,21 +88,27 @@ export default function KitDetails({ params }) {
 
             <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
                 <div className="px-6 py-3 bg-slate-50 border-b border-slate-200 flex justify-between">
-                    <span className="text-xs font-bold text-slate-500 uppercase">Item Name</span>
+                    <span className="text-xs font-bold text-slate-500 uppercase">Item Selection</span>
                     <span className="text-xs font-bold text-slate-500 uppercase mr-12">Qty</span>
                 </div>
                 <div className="divide-y divide-slate-100">
                     {items.map(item => (
-                        <div key={item.id} className="flex items-center px-6 py-3 hover:bg-slate-50 group">
-                            <input 
-                                className="flex-1 bg-transparent border border-transparent hover:border-slate-300 rounded px-2 py-1 outline-none focus:border-[#0176D3]"
-                                value={item.piece || ''}
-                                onChange={(e) => updateItem(item.id, 'piece', e.target.value)}
-                                placeholder="Item Name"
-                            />
+                        <div key={item.id} className="flex items-center px-6 py-3 hover:bg-slate-50 group gap-4">
+                            
+                            {/* Dropdown for Items */}
+                            <select 
+                                className="flex-1 bg-transparent border border-transparent hover:border-slate-300 rounded px-2 py-1 outline-none focus:border-[#0176D3] text-sm"
+                                value={item.item_id || ''}
+                                onChange={(e) => updateItem(item.id, 'item_id', e.target.value)}
+                            >
+                                {masterItems.map(m => (
+                                    <option key={m.id} value={m.id}>{m.sku} - {m.name}</option>
+                                ))}
+                            </select>
+
                             <input 
                                 type="number"
-                                className="w-20 mx-4 bg-transparent border border-transparent hover:border-slate-300 rounded px-2 py-1 outline-none focus:border-[#0176D3]"
+                                className="w-20 bg-transparent border border-transparent hover:border-slate-300 rounded px-2 py-1 outline-none focus:border-[#0176D3] text-sm"
                                 value={item.quantity || 1}
                                 onChange={(e) => updateItem(item.id, 'quantity', e.target.value)}
                             />

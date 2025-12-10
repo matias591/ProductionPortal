@@ -2,24 +2,24 @@
 import { useState, useEffect, use } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Plus, Trash2, Box, Calendar, Ship, Upload, FileText, Paperclip, Lock, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Box, Calendar, Ship, Upload, FileText, Paperclip, Lock, Download } from 'lucide-react';
+import * as XLSX from 'xlsx';
 
 export default function OrderDetails({ params }) {
   const unwrappedParams = use(params);
   const orderId = unwrappedParams.id;
   const router = useRouter();
 
-  // Data State
   const [items, setItems] = useState([]);
   const [order, setOrder] = useState(null);
   const [files, setFiles] = useState([]);
+  const [masterItems, setMasterItems] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // UI State
   const [isAdmin, setIsAdmin] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [shipping, setShipping] = useState(false); 
-  const [showShipModal, setShowShipModal] = useState(false); // <--- New Modal State
+  const [showShipModal, setShowShipModal] = useState(false);
 
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -40,103 +40,102 @@ export default function OrderDetails({ params }) {
     const { data: orderData } = await supabase.from('orders').select('*').eq('id', orderId).single();
     const { data: itemData } = await supabase.from('order_items').select('*').eq('order_id', orderId).order('created_at', { ascending: true });
     const { data: fileData } = await supabase.from('order_files').select('*').eq('order_id', orderId).order('created_at', { ascending: false });
+    
+    const { data: allItems } = await supabase.from('items').select('*').order('name');
 
     setOrder(orderData);
     setItems(itemData || []);
     setFiles(fileData || []);
+    setMasterItems(allItems || []);
     setLoading(false);
   }
 
-  // --- LOGIC: LOCKING ---
+  // --- ORDER LOGIC ---
   const isLocked = order?.status === 'Shipped' && !isAdmin;
 
-  // --- ORDER LOGIC ---
   async function updateOrder(field, value) {
     if (isLocked) return;
 
-    // INTERCEPT "SHIPPED" SELECTION
+    // 1. INTERCEPT "SHIPPED" SELECTION
     if (field === 'status' && value === 'Shipped') {
-        setShowShipModal(true); // Open the custom modal instead of freezing browser
+        // 2. VALIDATION: CHECK VESSEL NAME
+        if (!order.vessel || order.vessel.trim() === '' || order.vessel === 'Unknown Vessel') {
+            alert("⚠️ Cannot Ship: Vessel Name is required.\nPlease enter a valid vessel name before shipping.");
+            return; // Stop. Do not save. Do not open modal.
+        }
+
+        setShowShipModal(true); 
         return; 
     }
 
-    // Normal Update
     setOrder({ ...order, [field]: value });
     await supabase.from('orders').update({ [field]: value }).eq('id', orderId);
   }
 
-  // NEW FUNCTION: Handle the API call when user clicks "Confirm" in modal
   async function confirmShipping() {
     setShipping(true);
     try {
-        const res = await fetch('/api/trigger-shipping', {
-            method: 'POST',
-            body: JSON.stringify({ orderId: orderId })
-        });
-        
+        const res = await fetch('/api/trigger-shipping', { method: 'POST', body: JSON.stringify({ orderId: orderId }) });
         const json = await res.json();
-        
-        if (json.error) {
-            alert("System Error: " + json.error);
-        } else {
-            // Success: Update local state to Shipped
-            setOrder({ ...order, status: 'Shipped' });
-            setShowShipModal(false); // Close modal
-        }
-    } catch (e) {
-        alert("Network Error: " + e.message);
-    }
+        if (json.error) alert("Error: " + json.error);
+        else { setOrder({ ...order, status: 'Shipped' }); setShowShipModal(false); }
+    } catch (e) { alert(e.message); }
     setShipping(false);
   }
 
-  // --- ITEM LOGIC ---
+  // ... (Export, Item, File Logic remains the same) ...
+  const totalCost = items.reduce((sum, item) => sum + ((item.quantity || 0) * (item.price || 0)), 0);
+
+  function exportToExcel() {
+    const dataToExport = items.map(item => ({
+        "Order #": order.order_number, "Vessel": order.vessel, "Item Name": item.piece,
+        "SKU": masterItems.find(m => m.name === item.piece)?.sku || '-', "Quantity": item.quantity,
+        ...(isAdmin ? { "Unit Price": item.price, "Total Price": item.price * item.quantity } : {})
+    }));
+    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Order Details");
+    XLSX.writeFile(workbook, `Order_${order.order_number}.xlsx`);
+  }
+
   async function updateItem(itemId, field, value) {
     if (isLocked) return;
-    const newItems = items.map(i => i.id === itemId ? { ...i, [field]: value } : i);
+    let updateData = { [field]: value };
+    if (field === 'piece') {
+        const selectedMaster = masterItems.find(m => m.name === value);
+        if (selectedMaster) updateData.price = selectedMaster.price;
+    }
+    const newItems = items.map(i => i.id === itemId ? { ...i, ...updateData } : i);
     setItems(newItems);
-    await supabase.from('order_items').update({ [field]: value }).eq('id', itemId);
+    await supabase.from('order_items').update(updateData).eq('id', itemId);
   }
 
   async function addItem() {
     if (isLocked) return;
-    const newItem = { order_id: orderId, piece: '', quantity: 1, serial: '', is_done: false };
+    const firstMaster = masterItems[0];
+    const newItem = { order_id: orderId, piece: firstMaster ? firstMaster.name : 'New Item', quantity: 1, serial: '', price: firstMaster ? firstMaster.price : 0, is_done: false };
     const { data } = await supabase.from('order_items').insert([newItem]).select().single();
     if(data) setItems([...items, data]);
   }
 
   async function deleteItem(itemId) {
     if (isLocked) return;
-    if(!confirm('Remove this item?')) return; // Simple confirm is fine for delete, usually
+    if(!confirm('Remove this item?')) return;
     setItems(items.filter(i => i.id !== itemId));
     await supabase.from('order_items').delete().eq('id', itemId);
   }
 
-  // --- FILE LOGIC ---
   async function handleFileUpload(e) {
     if (isLocked) return;
     if (!e.target.files || e.target.files.length === 0) return;
     setUploading(true);
-    
     const file = e.target.files[0];
     const fileExt = file.name.split('.').pop();
     const fileName = `${Date.now()}_${Math.floor(Math.random()*1000)}.${fileExt}`;
     const filePath = `${orderId}/${fileName}`;
-
     const { error: uploadError } = await supabase.storage.from('order-attachments').upload(filePath, file);
-
-    if (uploadError) {
-        alert("Upload failed: " + uploadError.message);
-        setUploading(false);
-        return;
-    }
-
-    const { data: fileRecord } = await supabase.from('order_files').insert([{
-        order_id: orderId,
-        file_name: file.name,
-        file_path: filePath,
-        uploaded_by: isAdmin ? 'Admin' : 'Vendor' 
-    }]).select().single();
-
+    if (uploadError) { alert(uploadError.message); setUploading(false); return; }
+    const { data: fileRecord } = await supabase.from('order_files').insert([{ order_id: orderId, file_name: file.name, file_path: filePath, uploaded_by: isAdmin ? 'Admin' : 'Vendor' }]).select().single();
     if (fileRecord) setFiles([fileRecord, ...files]);
     setUploading(false);
   }
@@ -146,12 +145,12 @@ export default function OrderDetails({ params }) {
     if (data?.publicUrl) window.open(data.publicUrl, '_blank');
   }
 
-  if (loading) return <div className="p-10 text-center text-slate-500 font-sans">Loading Order...</div>;
+  if (loading) return <div className="p-10 text-center text-slate-500 font-sans">Loading...</div>;
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans pb-20">
       
-      {/* Header Panel */}
+      {/* Header */}
       <div className="bg-white border-b border-slate-200 shadow-sm sticky top-0 z-10">
         <div className="max-w-[1600px] mx-auto px-6 py-4">
           <button onClick={() => router.push('/')} className="text-xs font-bold text-[#0176D3] hover:underline mb-3 flex items-center gap-1 uppercase tracking-wide">
@@ -169,31 +168,32 @@ export default function OrderDetails({ params }) {
                     {isLocked && <Lock size={18} className="text-red-500" title="Order Locked" />}
                  </div>
                  <div className="flex items-center gap-3 text-sm text-slate-500 mt-1">
-                    <span className="font-mono bg-slate-100 px-2 py-0.5 rounded text-xs border border-slate-200 text-slate-600">
-                        #{order.order_number}
-                    </span>
+                    <span className="font-mono bg-slate-100 px-2 py-0.5 rounded text-xs border border-slate-200 text-slate-600">#{order.order_number}</span>
                     <span>Created: {new Date(order.created_at).toLocaleDateString()}</span>
                  </div>
                </div>
             </div>
 
-            {/* Status Dropdown */}
-            <div className="flex flex-col items-end">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Status</label>
-                
-                <select 
-                value={order.status || 'New'} 
-                onChange={(e) => updateOrder('status', e.target.value)}
-                disabled={isLocked && !isAdmin} 
-                className={`bg-white border border-slate-300 text-slate-900 text-sm font-bold rounded-md shadow-sm focus:ring-2 focus:ring-[#0176D3] block w-44 p-2 cursor-pointer outline-none transition-all
-                    ${isLocked ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`}
-                >
-                <option value="New">New</option>
-                <option value="In preparation">In preparation</option>
-                <option value="Ready for Pickup">Ready for Pickup</option>
-                <option value="Shipped">Shipped (Lock & Send)</option>
-                </select>
-                
+            <div className="flex items-end gap-3">
+                <button onClick={exportToExcel} className="bg-white border border-slate-300 text-slate-700 font-bold px-3 py-2 rounded-md text-sm shadow-sm hover:bg-slate-50 flex items-center gap-2">
+                    <Download size={16}/> Export Excel
+                </button>
+
+                <div className="flex flex-col items-end">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Status</label>
+                    <select 
+                    value={order.status || 'New'} 
+                    onChange={(e) => updateOrder('status', e.target.value)}
+                    disabled={isLocked && !isAdmin} 
+                    className={`bg-white border border-slate-300 text-slate-900 text-sm font-bold rounded-md shadow-sm focus:ring-2 focus:ring-[#0176D3] block w-44 p-2 outline-none ${isLocked ? 'bg-gray-100 text-gray-500' : ''}`}
+                    >
+                    <option value="New">New</option>
+                    <option value="In preparation">In preparation</option>
+                    <option value="In Box">In Box</option> {/* NEW STATUS */}
+                    <option value="Ready for Pickup">Ready for Pickup</option>
+                    <option value="Shipped">Shipped</option>
+                    </select>
+                </div>
             </div>
           </div>
         </div>
@@ -201,7 +201,7 @@ export default function OrderDetails({ params }) {
 
       <main className="max-w-[1600px] mx-auto px-6 py-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
         
-        {/* Left Column: Details & Files */}
+        {/* Left Column */}
         <div className="lg:col-span-1 space-y-6">
             <div className="bg-white border border-slate-200 rounded-lg shadow-sm">
                 <div className="px-5 py-3 border-b border-slate-100 bg-slate-50/50">
@@ -209,41 +209,17 @@ export default function OrderDetails({ params }) {
                 </div>
                 <div className="p-5 space-y-5">
                     <div>
-                        <label className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase mb-1.5">
-                            <Ship size={14} /> Vessel Name
-                        </label>
-                        <input 
-                        className="w-full text-sm font-medium border border-slate-200 rounded px-3 py-2 focus:border-[#0176D3] focus:ring-1 focus:ring-[#0176D3] outline-none text-slate-900"
-                        placeholder="Optional"
-                        value={order.vessel || ''} 
-                        disabled={isLocked}
-                        onChange={(e) => updateOrder('vessel', e.target.value)}
-                        />
+                        <label className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase mb-1.5"><Ship size={14} /> Vessel Name <span className="text-red-500">*</span></label>
+                        <input className="w-full text-sm font-medium border border-slate-200 rounded px-3 py-2 focus:border-[#0176D3] outline-none text-slate-900" placeholder="Required for Shipping" value={order.vessel || ''} disabled={isLocked} onChange={(e) => updateOrder('vessel', e.target.value)} />
                     </div>
                     <div>
-                        <label className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase mb-1.5">
-                            <Calendar size={14} /> Pickup Date
-                        </label>
-                        <input 
-                        type="date"
-                        className="w-full text-sm font-medium border border-slate-200 rounded px-3 py-2 focus:border-[#0176D3] focus:ring-1 focus:ring-[#0176D3] outline-none text-slate-700"
-                        value={order.pickup_date || ''} 
-                        disabled={isLocked}
-                        onChange={(e) => updateOrder('pickup_date', e.target.value)}
-                        />
+                        <label className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase mb-1.5"><Calendar size={14} /> Pickup Date</label>
+                        <input type="date" className="w-full text-sm font-medium border border-slate-200 rounded px-3 py-2 focus:border-[#0176D3] outline-none text-slate-700" value={order.pickup_date || ''} disabled={isLocked} onChange={(e) => updateOrder('pickup_date', e.target.value)} />
                     </div>
                     <div>
                         <label className="block text-xs font-bold text-slate-400 uppercase mb-1.5">Kit Type</label>
-                        <select 
-                        className="w-full text-sm font-medium border border-slate-200 rounded px-3 py-2 focus:border-[#0176D3] outline-none bg-white" 
-                        value={order.type || ''} 
-                        disabled={isLocked}
-                        onChange={(e) => updateOrder('type', e.target.value)}
-                        >
-                        <option>Full system</option>
-                        <option>Upgrade</option>
-                        <option>Replacement</option>
-                        <option>Spare Parts</option>
+                        <select className="w-full text-sm font-medium border border-slate-200 rounded px-3 py-2 focus:border-[#0176D3] outline-none bg-white" value={order.type || ''} disabled={isLocked} onChange={(e) => updateOrder('type', e.target.value)} >
+                        <option>Full system</option><option>Upgrade</option><option>Replacement</option><option>Spare Parts</option>
                         </select>
                     </div>
                 </div>
@@ -251,30 +227,14 @@ export default function OrderDetails({ params }) {
 
             <div className="bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden">
                 <div className="px-5 py-3 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
-                    <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wide flex items-center gap-2">
-                        <Paperclip size={14}/> Attachments ({files.length})
-                    </h3>
-                    {isAdmin && !isLocked && (
-                        <label className="cursor-pointer text-xs font-bold text-[#0176D3] hover:underline flex items-center gap-1">
-                            {uploading ? 'Uploading...' : '+ Upload'}
-                            <input type="file" className="hidden" onChange={handleFileUpload} disabled={uploading || isLocked} />
-                        </label>
-                    )}
+                    <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wide flex items-center gap-2"><Paperclip size={14}/> Attachments ({files.length})</h3>
+                    {isAdmin && !isLocked && (<label className="cursor-pointer text-xs font-bold text-[#0176D3] hover:underline flex items-center gap-1">{uploading ? 'Uploading...' : '+ Upload'}<input type="file" className="hidden" onChange={handleFileUpload} disabled={uploading || isLocked} /></label>)}
                 </div>
                 <div className="divide-y divide-slate-50">
                     {files.map(file => (
-                        <div 
-                            key={file.id} 
-                            onClick={() => openFile(file.file_path)} 
-                            className="px-5 py-3 flex items-center gap-3 hover:bg-blue-50 cursor-pointer transition-colors group"
-                        >
-                            <div className="bg-blue-100 p-1.5 rounded text-blue-600">
-                                <FileText size={16}/>
-                            </div>
-                            <div className="overflow-hidden">
-                                <p className="text-sm font-medium text-slate-700 truncate group-hover:text-[#0176D3] group-hover:underline">{file.file_name}</p>
-                                <p className="text-[10px] text-slate-400">Uploaded by {file.uploaded_by}</p>
-                            </div>
+                        <div key={file.id} onClick={() => openFile(file.file_path)} className="px-5 py-3 flex items-center gap-3 hover:bg-blue-50 cursor-pointer transition-colors group">
+                            <div className="bg-blue-100 p-1.5 rounded text-blue-600"><FileText size={16}/></div>
+                            <div className="overflow-hidden"><p className="text-sm font-medium text-slate-700 truncate group-hover:text-[#0176D3] group-hover:underline">{file.file_name}</p><p className="text-[10px] text-slate-400">Uploaded by {file.uploaded_by}</p></div>
                         </div>
                     ))}
                     {files.length === 0 && <div className="p-6 text-center text-slate-400 text-xs italic">No files attached.</div>}
@@ -282,84 +242,53 @@ export default function OrderDetails({ params }) {
             </div>
         </div>
 
-        {/* Right Column: Line Items */}
+        {/* Right Column: Items */}
         <div className="lg:col-span-2">
            <div className="bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden">
                <div className="bg-slate-50 px-6 py-4 border-b border-slate-200 flex justify-between items-center">
                   <h3 className="font-bold text-sm text-slate-800 uppercase tracking-wide">Line Items</h3>
-                  <span className="bg-white border border-slate-200 text-slate-500 text-xs font-bold px-2 py-1 rounded">
-                    {items.length} Items
-                  </span>
+                  <div className="flex items-center gap-4">
+                      {isAdmin && (<div className="text-sm font-bold text-slate-700">Total: <span className="text-[#0176D3]">${totalCost.toFixed(2)}</span></div>)}
+                      <span className="bg-white border border-slate-200 text-slate-500 text-xs font-bold px-2 py-1 rounded">{items.length} Items</span>
+                  </div>
                </div>
                
                <table className="w-full text-left border-collapse">
                  <thead className="bg-white border-b border-slate-200 text-xs uppercase text-slate-400 font-bold">
                    <tr>
-                     <th className="px-6 py-3 w-16 text-center">Done</th>
-                     <th className="px-6 py-3">Item / Piece</th>
-                     <th className="px-6 py-3 w-24">Qty</th>
-                     <th className="px-6 py-3">Serial #</th>
-                     <th className="px-6 py-3">Orca ID</th>
-                     <th className="w-12"></th>
+                     <th className="px-6 py-3 w-10 text-center"></th>
+                     <th className="px-6 py-3">Item</th>
+                     <th className="px-6 py-3 w-20">Qty</th>
+                     <th className="px-6 py-3 w-32">Serial #</th>
+                     <th className="px-6 py-3 w-32">Orca ID</th>
+                     {isAdmin && <th className="px-6 py-3 w-24 text-right">Price</th>}
+                     <th className="w-10"></th>
                    </tr>
                  </thead>
                  <tbody className="divide-y divide-slate-50">
                    {items.map((item) => (
                      <tr key={item.id} className="group hover:bg-slate-50 transition-colors">
                         <td className="px-6 py-3 text-center">
-                           <input 
-                             type="checkbox"
-                             checked={item.is_done || false}
-                             onChange={(e) => updateItem(item.id, 'is_done', e.target.checked)}
-                             disabled={isLocked}
-                             className="w-5 h-5 rounded border-slate-300 text-[#0176D3] focus:ring-[#0176D3] accent-[#0176D3] cursor-pointer"
-                           />
+                           <input type="checkbox" checked={item.is_done || false} onChange={(e) => updateItem(item.id, 'is_done', e.target.checked)} disabled={isLocked} className="w-5 h-5 rounded border-slate-300 text-[#0176D3] focus:ring-[#0176D3] accent-[#0176D3] cursor-pointer" />
                         </td>
                         <td className="px-6 py-3">
-                           <input 
-                             className="w-full bg-transparent border border-transparent hover:border-slate-300 focus:bg-white focus:border-[#0176D3] rounded px-2 py-1.5 text-sm font-medium text-slate-900 outline-none transition-all placeholder-slate-300"
-                             value={item.piece || ''}
-                             disabled={isLocked}
-                             onChange={(e) => updateItem(item.id, 'piece', e.target.value)}
-                             placeholder="Item Name"
-                           />
+                           <select className="w-full bg-transparent border-none outline-none focus:ring-0 text-sm font-medium text-slate-900" value={item.piece || ''} disabled={isLocked} onChange={(e) => updateItem(item.id, 'piece', e.target.value)}>
+                                <option value="">Select Item...</option>
+                                {masterItems.map(m => <option key={m.id} value={m.name}>{m.sku} - {m.name}</option>)}
+                           </select>
                         </td>
                         <td className="px-6 py-3">
-                           <input 
-                             type="number"
-                             className="w-full bg-transparent border border-transparent hover:border-slate-300 focus:bg-white focus:border-[#0176D3] rounded px-2 py-1.5 text-sm outline-none transition-all"
-                             value={item.quantity || 1}
-                             disabled={isLocked}
-                             onChange={(e) => updateItem(item.id, 'quantity', e.target.value)}
-                           />
+                           <input type="number" className="w-full bg-transparent border-none outline-none" value={item.quantity || 1} disabled={isLocked} onChange={(e) => updateItem(item.id, 'quantity', e.target.value)} />
                         </td>
                         <td className="px-6 py-3">
-                           <input 
-                             className="w-full bg-transparent border border-transparent hover:border-slate-300 focus:bg-white focus:border-[#0176D3] rounded px-2 py-1.5 text-sm font-medium text-[#0176D3] outline-none transition-all placeholder-slate-300"
-                             value={item.serial || ''}
-                             disabled={isLocked}
-                             onChange={(e) => updateItem(item.id, 'serial', e.target.value)}
-                             placeholder="---"
-                           />
+                           <input className="w-full bg-transparent border-none outline-none text-[#0176D3] font-medium placeholder-slate-300" value={item.serial || ''} disabled={isLocked} onChange={(e) => updateItem(item.id, 'serial', e.target.value)} placeholder="---" />
                         </td>
                         <td className="px-6 py-3">
-                           <input 
-                             className="w-full bg-transparent border border-transparent hover:border-slate-300 focus:bg-white focus:border-[#0176D3] rounded px-2 py-1.5 text-sm text-slate-600 outline-none transition-all placeholder-slate-300"
-                             value={item.orca_id || ''}
-                             disabled={isLocked}
-                             onChange={(e) => updateItem(item.id, 'orca_id', e.target.value)}
-                             placeholder="---"
-                           />
+                           <input className="w-full bg-transparent border-none outline-none text-slate-600 placeholder-slate-300" value={item.orca_id || ''} disabled={isLocked} onChange={(e) => updateItem(item.id, 'orca_id', e.target.value)} placeholder="---" />
                         </td>
+                        {isAdmin && (<td className="px-6 py-3 text-right text-xs font-mono text-slate-600">${(item.price * item.quantity).toFixed(2)}</td>)}
                         <td className="px-4 py-3 text-right">
-                           {!isLocked && (
-                               <button 
-                                onClick={() => deleteItem(item.id)} 
-                                className="p-2 text-slate-300 hover:text-red-600 hover:bg-red-50 rounded transition-all opacity-0 group-hover:opacity-100"
-                               >
-                                <Trash2 size={16}/>
-                               </button>
-                           )}
+                           {!isLocked && (<button onClick={() => deleteItem(item.id)} className="text-slate-300 hover:text-red-600 opacity-0 group-hover:opacity-100"><Trash2 size={16}/></button>)}
                         </td>
                      </tr>
                    ))}
@@ -367,56 +296,27 @@ export default function OrderDetails({ params }) {
                </table>
                
                {!isLocked && (
-                   <button 
-                     onClick={addItem}
-                     className="w-full py-4 text-sm font-bold text-slate-500 hover:bg-slate-50 hover:text-[#0176D3] transition-colors flex items-center justify-center gap-2 border-t border-slate-200"
-                   >
-                     <Plus size={16} /> Add New Line Item
-                   </button>
+                   <button onClick={addItem} className="w-full py-4 text-sm font-bold text-slate-500 hover:bg-slate-50 hover:text-[#0176D3] transition-colors flex items-center justify-center gap-2 border-t border-slate-200"><Plus size={16} /> Add New Line Item</button>
                )}
             </div>
         </div>
       </main>
 
-      {/* --- SHIPPING MODAL (Replaces Browser Confirm) --- */}
       {showShipModal && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-xl shadow-2xl max-w-sm w-full p-6 animate-in fade-in zoom-in duration-200 border border-slate-200">
             <div className="flex flex-col items-center text-center">
-              <div className="w-12 h-12 bg-blue-100 text-[#0176D3] rounded-full flex items-center justify-center mb-4">
-                <Ship size={24} />
-              </div>
+              <div className="w-12 h-12 bg-blue-100 text-[#0176D3] rounded-full flex items-center justify-center mb-4"><Ship size={24} /></div>
               <h3 className="text-lg font-bold text-slate-900">Confirm Shipment?</h3>
-              <p className="text-sm text-slate-500 mt-2 mb-6 leading-relaxed">
-                This will <strong className="text-slate-800">lock the order</strong> and send all data to the external system.
-                <br/><span className="text-xs text-red-500 mt-1 block"> This action cannot be undone by vendors.</span>
-              </p>
-              
+              <p className="text-sm text-slate-500 mt-2 mb-6">This will <strong>lock the order</strong> and send data. Cannot be undone.</p>
               <div className="flex gap-3 w-full">
-                <button 
-                  onClick={() => setShowShipModal(false)}
-                  disabled={shipping}
-                  className="flex-1 px-4 py-2.5 border border-slate-300 rounded-lg text-sm font-bold text-slate-700 hover:bg-slate-50 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button 
-                  onClick={confirmShipping}
-                  disabled={shipping}
-                  className="flex-1 px-4 py-2.5 bg-[#0176D3] text-white rounded-lg text-sm font-bold hover:bg-blue-700 shadow-sm transition-colors flex items-center justify-center gap-2"
-                >
-                  {shipping ? (
-                    <>Processing...</>
-                  ) : (
-                    <>Confirm & Ship</>
-                  )}
-                </button>
+                <button onClick={() => setShowShipModal(false)} disabled={shipping} className="flex-1 px-4 py-2.5 border border-slate-300 rounded-lg text-sm font-bold text-slate-700 hover:bg-slate-50">Cancel</button>
+                <button onClick={confirmShipping} disabled={shipping} className="flex-1 px-4 py-2.5 bg-[#0176D3] text-white rounded-lg text-sm font-bold hover:bg-blue-700 shadow-sm">{shipping ? 'Processing...' : 'Confirm & Ship'}</button>
               </div>
             </div>
           </div>
         </div>
       )}
-
     </div>
   );
 }

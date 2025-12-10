@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { usePathname, useRouter } from 'next/navigation';
-import { LayoutDashboard, Package, Users, LogOut, Box } from 'lucide-react';
+import { LayoutDashboard, Package, Users, LogOut, Tag } from 'lucide-react';
 
 export default function Sidebar() {
   const router = useRouter();
@@ -23,8 +23,16 @@ export default function Sidebar() {
     const { data: { session } } = await supabase.auth.getSession();
     if (session) {
       setEmail(session.user.email);
-      const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).single();
-      if (profile?.role === 'admin') setIsAdmin(true);
+      // Check if user is Admin
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', session.user.id)
+        .single();
+      
+      if (profile?.role === 'admin') {
+        setIsAdmin(true);
+      }
     }
   }
 
@@ -65,8 +73,14 @@ export default function Sidebar() {
         {/* 2. Admin Only Links */}
         {isAdmin && (
           <>
-            <div className="pt-4 pb-2 px-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+            <div className="pt-6 pb-2 px-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
               Admin Controls
+            </div>
+
+            {/* NEW: Master Items Database */}
+            <div onClick={() => router.push('/admin/items')} className={getLinkClass('/admin/items')}>
+              <Tag size={18} />
+              <span>Master Items</span>
             </div>
 
             <div onClick={() => router.push('/admin/kits')} className={getLinkClass('/admin/kits')}>
@@ -85,7 +99,7 @@ export default function Sidebar() {
       {/* User Footer */}
       <div className="p-4 border-t border-slate-100 bg-slate-50">
         <div className="flex items-center gap-3 mb-3">
-           <div className="w-8 h-8 rounded-full bg-[#0176D3]/20 text-[#0176D3] flex items-center justify-center font-bold text-xs">
+           <div className="w-8 h-8 rounded-full bg-[#0176D3]/20 text-[#0176D3] flex items-center justify-center font-bold text-xs border border-[#0176D3]/10">
               {email.charAt(0).toUpperCase()}
            </div>
            <div className="overflow-hidden">
@@ -95,7 +109,7 @@ export default function Sidebar() {
         </div>
         <button 
           onClick={handleLogout} 
-          className="w-full flex items-center justify-center gap-2 text-xs font-bold text-slate-500 hover:text-red-600 py-1.5 hover:bg-red-50 rounded transition-colors"
+          className="w-full flex items-center justify-center gap-2 text-xs font-bold text-slate-500 hover:text-red-600 py-2 hover:bg-white border border-transparent hover:border-slate-200 rounded transition-all"
         >
           <LogOut size={14} /> Sign Out
         </button>
