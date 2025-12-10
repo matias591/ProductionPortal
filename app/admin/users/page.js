@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { useRouter } from 'next/navigation';
-import { Trash2, UserPlus, Shield } from 'lucide-react';
+import { Trash2, UserPlus, Shield, User, CheckCircle, AlertCircle } from 'lucide-react';
 import Sidebar from '../../components/Sidebar';
 
 export default function UserManagement() {
@@ -11,10 +11,14 @@ export default function UserManagement() {
   const [isAdmin, setIsAdmin] = useState(false);
   const router = useRouter();
 
+  // Form State
   const [newUserEmail, setNewUserEmail] = useState('');
   const [newUserPassword, setNewUserPassword] = useState('');
   const [newUserRole, setNewUserRole] = useState('vendor');
   const [creating, setCreating] = useState(false);
+
+  // Notification State (Toast)
+  const [notification, setNotification] = useState(null); // { type: 'success' | 'error', message: '...' }
 
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -25,6 +29,12 @@ export default function UserManagement() {
     checkPermission();
     fetchUsers();
   }, []);
+
+  // Helper to show modern toast
+  const showToast = (type, message) => {
+    setNotification({ type, message });
+    setTimeout(() => setNotification(null), 3000); // Hide after 3s
+  };
 
   async function checkPermission() {
     const { data: { session } } = await supabase.auth.getSession();
@@ -44,15 +54,44 @@ export default function UserManagement() {
     e.preventDefault();
     setCreating(true);
     const { data: { session } } = await supabase.auth.getSession();
+
     const res = await fetch('/api/admin/create-user', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
       body: JSON.stringify({ email: newUserEmail, password: newUserPassword, role: newUserRole }),
     });
+
     const json = await res.json();
-    if (json.error) alert("Error: " + json.error);
-    else { alert("User Created!"); setNewUserEmail(''); setNewUserPassword(''); fetchUsers(); }
+    
+    if (json.error) {
+      showToast('error', json.error);
+    } else {
+      showToast('success', 'User created successfully!');
+      setNewUserEmail('');
+      setNewUserPassword('');
+      fetchUsers();
+    }
     setCreating(false);
+  }
+
+  // --- DELETE USER FUNCTION ---
+  async function handleDeleteUser(userId) {
+    if (!confirm("Are you sure you want to remove this user?")) return;
+
+    const res = await fetch('/api/admin/delete-user', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId }),
+    });
+
+    const json = await res.json();
+
+    if (json.error) {
+        showToast('error', json.error);
+    } else {
+        showToast('success', 'User removed successfully');
+        fetchUsers();
+    }
   }
 
   if (!isAdmin) return <div className="p-10 text-slate-500">Checking permissions...</div>;
@@ -60,7 +99,7 @@ export default function UserManagement() {
   return (
     <div className="flex min-h-screen bg-slate-50 font-sans">
        <Sidebar />
-       <main className="flex-1 ml-64 p-8">
+       <main className="flex-1 ml-64 p-8 relative">
          <div className="max-w-5xl mx-auto">
             <h1 className="text-2xl font-bold text-slate-800 mb-1">User Management</h1>
             <p className="text-slate-500 text-sm mb-8">Manage system access and roles.</p>
@@ -98,7 +137,7 @@ export default function UserManagement() {
                    </div>
                    <div className="divide-y divide-slate-100">
                       {users.map(u => (
-                          <div key={u.id} className="px-6 py-4 flex justify-between items-center group hover:bg-slate-50">
+                          <div key={u.id} className="px-6 py-4 flex justify-between items-center group hover:bg-slate-50 transition-colors">
                               <div>
                                  <div className="font-bold text-sm text-slate-800">{u.email}</div>
                                  <div className={`text-[10px] inline-block px-2 py-0.5 rounded mt-1 font-bold uppercase tracking-wider
@@ -106,12 +145,30 @@ export default function UserManagement() {
                                     {u.role}
                                  </div>
                               </div>
+                              
+                              {/* DELETE BUTTON */}
+                              <button 
+                                onClick={() => handleDeleteUser(u.id)}
+                                className="text-slate-300 hover:text-red-500 hover:bg-red-50 p-2 rounded transition-all opacity-0 group-hover:opacity-100"
+                                title="Delete User"
+                              >
+                                <Trash2 size={16} />
+                              </button>
                           </div>
                       ))}
                    </div>
                 </div>
             </div>
          </div>
+
+         {/* MODERN NOTIFICATION TOAST */}
+         {notification && (
+            <div className={`fixed bottom-6 right-6 px-4 py-3 rounded-lg shadow-lg border flex items-center gap-3 animate-in slide-in-from-bottom-5 duration-300 z-50
+                ${notification.type === 'success' ? 'bg-white border-green-200 text-green-800' : 'bg-white border-red-200 text-red-800'}`}>
+                {notification.type === 'success' ? <CheckCircle size={20} className="text-green-500"/> : <AlertCircle size={20} className="text-red-500"/>}
+                <span className="text-sm font-bold">{notification.message}</span>
+            </div>
+         )}
        </main>
     </div>
   );
