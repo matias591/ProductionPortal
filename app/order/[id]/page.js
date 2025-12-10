@@ -61,7 +61,7 @@ export default function OrderDetails({ params }) {
         // 2. VALIDATION: CHECK VESSEL NAME
         if (!order.vessel || order.vessel.trim() === '' || order.vessel === 'Unknown Vessel') {
             alert("⚠️ Cannot Ship: Vessel Name is required.\nPlease enter a valid vessel name before shipping.");
-            return; // Stop. Do not save. Do not open modal.
+            return; 
         }
 
         setShowShipModal(true); 
@@ -83,13 +83,17 @@ export default function OrderDetails({ params }) {
     setShipping(false);
   }
 
-  // ... (Export, Item, File Logic remains the same) ...
   const totalCost = items.reduce((sum, item) => sum + ((item.quantity || 0) * (item.price || 0)), 0);
 
+  // --- UPDATED EXPORT FUNCTION ---
   function exportToExcel() {
     const dataToExport = items.map(item => ({
-        "Order #": order.order_number, "Vessel": order.vessel, "Item Name": item.piece,
-        "SKU": masterItems.find(m => m.name === item.piece)?.sku || '-', "Quantity": item.quantity,
+        "Order #": order.order_number, 
+        "Vessel": order.vessel, 
+        "Item Name": item.piece,
+        "SKU": masterItems.find(m => m.name === item.piece)?.sku || '-', 
+        "Serial Number": item.serial || '-', // <--- ADDED THIS LINE
+        "Quantity": item.quantity,
         ...(isAdmin ? { "Unit Price": item.price, "Total Price": item.price * item.quantity } : {})
     }));
     const worksheet = XLSX.utils.json_to_sheet(dataToExport);
@@ -189,7 +193,7 @@ export default function OrderDetails({ params }) {
                     >
                     <option value="New">New</option>
                     <option value="In preparation">In preparation</option>
-                    <option value="In Box">In Box</option> {/* NEW STATUS */}
+                    <option value="In Box">In Box</option>
                     <option value="Ready for Pickup">Ready for Pickup</option>
                     <option value="Shipped">Shipped</option>
                     </select>
