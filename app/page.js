@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { useRouter } from 'next/navigation';
-import { RefreshCw, Plus, Search, Ship, ChevronRight, Filter, LayoutGrid, Package } from 'lucide-react';
+import { Plus, Search, Ship, ChevronRight, Filter, LayoutGrid } from 'lucide-react';
 import Sidebar from './components/Sidebar';
 
 export default function Dashboard() {
@@ -11,8 +11,11 @@ export default function Dashboard() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   
+  // Kit List State (From DB)
   const [kitOptions, setKitOptions] = useState([]);
   const [loadingKits, setLoadingKits] = useState(true);
+
+  // User State
   const [userEmail, setUserEmail] = useState('');
   const [isAdmin, setIsAdmin] = useState(false);
   
@@ -29,6 +32,7 @@ export default function Dashboard() {
     fetchKitsFromDB(); 
   }, []);
 
+  // --- FETCH KITS FROM DATABASE ---
   async function fetchKitsFromDB() {
     const { data } = await supabase.from('kits').select('*').order('name');
     setKitOptions(data || []);
@@ -55,6 +59,8 @@ export default function Dashboard() {
   async function handleCreateOrder(e) {
     e.preventDefault();
     const formData = new FormData(e.target);
+    
+    // Get the selected Kit details
     const selectedKitId = formData.get('kit'); 
     const selectedKitName = kitOptions.find(k => k.id === selectedKitId)?.name || 'Custom';
 
@@ -65,20 +71,45 @@ export default function Dashboard() {
       status: 'New'
     };
 
+    // 1. Create the Order
     const { data: orderData, error } = await supabase.from('orders').insert([newOrder]).select().single();
-    if (error) { alert("Error: " + error.message); return; }
+    
+    if (error) {
+      alert("Error: " + error.message);
+      return;
+    }
 
+    // 2. IF A KIT WAS SELECTED: Copy Items AND Prices
     if (selectedKitId) {
+        // A. Fetch items defined in the Kit
         const { data: templateItems } = await supabase.from('kit_items').select('*').eq('kit_id', selectedKitId);
+        
         if (templateItems && templateItems.length > 0) {
+            
+            // B. Fetch Master Prices to ensure we use the current rates
+            // We need to look up prices based on the item_id stored in the kit
             const { data: masterList } = await supabase.from('items').select('id, price');
+
+            // C. Prepare items for the new Order
             const itemsToInsert = templateItems.map(item => {
+                // Find current price for this item ID
                 const masterPrice = masterList?.find(m => m.id === item.item_id)?.price || 0;
-                return { order_id: orderData.id, piece: item.piece, quantity: item.quantity, serial: '', is_done: false, price: masterPrice };
+
+                return {
+                    order_id: orderData.id,
+                    piece: item.piece,
+                    quantity: item.quantity,
+                    serial: '',
+                    is_done: false,
+                    price: masterPrice // <--- Snapshot the price at moment of creation
+                };
             });
+
+            // D. Insert into Order Items
             await supabase.from('order_items').insert(itemsToInsert);
         }
     }
+
     setShowCreateModal(false);
     fetchOrders();
   }
@@ -97,7 +128,7 @@ export default function Dashboard() {
     switch(status) {
       case 'New': return 'bg-blue-100 text-blue-700 border-blue-200';
       case 'In preparation': return 'bg-purple-100 text-purple-700 border-purple-200';
-      case 'In Box': return 'bg-orange-100 text-orange-700 border-orange-200'; // NEW COLOR
+      case 'In Box': return 'bg-orange-100 text-orange-700 border-orange-200';
       case 'Shipped': return 'bg-green-100 text-green-700 border-green-200';
       default: return 'bg-gray-100 text-gray-700 border-gray-200';
     }
@@ -105,32 +136,43 @@ export default function Dashboard() {
 
   return (
     <div className="flex min-h-screen bg-[#F3F4F6] font-sans">
+      
+      {/* 1. Sidebar Component */}
       <Sidebar />
+
+      {/* 2. Main Content */}
       <main className="flex-1 ml-64 p-8">
         
+        {/* Header Actions */}
         <div className="flex flex-col md:flex-row justify-between items-end mb-6 gap-4">
           <div>
             <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Orders</h1>
             <p className="text-slate-500 mt-1 text-sm">{orders.length} items • Sorted by Date</p>
           </div>
+          
           <div className="flex gap-3">
             {isAdmin && (
-              <>
-                <button className="px-4 py-2 bg-white border border-slate-300 text-slate-700 text-sm font-semibold rounded-md hover:bg-slate-50 shadow-sm flex items-center gap-2 transition-all">
-                  <RefreshCw size={14} /> Sync
-                </button>
-                <button onClick={() => setShowCreateModal(true)} className="px-4 py-2 bg-[#0176D3] text-white text-sm font-semibold rounded-md hover:bg-blue-700 shadow-md shadow-blue-200 flex items-center gap-2 transition-all">
-                  <Plus size={16} /> New Order
-                </button>
-              </>
+              <button 
+                onClick={() => setShowCreateModal(true)}
+                className="px-4 py-2 bg-[#0176D3] text-white text-sm font-semibold rounded-md hover:bg-blue-700 shadow-md shadow-blue-200 flex items-center gap-2 transition-all"
+              >
+                <Plus size={16} /> New Order
+              </button>
             )}
           </div>
         </div>
 
+        {/* Search Toolbar */}
         <div className="bg-white p-3 rounded-t-lg border border-slate-200 border-b-0 flex justify-between items-center">
           <div className="relative max-w-md w-full">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-            <input type="text" placeholder="Search by ID or Vessel..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-9 pr-4 py-2 bg-white border border-slate-300 rounded-md text-sm focus:ring-2 focus:ring-[#0176D3] focus:border-transparent outline-none transition-all" />
+            <input 
+              type="text" 
+              placeholder="Search by ID or Vessel..." 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-9 pr-4 py-2 bg-white border border-slate-300 rounded-md text-sm focus:ring-2 focus:ring-[#0176D3] focus:border-transparent outline-none transition-all"
+            />
           </div>
           <div className="flex gap-2">
             <button className="p-2 text-slate-600 hover:bg-slate-100 rounded border border-slate-200"><Filter size={16}/></button>
@@ -138,6 +180,7 @@ export default function Dashboard() {
           </div>
         </div>
 
+        {/* Orders Table */}
         <div className="bg-white border border-slate-200 rounded-b-lg shadow-sm overflow-hidden">
           <table className="w-full text-left border-collapse">
             <thead className="bg-slate-50 text-xs font-bold text-slate-500 uppercase tracking-wide border-b border-slate-200">
@@ -153,29 +196,54 @@ export default function Dashboard() {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {filteredOrders.map((order) => (
-                <tr key={order.id} onClick={() => router.push(`/order/${order.id}`)} className="hover:bg-blue-50/50 cursor-pointer transition-colors group">
-                  <td className="px-6 py-4 font-semibold text-[#0176D3] hover:underline">{order.order_number}</td>
-                  <td className="px-6 py-4 text-sm text-slate-700 font-medium">
-                    <div className="flex items-center gap-2">{order.vessel ? <Ship size={14} className="text-slate-400"/> : null}{order.vessel || <span className="text-slate-400 italic">No Vessel Name</span>}</div>
+                <tr 
+                  key={order.id} 
+                  onClick={() => router.push(`/order/${order.id}`)}
+                  className="hover:bg-blue-50/50 cursor-pointer transition-colors group"
+                >
+                  <td className="px-6 py-4 font-semibold text-[#0176D3] hover:underline">
+                    {order.order_number}
                   </td>
-                  <td className="px-6 py-4 text-sm text-slate-600">{order.type}</td>
-                  <td className="px-6 py-4 text-sm text-slate-600 font-medium">{order.kit || '-'}</td>
-                   <td className="px-6 py-4 text-sm text-slate-600">{order.pickup_date || '-'}</td>
+                  <td className="px-6 py-4 text-sm text-slate-700 font-medium">
+                    <div className="flex items-center gap-2">
+                       {order.vessel ? <Ship size={14} className="text-slate-400"/> : null}
+                       {order.vessel || <span className="text-slate-400 italic">No Vessel Name</span>}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 text-sm text-slate-600">
+                    {order.type}
+                  </td>
+                  <td className="px-6 py-4 text-sm text-slate-600 font-medium">
+                    {order.kit || '-'}
+                  </td>
+                   <td className="px-6 py-4 text-sm text-slate-600">
+                    {order.pickup_date || '-'}
+                  </td>
                   <td className="px-6 py-4">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded text-xs font-bold border ${getStatusColor(order.status)}`}>{order.status}</span>
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded text-xs font-bold border ${getStatusColor(order.status)}`}>
+                      {order.status}
+                    </span>
                   </td>
                   <td className="px-6 py-4 text-right">
-                    <span className="text-slate-400 text-xs group-hover:text-[#0176D3] font-bold uppercase flex items-center justify-end gap-1">View <ChevronRight size={14}/></span>
+                    <span className="text-slate-400 text-xs group-hover:text-[#0176D3] font-bold uppercase flex items-center justify-end gap-1">
+                        View <ChevronRight size={14}/>
+                    </span>
                   </td>
                 </tr>
               ))}
-              {filteredOrders.length === 0 && (<tr><td colSpan={7} className="p-10 text-center text-slate-400">No orders found.</td></tr>)}
+              {filteredOrders.length === 0 && (
+                <tr>
+                    <td colSpan={7} className="p-10 text-center text-slate-400">
+                        No orders found.
+                    </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
       </main>
 
-      {/* Modal code remains the same */}
+      {/* Create Order Modal */}
       {showCreateModal && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-lg shadow-2xl max-w-lg w-full overflow-hidden border border-slate-200 animate-in fade-in zoom-in duration-200">
@@ -184,13 +252,47 @@ export default function Dashboard() {
               <button onClick={() => setShowCreateModal(false)} className="text-slate-400 hover:text-slate-700">✕</button>
             </div>
             <form onSubmit={handleCreateOrder} className="p-6 space-y-5">
-              <div className="p-3 bg-blue-50 border border-blue-100 rounded-md"><p className="text-xs text-blue-800 font-semibold">Order Number will be auto-generated by the system.</p></div>
-              <div><label className="block text-xs font-bold text-slate-500 mb-1">Vessel Name (Optional)</label><input name="vessel" className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-[#0176D3] focus:ring-1 focus:ring-[#0176D3] outline-none" placeholder="e.g. Evergreen A" /></div>
-              <div className="grid grid-cols-2 gap-4">
-                <div><label className="block text-xs font-bold text-slate-500 mb-1">Type</label><select name="type" className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-[#0176D3] outline-none bg-white"><option>Full system</option><option>Upgrade</option><option>Replacement</option><option>Spare Parts</option></select></div>
-                <div><label className="block text-xs font-bold text-slate-500 mb-1">Kit Preset</label><select name="kit" className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-[#0176D3] outline-none bg-white" disabled={loadingKits}><option value="">- Custom (Empty) -</option>{loadingKits ? <option>Loading...</option> : (kitOptions.map((kit) => (<option key={kit.id} value={kit.id}>{kit.name}</option>)))}</select></div>
+              
+              <div className="p-3 bg-blue-50 border border-blue-100 rounded-md">
+                 <p className="text-xs text-blue-800 font-semibold">
+                    Order Number will be auto-generated by the system.
+                 </p>
               </div>
-              <div className="pt-4 flex justify-end gap-2 border-t border-slate-100 mt-4"><button type="button" onClick={() => setShowCreateModal(false)} className="px-4 py-2 border border-slate-300 rounded text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-all">Cancel</button><button type="submit" className="px-4 py-2 bg-[#0176D3] text-white rounded text-sm font-semibold hover:bg-blue-700 shadow-sm transition-all">Save & Create</button></div>
+
+              <div>
+                 <label className="block text-xs font-bold text-slate-500 mb-1">Vessel Name (Optional)</label>
+                 <input name="vessel" className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-[#0176D3] focus:ring-1 focus:ring-[#0176D3] outline-none" placeholder="e.g. Evergreen A" />
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                    <label className="block text-xs font-bold text-slate-500 mb-1">Type</label>
+                    <select name="type" className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-[#0176D3] outline-none bg-white">
+                    <option>Full system</option>
+                    <option>Upgrade</option>
+                    <option>Replacement</option>
+                    <option>Spare Parts</option>
+                    </select>
+                </div>
+                
+                {/* DYNAMIC KIT LIST FROM DB */}
+                <div>
+                    <label className="block text-xs font-bold text-slate-500 mb-1">Kit Preset</label>
+                    <select name="kit" className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-[#0176D3] outline-none bg-white" disabled={loadingKits}>
+                    <option value="">- Custom (Empty) -</option>
+                    {loadingKits ? <option>Loading...</option> : (
+                        kitOptions.map((kit) => (
+                            <option key={kit.id} value={kit.id}>{kit.name}</option>
+                        ))
+                    )}
+                    </select>
+                </div>
+              </div>
+              
+              <div className="pt-4 flex justify-end gap-2 border-t border-slate-100 mt-4">
+                <button type="button" onClick={() => setShowCreateModal(false)} className="px-4 py-2 border border-slate-300 rounded text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-all">Cancel</button>
+                <button type="submit" className="px-4 py-2 bg-[#0176D3] text-white rounded text-sm font-semibold hover:bg-blue-700 shadow-sm transition-all">Save & Create</button>
+              </div>
             </form>
           </div>
         </div>
