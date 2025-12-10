@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { useRouter } from 'next/navigation';
-import { Trash2, UserPlus, Shield, User, CheckCircle, AlertCircle } from 'lucide-react';
+import { Trash2, UserPlus, Shield, User, CheckCircle, AlertCircle, X, AlertTriangle } from 'lucide-react';
 import Sidebar from '../../components/Sidebar';
 
 export default function UserManagement() {
@@ -11,14 +11,19 @@ export default function UserManagement() {
   const [isAdmin, setIsAdmin] = useState(false);
   const router = useRouter();
 
+  // Modals State
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [userToDelete, setUserToDelete] = useState(null);
+
   // Form State
   const [newUserEmail, setNewUserEmail] = useState('');
   const [newUserPassword, setNewUserPassword] = useState('');
   const [newUserRole, setNewUserRole] = useState('vendor');
-  const [creating, setCreating] = useState(false);
+  const [processing, setProcessing] = useState(false);
 
-  // Notification State (Toast)
-  const [notification, setNotification] = useState(null); // { type: 'success' | 'error', message: '...' }
+  // Notification State
+  const [notification, setNotification] = useState(null);
 
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -30,18 +35,21 @@ export default function UserManagement() {
     fetchUsers();
   }, []);
 
-  // Helper to show modern toast
   const showToast = (type, message) => {
     setNotification({ type, message });
-    setTimeout(() => setNotification(null), 3000); // Hide after 3s
+    setTimeout(() => setNotification(null), 3000);
   };
 
   async function checkPermission() {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return router.push('/login');
     const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).single();
-    if (profile?.role !== 'admin') { alert("Access Denied"); router.push('/'); } 
-    else setIsAdmin(true);
+    if (profile?.role !== 'admin') { 
+        alert("Access Denied"); 
+        router.push('/'); 
+    } else {
+        setIsAdmin(true);
+    }
   }
 
   async function fetchUsers() {
@@ -50,9 +58,11 @@ export default function UserManagement() {
     setLoading(false);
   }
 
+  // --- ACTIONS ---
+
   async function handleCreateUser(e) {
     e.preventDefault();
-    setCreating(true);
+    setProcessing(true);
     const { data: { session } } = await supabase.auth.getSession();
 
     const res = await fetch('/api/admin/create-user', {
@@ -69,19 +79,27 @@ export default function UserManagement() {
       showToast('success', 'User created successfully!');
       setNewUserEmail('');
       setNewUserPassword('');
+      setShowCreateModal(false);
       fetchUsers();
     }
-    setCreating(false);
+    setProcessing(false);
   }
 
-  // --- DELETE USER FUNCTION ---
-  async function handleDeleteUser(userId) {
-    if (!confirm("Are you sure you want to remove this user?")) return;
+  // Open the Delete Modal
+  function confirmDelete(user) {
+    setUserToDelete(user);
+    setShowDeleteModal(true);
+  }
+
+  // Actually Execute Delete
+  async function executeDelete() {
+    if (!userToDelete) return;
+    setProcessing(true);
 
     const res = await fetch('/api/admin/delete-user', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId }),
+      body: JSON.stringify({ userId: userToDelete.id }),
     });
 
     const json = await res.json();
@@ -90,8 +108,11 @@ export default function UserManagement() {
         showToast('error', json.error);
     } else {
         showToast('success', 'User removed successfully');
+        setShowDeleteModal(false);
+        setUserToDelete(null);
         fetchUsers();
     }
+    setProcessing(false);
   }
 
   if (!isAdmin) return <div className="p-10 text-slate-500">Checking permissions...</div>;
@@ -101,67 +122,124 @@ export default function UserManagement() {
        <Sidebar />
        <main className="flex-1 ml-64 p-8 relative">
          <div className="max-w-5xl mx-auto">
-            <h1 className="text-2xl font-bold text-slate-800 mb-1">User Management</h1>
-            <p className="text-slate-500 text-sm mb-8">Manage system access and roles.</p>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                {/* Form */}
-                <div className="md:col-span-1 bg-white p-6 rounded-xl shadow-sm border border-slate-200 h-fit">
-                   <h3 className="font-bold text-sm text-slate-700 mb-4 uppercase tracking-wide flex items-center gap-2"><UserPlus size={16}/> Add New User</h3>
-                   <form onSubmit={handleCreateUser} className="space-y-4">
-                      <div>
-                        <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Email</label>
-                        <input type="email" required className="w-full border border-slate-200 rounded px-3 py-2 text-sm focus:border-[#0176D3] outline-none" value={newUserEmail} onChange={e => setNewUserEmail(e.target.value)} />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Password</label>
-                        <input type="password" required className="w-full border border-slate-200 rounded px-3 py-2 text-sm focus:border-[#0176D3] outline-none" value={newUserPassword} onChange={e => setNewUserPassword(e.target.value)} />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Role</label>
-                        <select className="w-full border border-slate-200 rounded px-3 py-2 text-sm bg-white focus:border-[#0176D3] outline-none" value={newUserRole} onChange={e => setNewUserRole(e.target.value)}>
-                            <option value="vendor">Vendor</option>
-                            <option value="admin">Admin</option>
-                        </select>
-                      </div>
-                      <button type="submit" disabled={creating} className="w-full bg-[#0176D3] text-white font-bold py-2 rounded hover:bg-blue-700 transition-colors shadow-sm text-sm">
-                         {creating ? 'Creating...' : 'Create User'}
-                      </button>
-                   </form>
+            
+            {/* Header */}
+            <div className="flex justify-between items-center mb-8">
+                <div>
+                    <h1 className="text-2xl font-bold text-slate-800 mb-1 flex items-center gap-2">
+                        <Shield className="text-[#0176D3]"/> User Management
+                    </h1>
+                    <p className="text-slate-500 text-sm">Manage system access and roles.</p>
                 </div>
+                <button 
+                    onClick={() => setShowCreateModal(true)}
+                    className="bg-[#0176D3] text-white px-4 py-2 rounded-md text-sm font-bold shadow-sm flex items-center gap-2 hover:bg-blue-700 transition-all"
+                >
+                    <UserPlus size={18}/> Add New User
+                </button>
+            </div>
 
-                {/* List */}
-                <div className="md:col-span-2 bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                   <div className="bg-slate-50 px-6 py-3 border-b border-slate-200 font-bold text-xs text-slate-500 uppercase">
-                      System Users ({users.length})
-                   </div>
-                   <div className="divide-y divide-slate-100">
-                      {users.map(u => (
-                          <div key={u.id} className="px-6 py-4 flex justify-between items-center group hover:bg-slate-50 transition-colors">
-                              <div>
-                                 <div className="font-bold text-sm text-slate-800">{u.email}</div>
-                                 <div className={`text-[10px] inline-block px-2 py-0.5 rounded mt-1 font-bold uppercase tracking-wider
-                                    ${u.role === 'admin' ? 'bg-purple-100 text-purple-700' : 'bg-slate-100 text-slate-500'}`}>
-                                    {u.role}
-                                 </div>
-                              </div>
-                              
-                              {/* DELETE BUTTON */}
-                              <button 
-                                onClick={() => handleDeleteUser(u.id)}
+            {/* User List */}
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div className="bg-slate-50 px-6 py-3 border-b border-slate-200 grid grid-cols-12 gap-4 text-xs font-bold text-slate-500 uppercase">
+                    <div className="col-span-5">Email</div>
+                    <div className="col-span-3">Role</div>
+                    <div className="col-span-3">Created</div>
+                    <div className="col-span-1 text-right">Action</div>
+                </div>
+                <div className="divide-y divide-slate-100">
+                    {users.map(u => (
+                        <div key={u.id} className="px-6 py-4 grid grid-cols-12 gap-4 items-center hover:bg-slate-50 transition-colors group">
+                            <div className="col-span-5 font-bold text-sm text-slate-800 flex items-center gap-2">
+                                <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500">
+                                    <User size={16}/>
+                                </div>
+                                {u.email}
+                            </div>
+                            <div className="col-span-3">
+                                <span className={`text-[10px] px-2 py-1 rounded font-bold uppercase tracking-wider
+                                ${u.role === 'admin' ? 'bg-purple-100 text-purple-700' : 'bg-slate-100 text-slate-500'}`}>
+                                {u.role}
+                                </span>
+                            </div>
+                            <div className="col-span-3 text-sm text-slate-500">
+                                {new Date(u.created_at).toLocaleDateString()}
+                            </div>
+                            <div className="col-span-1 text-right">
+                                <button 
+                                onClick={() => confirmDelete(u)}
                                 className="text-slate-300 hover:text-red-500 hover:bg-red-50 p-2 rounded transition-all opacity-0 group-hover:opacity-100"
                                 title="Delete User"
-                              >
+                                >
                                 <Trash2 size={16} />
-                              </button>
-                          </div>
-                      ))}
-                   </div>
+                                </button>
+                            </div>
+                        </div>
+                    ))}
                 </div>
             </div>
          </div>
 
-         {/* MODERN NOTIFICATION TOAST */}
+         {/* --- CREATE USER MODAL --- */}
+         {showCreateModal && (
+            <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                <div className="bg-white rounded-lg shadow-2xl max-w-md w-full p-6 animate-in fade-in zoom-in duration-200">
+                    <div className="flex justify-between items-center mb-6">
+                        <h3 className="font-bold text-lg text-slate-800">Create New User</h3>
+                        <button onClick={() => setShowCreateModal(false)} className="text-slate-400 hover:text-slate-700"><X size={20}/></button>
+                    </div>
+                    <form onSubmit={handleCreateUser} className="space-y-4">
+                        <div>
+                            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Email Address</label>
+                            <input type="email" required className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-[#0176D3] outline-none" value={newUserEmail} onChange={e => setNewUserEmail(e.target.value)} />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Temporary Password</label>
+                            <input type="password" required className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-[#0176D3] outline-none" value={newUserPassword} onChange={e => setNewUserPassword(e.target.value)} />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Role</label>
+                            <select className="w-full border border-slate-300 rounded px-3 py-2 text-sm bg-white focus:border-[#0176D3] outline-none" value={newUserRole} onChange={e => setNewUserRole(e.target.value)}>
+                                <option value="vendor">Vendor</option>
+                                <option value="admin">Admin</option>
+                            </select>
+                        </div>
+                        <div className="pt-4 flex gap-3">
+                            <button type="button" onClick={() => setShowCreateModal(false)} className="flex-1 py-2 border border-slate-300 rounded text-sm font-bold text-slate-600 hover:bg-slate-50">Cancel</button>
+                            <button type="submit" disabled={processing} className="flex-1 py-2 bg-[#0176D3] text-white rounded text-sm font-bold hover:bg-blue-700 shadow-sm">
+                                {processing ? 'Creating...' : 'Create Account'}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+         )}
+
+         {/* --- DELETE CONFIRMATION MODAL --- */}
+         {showDeleteModal && (
+            <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                <div className="bg-white rounded-xl shadow-2xl max-w-sm w-full p-6 animate-in fade-in zoom-in duration-200 border border-slate-200">
+                    <div className="flex flex-col items-center text-center">
+                        <div className="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center mb-4">
+                            <AlertTriangle size={24} />
+                        </div>
+                        <h3 className="text-lg font-bold text-slate-900">Remove User?</h3>
+                        <p className="text-sm text-slate-500 mt-2 mb-6">
+                            Are you sure you want to delete <span className="font-bold text-slate-800">{userToDelete?.email}</span>? 
+                            This action cannot be undone.
+                        </p>
+                        <div className="flex gap-3 w-full">
+                            <button onClick={() => setShowDeleteModal(false)} disabled={processing} className="flex-1 px-4 py-2 border border-slate-300 rounded-lg text-sm font-bold text-slate-700 hover:bg-slate-50">Cancel</button>
+                            <button onClick={executeDelete} disabled={processing} className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-bold hover:bg-red-700 shadow-sm">
+                                {processing ? 'Deleting...' : 'Delete User'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+         )}
+
+         {/* Toast Notification */}
          {notification && (
             <div className={`fixed bottom-6 right-6 px-4 py-3 rounded-lg shadow-lg border flex items-center gap-3 animate-in slide-in-from-bottom-5 duration-300 z-50
                 ${notification.type === 'success' ? 'bg-white border-green-200 text-green-800' : 'bg-white border-red-200 text-red-800'}`}>
