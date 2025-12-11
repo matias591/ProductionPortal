@@ -11,9 +11,8 @@ export async function POST(request) {
     const webhookUrl = process.env.N8N_VESSEL_CHECK_URL;
 
     if (!webhookUrl) {
-        // Fallback for testing if no URL is set
-        console.warn("No N8N_VESSEL_CHECK_URL set. Returning mock data.");
-        return NextResponse.json({ account: "Test Account (Mock)" }); 
+        console.warn("No N8N_VESSEL_CHECK_URL set.");
+        return NextResponse.json({ account: null }); 
     }
 
     // Call n8n
@@ -24,16 +23,34 @@ export async function POST(request) {
     });
 
     if (!n8nResponse.ok) {
-        throw new Error("Failed to connect to n8n");
+        // If n8n errors out, treat as not found
+        return NextResponse.json({ account: null });
     }
 
-    // Expecting n8n to return JSON like: { "account": "MSC" } or { "account": null }
-    const data = await n8nResponse.json();
+    // Parse the raw response from n8n (Salesforce format)
+    const rawData = await n8nResponse.json();
+    let accountName = null;
 
-    return NextResponse.json(data);
+    // LOGIC: Dig through the Salesforce structure
+    // 1. Check if it's an Array (List)
+    if (Array.isArray(rawData) && rawData.length > 0) {
+        const record = rawData[0]; // Get first result
+        // 2. Look for the Relationship Object (Account__r)
+        if (record.Account__r && record.Account__r.Name) {
+            accountName = record.Account__r.Name;
+        }
+    } 
+    // 3. Fallback: Sometimes n8n returns just the object, not an array
+    else if (rawData && rawData.Account__r && rawData.Account__r.Name) {
+        accountName = rawData.Account__r.Name;
+    }
+
+    // Return in the simple format the Frontend expects
+    return NextResponse.json({ account: accountName });
 
   } catch (error) {
     console.error("Vessel Check Error:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    // Return null so the UI handles it gracefully (Not found)
+    return NextResponse.json({ account: null });
   }
 }
