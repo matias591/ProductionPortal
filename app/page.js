@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { useRouter } from 'next/navigation';
-import { Plus, Search, Ship, ChevronRight, Filter, LayoutGrid } from 'lucide-react';
+import { Plus, Search, Ship, ChevronRight, Filter, LayoutGrid, Trash2 } from 'lucide-react';
 import Sidebar from './components/Sidebar';
 
 export default function Dashboard() {
@@ -11,16 +11,13 @@ export default function Dashboard() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   
-  // Data States
   const [kitOptions, setKitOptions] = useState([]);
   const [loadingKits, setLoadingKits] = useState(true);
   
-  // Form States
-  const [selectedType, setSelectedType] = useState('Full system'); // Default type
-  const [selectedKitId, setSelectedKitId] = useState(''); // Controlled input for kit
+  const [selectedType, setSelectedType] = useState('Full system'); 
+  const [selectedKitId, setSelectedKitId] = useState(''); 
   const [warehouse, setWarehouse] = useState('Orca');
 
-  // User State
   const [userEmail, setUserEmail] = useState('');
   const [isAdmin, setIsAdmin] = useState(false);
   
@@ -37,24 +34,18 @@ export default function Dashboard() {
     fetchKitsFromDB(); 
   }, []);
 
-  // --- LOGIC: AUTO-SELECT KIT BASED ON TYPE ---
+  // Auto-select kit based on type
   useEffect(() => {
     if (kitOptions.length === 0) return;
-
     const defaults = {
         'Full system': 'MSC003',
         'Upgrade': 'UPGRD',
         'Replacement': 'REP001'
     };
-
     const targetKitName = defaults[selectedType];
     const targetKit = kitOptions.find(k => k.name === targetKitName);
-
-    if (targetKit) {
-        setSelectedKitId(targetKit.id);
-    } else {
-        setSelectedKitId(''); 
-    }
+    if (targetKit) setSelectedKitId(targetKit.id);
+    else setSelectedKitId(''); 
   }, [selectedType, kitOptions]);
 
   async function fetchKitsFromDB() {
@@ -75,7 +66,6 @@ export default function Dashboard() {
   }
 
   async function fetchOrders() {
-    // We join order_items to calculate the columns
     const { data } = await supabase
       .from('orders')
       .select('*, order_items(piece, serial, orca_id)')
@@ -87,7 +77,6 @@ export default function Dashboard() {
   async function handleCreateOrder(e) {
     e.preventDefault();
     const formData = new FormData(e.target);
-    
     const selectedKitName = kitOptions.find(k => k.id === selectedKitId)?.name || 'Custom';
 
     const newOrder = {
@@ -98,22 +87,17 @@ export default function Dashboard() {
       status: 'New'
     };
 
-    // 1. Create the Order
     const { data: orderData, error } = await supabase.from('orders').insert([newOrder]).select().single();
     
-    if (error) {
-      alert("Error: " + error.message);
-      return;
-    }
+    if (error) { alert("Error: " + error.message); return; }
 
-    // 2. IF A KIT WAS SELECTED: Copy Items
     if (selectedKitId) {
-        const { data: templateItems } = await supabase.from('kit_items').select('*').eq('kit_id', selectedKitId);
+        const { data: templateItems } = await supabase.from('kit_items').select('*').eq('kit_id', selectedKitId).order('sort_order', { ascending: true });
         
         if (templateItems && templateItems.length > 0) {
             const { data: masterList } = await supabase.from('items').select('id, price');
 
-            const itemsToInsert = templateItems.map(item => {
+            const itemsToInsert = templateItems.map((item, index) => {
                 const masterPrice = masterList?.find(m => m.id === item.item_id)?.price || 0;
                 return {
                     order_id: orderData.id,
@@ -121,7 +105,8 @@ export default function Dashboard() {
                     quantity: item.quantity,
                     serial: '',
                     is_done: false,
-                    price: masterPrice
+                    price: masterPrice,
+                    sort_order: index + 1
                 };
             });
 
@@ -131,6 +116,17 @@ export default function Dashboard() {
 
     setShowCreateModal(false);
     fetchOrders();
+  }
+
+  // --- DELETE ORDER LOGIC ---
+  async function handleDeleteOrder(e, order) {
+    e.stopPropagation(); // Prevents clicking the row
+    
+    if (!confirm(`Are you sure you want to delete Order #${order.order_number}?`)) return;
+
+    const { error } = await supabase.from('orders').delete().eq('id', order.id);
+    if (error) alert("Delete failed: " + error.message);
+    else fetchOrders();
   }
 
   async function handleLogout() {
@@ -164,45 +160,30 @@ export default function Dashboard() {
       <Sidebar />
       <main className="flex-1 ml-64 p-8">
         
-        {/* Header Actions */}
+        {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-end mb-6 gap-4">
           <div>
             <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Orders</h1>
             <p className="text-slate-500 mt-1 text-sm">{orders.length} items • Sorted by Date</p>
           </div>
-          
           <div className="flex gap-3">
-            {/* ONLY SHOW NEW ORDER BUTTON (Kits/Users are in Sidebar) */}
             {isAdmin && (
-              <button 
-                onClick={() => setShowCreateModal(true)}
-                className="px-4 py-2 bg-[#0176D3] text-white text-sm font-semibold rounded-md hover:bg-blue-700 shadow-md shadow-blue-200 flex items-center gap-2 transition-all"
-              >
+              <button onClick={() => setShowCreateModal(true)} className="px-4 py-2 bg-[#0176D3] text-white text-sm font-semibold rounded-md hover:bg-blue-700 shadow-md shadow-blue-200 flex items-center gap-2 transition-all">
                 <Plus size={16} /> New Order
               </button>
             )}
           </div>
         </div>
 
-        {/* Search Toolbar */}
+        {/* Search */}
         <div className="bg-white p-3 rounded-t-lg border border-slate-200 border-b-0 flex justify-between items-center">
           <div className="relative max-w-md w-full">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-            <input 
-              type="text" 
-              placeholder="Search by ID or Vessel..." 
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 bg-white border border-slate-300 rounded-md text-sm focus:ring-2 focus:ring-[#0176D3] focus:border-transparent outline-none transition-all"
-            />
-          </div>
-          <div className="flex gap-2">
-            <button className="p-2 text-slate-600 hover:bg-slate-100 rounded border border-slate-200"><Filter size={16}/></button>
-            <button className="p-2 text-slate-600 hover:bg-slate-100 rounded border border-slate-200"><LayoutGrid size={16}/></button>
+            <input type="text" placeholder="Search by ID or Vessel..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-9 pr-4 py-2 bg-white border border-slate-300 rounded-md text-sm focus:ring-2 focus:ring-[#0176D3] focus:border-transparent outline-none transition-all" />
           </div>
         </div>
 
-        {/* Orders Table */}
+        {/* Table */}
         <div className="bg-white border border-slate-200 rounded-b-lg shadow-sm overflow-hidden overflow-x-auto">
           <table className="w-full text-left border-collapse min-w-[1000px]">
             <thead className="bg-slate-50 text-xs font-bold text-slate-500 uppercase tracking-wide border-b border-slate-200">
@@ -218,57 +199,42 @@ export default function Dashboard() {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {filteredOrders.map((order) => (
-                <tr 
-                  key={order.id} 
-                  onClick={() => router.push(`/order/${order.id}`)}
-                  className="hover:bg-blue-50/50 cursor-pointer transition-colors group"
-                >
-                  <td className="px-6 py-4 font-semibold text-[#0176D3] hover:underline">
-                    {order.order_number}
-                  </td>
+                <tr key={order.id} onClick={() => router.push(`/order/${order.id}`)} className="hover:bg-blue-50/50 cursor-pointer transition-colors group">
+                  <td className="px-6 py-4 font-semibold text-[#0176D3] hover:underline">{order.order_number}</td>
                   <td className="px-6 py-4 text-sm text-slate-700 font-medium">
-                    <div className="flex items-center gap-2">
-                       {order.vessel ? <Ship size={14} className="text-slate-400"/> : null}
-                       {order.vessel || <span className="text-slate-400 italic">No Vessel Name</span>}
-                    </div>
+                    <div className="flex items-center gap-2">{order.vessel ? <Ship size={14} className="text-slate-400"/> : null}{order.vessel || <span className="text-slate-400 italic">No Vessel Name</span>}</div>
                   </td>
-                  
-                  {/* NEW DYNAMIC COLUMNS */}
-                  <td className="px-6 py-4 text-xs font-mono text-slate-600">
-                    {getItemValue(order.order_items, 'Seapod', 'serial')}
-                  </td>
-                  <td className="px-6 py-4 text-xs font-mono text-slate-600">
-                    {getItemValue(order.order_items, 'Modem', 'orca_id')}
-                  </td>
-                  <td className="px-6 py-4 text-xs font-mono text-slate-600">
-                    {getItemValue(order.order_items, 'Asus', 'orca_id')}
-                  </td>
-
+                  <td className="px-6 py-4 text-xs font-mono text-slate-600">{getItemValue(order.order_items, 'Seapod', 'serial')}</td>
+                  <td className="px-6 py-4 text-xs font-mono text-slate-600">{getItemValue(order.order_items, 'Modem', 'orca_id')}</td>
+                  <td className="px-6 py-4 text-xs font-mono text-slate-600">{getItemValue(order.order_items, 'Asus', 'orca_id')}</td>
                   <td className="px-6 py-4">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded text-xs font-bold border ${getStatusColor(order.status)}`}>
-                      {order.status}
-                    </span>
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded text-xs font-bold border ${getStatusColor(order.status)}`}>{order.status}</span>
                   </td>
-                  <td className="px-6 py-4 text-right">
+                  <td className="px-6 py-4 text-right flex items-center justify-end gap-3">
                     <span className="text-slate-400 text-xs group-hover:text-[#0176D3] font-bold uppercase flex items-center justify-end gap-1">
                         View <ChevronRight size={14}/>
                     </span>
+                    
+                    {/* DELETE BUTTON - ONLY ADMINS - ONLY IF ALLOWED STATUS */}
+                    {isAdmin && ['New', 'In preparation', 'In Box'].includes(order.status) && (
+                        <button 
+                            onClick={(e) => handleDeleteOrder(e, order)}
+                            className="p-1.5 text-slate-300 hover:text-red-600 hover:bg-red-50 rounded transition-all"
+                            title="Delete Order"
+                        >
+                            <Trash2 size={16} />
+                        </button>
+                    )}
                   </td>
                 </tr>
               ))}
-              {filteredOrders.length === 0 && (
-                <tr>
-                    <td colSpan={7} className="p-10 text-center text-slate-400">
-                        No orders found.
-                    </td>
-                </tr>
-              )}
+              {filteredOrders.length === 0 && (<tr><td colSpan={7} className="p-10 text-center text-slate-400">No orders found.</td></tr>)}
             </tbody>
           </table>
         </div>
       </main>
 
-      {/* Create Modal */}
+      {/* Modal - Same as before */}
       {showCreateModal && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-lg shadow-2xl max-w-lg w-full overflow-hidden border border-slate-200 animate-in fade-in zoom-in duration-200">
@@ -277,74 +243,18 @@ export default function Dashboard() {
               <button onClick={() => setShowCreateModal(false)} className="text-slate-400 hover:text-slate-700">✕</button>
             </div>
             <form onSubmit={handleCreateOrder} className="p-6 space-y-5">
-              
-              <div className="p-3 bg-blue-50 border border-blue-100 rounded-md">
-                 <p className="text-xs text-blue-800 font-semibold">
-                    Order Number will be auto-generated by the system.
-                 </p>
-              </div>
-
-              <div>
-                 <label className="block text-xs font-bold text-slate-500 mb-1">Vessel Name (Optional)</label>
-                 <input name="vessel" className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-[#0176D3] focus:ring-1 focus:ring-[#0176D3] outline-none" placeholder="e.g. Evergreen A" />
-              </div>
-              
+              <div className="p-3 bg-blue-50 border border-blue-100 rounded-md"><p className="text-xs text-blue-800 font-semibold">Order Number will be auto-generated by the system.</p></div>
+              <div><label className="block text-xs font-bold text-slate-500 mb-1">Vessel Name (Optional)</label><input name="vessel" className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-[#0176D3] focus:ring-1 focus:ring-[#0176D3] outline-none" placeholder="e.g. Evergreen A" /></div>
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                    <label className="block text-xs font-bold text-slate-500 mb-1">Type</label>
-                    <select 
-                        name="type" 
-                        value={selectedType}
-                        onChange={(e) => setSelectedType(e.target.value)} // Update state on change
-                        className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-[#0176D3] outline-none bg-white"
-                    >
-                        <option value="Full system">Full system</option>
-                        <option value="Upgrade">Upgrade</option>
-                        <option value="Replacement">Replacement</option>
-                        <option value="Spare Parts">Spare Parts</option>
+                <div><label className="block text-xs font-bold text-slate-500 mb-1">Type</label>
+                    <select name="type" value={selectedType} onChange={(e) => setSelectedType(e.target.value)} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-[#0176D3] outline-none bg-white">
+                        <option value="Full system">Full system</option><option value="Upgrade">Upgrade</option><option value="Replacement">Replacement</option><option value="Spare Parts">Spare Parts</option>
                     </select>
                 </div>
-                
-                {/* DYNAMIC KIT LIST - Controlled by State */}
-                <div>
-                    <label className="block text-xs font-bold text-slate-500 mb-1">Kit Preset</label>
-                    <select 
-                        name="kit" 
-                        className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-[#0176D3] outline-none bg-white" 
-                        disabled={loadingKits}
-                        value={selectedKitId} // Controlled Input
-                        onChange={(e) => setSelectedKitId(e.target.value)}
-                    >
-                        <option value="">- Custom (Empty) -</option>
-                        {loadingKits ? <option>Loading...</option> : (
-                            kitOptions.map((kit) => (
-                                <option key={kit.id} value={kit.id}>{kit.name}</option>
-                            ))
-                        )}
-                    </select>
-                </div>
+                <div><label className="block text-xs font-bold text-slate-500 mb-1">Kit Preset</label><select name="kit" className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-[#0176D3] outline-none bg-white" disabled={loadingKits} value={selectedKitId} onChange={(e) => setSelectedKitId(e.target.value)}><option value="">- Custom (Empty) -</option>{loadingKits ? <option>Loading...</option> : (kitOptions.map((kit) => (<option key={kit.id} value={kit.id}>{kit.name}</option>)))}</select></div>
               </div>
-
-              {/* WAREHOUSE FIELD - ADMIN ONLY */}
-              {isAdmin && (
-                  <div>
-                     <label className="block text-xs font-bold text-slate-500 mb-1">Warehouse</label>
-                     <select 
-                        name="warehouse"
-                        value={warehouse}
-                        onChange={(e) => setWarehouse(e.target.value)}
-                        className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-[#0176D3] outline-none bg-white"
-                     >
-                        <option value="Orca">Orca</option>
-                        <option value="Bazz">Bazz</option>
-                     </select>
-                  </div>
-              )}
-              
-              <div className="pt-4 flex justify-end gap-2 border-t border-slate-100 mt-4">
-                <button type="button" onClick={() => setShowCreateModal(false)} className="px-4 py-2 border border-slate-300 rounded text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-all">Cancel</button>
-                <button type="submit" className="px-4 py-2 bg-[#0176D3] text-white rounded text-sm font-semibold hover:bg-blue-700 shadow-sm transition-all">Save & Create</button>
-              </div>
+              {isAdmin && (<div><label className="block text-xs font-bold text-slate-500 mb-1">Warehouse</label><select name="warehouse" value={warehouse} onChange={(e) => setWarehouse(e.target.value)} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-[#0176D3] outline-none bg-white"><option value="Orca">Orca</option><option value="Bazz">Bazz</option></select></div>)}
+              <div className="pt-4 flex justify-end gap-2 border-t border-slate-100 mt-4"><button type="button" onClick={() => setShowCreateModal(false)} className="px-4 py-2 border border-slate-300 rounded text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-all">Cancel</button><button type="submit" className="px-4 py-2 bg-[#0176D3] text-white rounded text-sm font-semibold hover:bg-blue-700 shadow-sm transition-all">Save & Create</button></div>
             </form>
           </div>
         </div>
