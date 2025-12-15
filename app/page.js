@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { useRouter } from 'next/navigation';
-import { RefreshCw, Plus, Search, Ship, ChevronRight, Filter, LayoutGrid, Package, UserCircle, UserCog, LogOut, Warehouse } from 'lucide-react';
+import { Plus, Search, Ship, ChevronRight, Filter, LayoutGrid } from 'lucide-react';
 import Sidebar from './components/Sidebar';
 
 export default function Dashboard() {
@@ -41,7 +41,6 @@ export default function Dashboard() {
   useEffect(() => {
     if (kitOptions.length === 0) return;
 
-    // Map Types to Kit Names
     const defaults = {
         'Full system': 'MSC003',
         'Upgrade': 'UPGRD',
@@ -54,7 +53,7 @@ export default function Dashboard() {
     if (targetKit) {
         setSelectedKitId(targetKit.id);
     } else {
-        setSelectedKitId(''); // Reset if no match
+        setSelectedKitId(''); 
     }
   }, [selectedType, kitOptions]);
 
@@ -89,14 +88,13 @@ export default function Dashboard() {
     e.preventDefault();
     const formData = new FormData(e.target);
     
-    // Find kit name
     const selectedKitName = kitOptions.find(k => k.id === selectedKitId)?.name || 'Custom';
 
     const newOrder = {
       vessel: formData.get('vessel') || 'Unknown Vessel',
       type: selectedType,
       kit: selectedKitId ? selectedKitName : 'Custom', 
-      warehouse: isAdmin ? formData.get('warehouse') : 'Bazz', // Default Bazz for vendors if logic allows
+      warehouse: isAdmin ? formData.get('warehouse') : 'Bazz', 
       status: 'New'
     };
 
@@ -155,10 +153,8 @@ export default function Dashboard() {
     }
   };
 
-  // Helper to extract specific items for the columns
   const getItemValue = (items, keyword, field) => {
     if (!items) return '-';
-    // Case insensitive search
     const found = items.find(i => i.piece?.toLowerCase().includes(keyword.toLowerCase()));
     return found ? (found[field] || '-') : '-';
   };
@@ -176,27 +172,14 @@ export default function Dashboard() {
           </div>
           
           <div className="flex gap-3">
+            {/* ONLY SHOW NEW ORDER BUTTON (Kits/Users are in Sidebar) */}
             {isAdmin && (
-              <>
-                <button 
-                  onClick={() => router.push('/admin/kits')}
-                  className="px-4 py-2 border border-slate-300 text-slate-700 text-sm font-semibold rounded-md hover:bg-slate-50 transition-all flex items-center gap-2"
-                >
-                  <Package size={16} /> Manage Kits
-                </button>
-                <button 
-                  onClick={() => router.push('/admin/users')}
-                  className="px-4 py-2 border border-slate-300 text-slate-700 text-sm font-semibold rounded-md hover:bg-slate-50 transition-all flex items-center gap-2"
-                >
-                  <UserCog size={16} /> Users
-                </button>
-                <button 
-                  onClick={() => setShowCreateModal(true)}
-                  className="px-4 py-2 bg-[#0176D3] text-white text-sm font-semibold rounded-md hover:bg-blue-700 shadow-md shadow-blue-200 flex items-center gap-2 transition-all"
-                >
-                  <Plus size={16} /> New Order
-                </button>
-              </>
+              <button 
+                onClick={() => setShowCreateModal(true)}
+                className="px-4 py-2 bg-[#0176D3] text-white text-sm font-semibold rounded-md hover:bg-blue-700 shadow-md shadow-blue-200 flex items-center gap-2 transition-all"
+              >
+                <Plus size={16} /> New Order
+              </button>
             )}
           </div>
         </div>
@@ -212,6 +195,10 @@ export default function Dashboard() {
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-9 pr-4 py-2 bg-white border border-slate-300 rounded-md text-sm focus:ring-2 focus:ring-[#0176D3] focus:border-transparent outline-none transition-all"
             />
+          </div>
+          <div className="flex gap-2">
+            <button className="p-2 text-slate-600 hover:bg-slate-100 rounded border border-slate-200"><Filter size={16}/></button>
+            <button className="p-2 text-slate-600 hover:bg-slate-100 rounded border border-slate-200"><LayoutGrid size={16}/></button>
           </div>
         </div>
 
