@@ -1,22 +1,25 @@
 'use client';
-import { useState, useEffect, use } from 'react';
+import { useState, useEffect } from 'react'; // Removed 'use' to prevent crashes
 import { createClient } from '@supabase/supabase-js';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Plus, Trash2, Box, Calendar, Ship, Upload, FileText, Paperclip, Lock, Download, Building2, Loader2, Warehouse } from 'lucide-react';
 import * as XLSX from 'xlsx';
-import Sidebar from '../../components/Sidebar'; // Import Sidebar
+import Sidebar from '../../components/Sidebar';
 
 export default function OrderDetails({ params }) {
-  const unwrappedParams = use(params);
-  const orderId = unwrappedParams.id;
   const router = useRouter();
+  
+  // Safe ID State
+  const [orderId, setOrderId] = useState(null);
 
+  // Data State
   const [items, setItems] = useState([]);
   const [order, setOrder] = useState(null);
   const [files, setFiles] = useState([]);
   const [masterItems, setMasterItems] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // UI State
   const [isAdmin, setIsAdmin] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [shipping, setShipping] = useState(false); 
@@ -28,9 +31,20 @@ export default function OrderDetails({ params }) {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
   );
 
+  // 1. SAFELY UNWRAP PARAMS (Works on Next 14 and 15)
   useEffect(() => {
-    fetchData();
-  }, []);
+    // Resolve params whether it's a Promise (Next 15) or Object (Next 14)
+    Promise.resolve(params).then((unwrapped) => {
+      setOrderId(unwrapped.id);
+    });
+  }, [params]);
+
+  // 2. FETCH DATA ONLY WHEN ID IS READY
+  useEffect(() => {
+    if (orderId) {
+      fetchData();
+    }
+  }, [orderId]);
 
   async function fetchData() {
     const { data: { session } } = await supabase.auth.getSession();
@@ -39,21 +53,13 @@ export default function OrderDetails({ params }) {
        if (profile?.role === 'admin') setIsAdmin(true);
     }
 
-    // Fetch Order
-    const { data: orderData, error: orderError } = await supabase.from('orders').select('*').eq('id', orderId).single();
-    
-    // Fetch Items
+    const { data: orderData, error } = await supabase.from('orders').select('*').eq('id', orderId).single();
     const { data: itemData } = await supabase.from('order_items').select('*').eq('order_id', orderId).order('created_at', { ascending: true });
-    
-    // Fetch Files
     const { data: fileData } = await supabase.from('order_files').select('*').eq('order_id', orderId).order('created_at', { ascending: false });
-    
-    // Fetch Master Items
     const { data: allItems } = await supabase.from('items').select('*').order('name');
 
-    if (orderError) {
-        console.error("Order fetch error:", orderError);
-        // This prevents the crash if ID is wrong
+    if (error) {
+        console.error("Order Load Error:", error);
     }
 
     setOrder(orderData);
@@ -63,13 +69,9 @@ export default function OrderDetails({ params }) {
     setLoading(false);
   }
 
-  // --- SAFETY CHECK (Prevents the crash) ---
-  if (loading) return <div className="p-10 ml-64 text-center text-slate-500">Loading Order...</div>;
-  if (!order) return <div className="p-10 ml-64 text-center text-red-500">Order not found. It may have been deleted.</div>;
-
+  // --- LOGIC ---
   const isLocked = order?.status === 'Shipped' && !isAdmin;
 
-  // --- LOGIC ---
   async function handleVesselBlur() {
     if (isLocked || !order.vessel || order.vessel.trim() === '') return;
     setCheckingVessel(true);
@@ -80,6 +82,7 @@ export default function OrderDetails({ params }) {
             body: JSON.stringify({ vessel: order.vessel })
         });
         const data = await res.json();
+        
         if (data.account && data.account !== "Account Empty") {
             setOrder(prev => ({ ...prev, account_name: data.account }));
             await supabase.from('orders').update({ account_name: data.account }).eq('id', orderId);
@@ -88,12 +91,15 @@ export default function OrderDetails({ params }) {
             setOrder(prev => ({ ...prev, vessel: '', account_name: '' }));
             await supabase.from('orders').update({ vessel: null, account_name: null }).eq('id', orderId);
         }
-    } catch (e) { console.error(e); }
+    } catch (e) {
+        console.error("Vessel Check Failed", e);
+    }
     setCheckingVessel(false);
   }
 
   async function updateOrder(field, value) {
     if (isLocked) return;
+
     if (field === 'status' && value === 'Shipped') {
         if (!order.vessel || order.vessel.trim() === '' || order.vessel === 'Unknown Vessel') {
             alert("⚠️ Cannot Ship: Vessel Name is required.");
@@ -102,6 +108,7 @@ export default function OrderDetails({ params }) {
         setShowShipModal(true); 
         return; 
     }
+
     setOrder({ ...order, [field]: value });
     await supabase.from('orders').update({ [field]: value }).eq('id', orderId);
   }
@@ -182,17 +189,37 @@ export default function OrderDetails({ params }) {
     if (data?.publicUrl) window.open(data.publicUrl, '_blank');
   }
 
+  // --- RENDER ---
+  if (loading || !orderId) return (
+    <div className="flex min-h-screen bg-[#F3F4F6] font-sans">
+        <Sidebar />
+        <div className="flex-1 ml-64 p-10 text-center text-slate-500">Loading Order...</div>
+    </div>
+  );
+
+  if (!order) return (
+    <div className="flex min-h-screen bg-[#F3F4F6] font-sans">
+        <Sidebar />
+        <div className="flex-1 ml-64 p-10 text-center text-red-500">
+            Order not found or deleted. 
+            <br/>
+            <button onClick={() => router.push('/')} className="mt-4 text-blue-600 hover:underline">Return to List</button>
+        </div>
+    </div>
+  );
+
+  const totalCost = items.reduce((sum, item) => sum + ((item.quantity || 0) * (item.price || 0)), 0);
+
   return (
     <div className="flex min-h-screen bg-[#F3F4F6] font-sans">
       <Sidebar />
       
-      {/* Main Content Area (ml-64 ensures it doesn't hide behind sidebar) */}
+      {/* Main Content */}
       <div className="flex-1 ml-64">
           
           {/* Header */}
           <div className="bg-white border-b border-slate-200 shadow-sm sticky top-0 z-10">
             <div className="max-w-[1600px] mx-auto px-6 py-4">
-              {/* No back button needed if we have Sidebar, but kept for clarity */}
               
               <div className="flex flex-col md:flex-row justify-between items-start gap-4">
                 <div className="flex items-center gap-4">
@@ -228,7 +255,6 @@ export default function OrderDetails({ params }) {
                         <option value="In preparation">In preparation</option>
                         <option value="In Box">In Box</option>
                         <option value="Ready for Pickup">Ready for Pickup</option>
-                        {/* ONLY ADMIN OR ALREADY SHIPPED */}
                         {(isAdmin || order.status === 'Shipped') && <option value="Shipped">Shipped</option>}
                         </select>
                     </div>
