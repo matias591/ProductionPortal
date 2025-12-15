@@ -2,7 +2,7 @@
 import { useState, useEffect, use } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Plus, Trash2, Box, Calendar, Ship, Upload, FileText, Paperclip, Lock, Download, Building2, Loader2 } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Box, Calendar, Ship, Upload, FileText, Paperclip, Lock, Download, Building2, Loader2, Warehouse } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
 export default function OrderDetails({ params }) {
@@ -16,13 +16,10 @@ export default function OrderDetails({ params }) {
   const [masterItems, setMasterItems] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // States for Admin, Upload, Shipping
   const [isAdmin, setIsAdmin] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [shipping, setShipping] = useState(false); 
   const [showShipModal, setShowShipModal] = useState(false);
-  
-  // NEW: State for Vessel Checking
   const [checkingVessel, setCheckingVessel] = useState(false);
 
   const supabase = createClient(
@@ -57,40 +54,25 @@ export default function OrderDetails({ params }) {
 
   // --- VESSEL CHECK LOGIC ---
   async function handleVesselBlur() {
-    // Only check if there is a name and it's not locked
     if (isLocked || !order.vessel || order.vessel.trim() === '') return;
-
     setCheckingVessel(true);
-
     try {
         const res = await fetch('/api/check-vessel', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ vessel: order.vessel })
         });
-
         const data = await res.json();
-
-        // LOGIC: If n8n returns an account name, save it.
-        // If n8n returns null, empty string, or specific "Not Found" flag -> Clear it.
         if (data.account && data.account !== "Account Empty") {
-            // Found! Update State & DB
             setOrder(prev => ({ ...prev, account_name: data.account }));
             await supabase.from('orders').update({ account_name: data.account }).eq('id', orderId);
         } else {
-            // Not Found!
-            alert(`⚠️ Vessel "${order.vessel}" does not exist in Salesforce.\n\nPlease check the spelling or create it in Salesforce first.`);
-            
-            // Clear Vessel & Account in UI
+            alert(`⚠️ Vessel "${order.vessel}" does not exist in Salesforce.`);
             setOrder(prev => ({ ...prev, vessel: '', account_name: '' }));
-            
-            // Clear in DB
             await supabase.from('orders').update({ vessel: null, account_name: null }).eq('id', orderId);
         }
-
     } catch (e) {
         console.error("Vessel Check Failed", e);
-        // Optional: Decide if you want to block them on API error or just let them pass
     }
     setCheckingVessel(false);
   }
@@ -122,12 +104,12 @@ export default function OrderDetails({ params }) {
     setShipping(false);
   }
 
-  // --- UPDATED EXPORT TO EXCEL ---
   function exportToExcel() {
     const dataToExport = items.map(item => ({
         "Order #": order.order_number, 
         "Vessel": order.vessel, 
-        "Account": order.account_name || '-', // <--- ADDED ACCOUNT
+        "Account": order.account_name || '-',
+        "Warehouse": order.warehouse || '-', // Exporting Warehouse
         "Item Name": item.piece,
         "SKU": masterItems.find(m => m.name === item.piece)?.sku || '-', 
         "Serial Number": item.serial || '-',
@@ -140,7 +122,7 @@ export default function OrderDetails({ params }) {
     XLSX.writeFile(workbook, `Order_${order.order_number}.xlsx`);
   }
 
-  // ... (Standard Item/File Functions - No Changes) ...
+  // ... (Item/File/Delete Functions unchanged) ...
   async function updateItem(itemId, field, value) {
     if (isLocked) return;
     let updateData = { [field]: value };
@@ -212,9 +194,7 @@ export default function OrderDetails({ params }) {
                  </div>
                  <div className="flex items-center gap-3 text-sm text-slate-500 mt-1">
                     <span className="font-mono bg-slate-100 px-2 py-0.5 rounded text-xs border border-slate-200 text-slate-600">#{order.order_number}</span>
-                    <span className="flex items-center gap-1 text-slate-600 font-medium">
-                        <Building2 size={12} /> {order.account_name || 'No Account'}
-                    </span>
+                    <span className="flex items-center gap-1 text-slate-600 font-medium"><Building2 size={12} /> {order.account_name || 'No Account'}</span>
                  </div>
                </div>
             </div>
@@ -229,14 +209,17 @@ export default function OrderDetails({ params }) {
                     <select 
                     value={order.status || 'New'} 
                     onChange={(e) => updateOrder('status', e.target.value)}
-                    disabled={isLocked && !isAdmin} 
+                    disabled={isLocked} // Still checks lock logic
                     className={`bg-white border border-slate-300 text-slate-900 text-sm font-bold rounded-md shadow-sm focus:ring-2 focus:ring-[#0176D3] block w-44 p-2 outline-none ${isLocked ? 'bg-gray-100 text-gray-500' : ''}`}
                     >
                     <option value="New">New</option>
                     <option value="In preparation">In preparation</option>
                     <option value="In Box">In Box</option>
                     <option value="Ready for Pickup">Ready for Pickup</option>
-                    <option value="Shipped">Shipped</option>
+                    {/* ONLY ADMIN CAN SEE SHIPPED OPTION */}
+                    {isAdmin && <option value="Shipped">Shipped</option>}
+                    {/* IF IT IS ALREADY SHIPPED, SHOW IT SO IT DOESNT BREAK */}
+                    {order.status === 'Shipped' && !isAdmin && <option value="Shipped">Shipped</option>}
                     </select>
                 </div>
             </div>
@@ -253,35 +236,34 @@ export default function OrderDetails({ params }) {
                     <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wide">Order Details</h3>
                 </div>
                 <div className="p-5 space-y-5">
-                    
-                    {/* VESSEL INPUT WITH AUTO-CHECK */}
                     <div>
                         <label className="flex items-center justify-between text-xs font-bold text-slate-400 uppercase mb-1.5">
                             <span className="flex items-center gap-2"><Ship size={14} /> Vessel Name <span className="text-red-500">*</span></span>
                             {checkingVessel && <span className="text-[#0176D3] flex items-center gap-1"><Loader2 size={12} className="animate-spin"/> Checking...</span>}
                         </label>
-                        <input 
-                            className="w-full text-sm font-medium border border-slate-200 rounded px-3 py-2 focus:border-[#0176D3] focus:ring-1 focus:ring-[#0176D3] outline-none text-slate-900" 
-                            placeholder="Enter Name & Click Away" 
-                            value={order.vessel || ''} 
-                            disabled={isLocked || checkingVessel}
-                            onChange={(e) => updateOrder('vessel', e.target.value)}
-                            onBlur={handleVesselBlur} // <--- TRIGGERS THE CHECK
-                        />
+                        <input className="w-full text-sm font-medium border border-slate-200 rounded px-3 py-2 focus:border-[#0176D3] focus:ring-1 focus:ring-[#0176D3] outline-none text-slate-900" placeholder="Enter Name & Click Away" value={order.vessel || ''} disabled={isLocked || checkingVessel} onChange={(e) => updateOrder('vessel', e.target.value)} onBlur={handleVesselBlur} />
                     </div>
 
-                    {/* ACCOUNT NAME (READ ONLY) */}
                     <div>
-                        <label className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase mb-1.5">
-                            <Building2 size={14} /> Account Name
-                        </label>
-                        <input 
-                            className="w-full text-sm font-medium border border-slate-200 bg-slate-50 rounded px-3 py-2 text-slate-500 cursor-not-allowed" 
-                            value={order.account_name || ''} 
-                            readOnly
-                            placeholder="Auto-filled from Salesforce"
-                        />
+                        <label className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase mb-1.5"><Building2 size={14} /> Account Name</label>
+                        <input className="w-full text-sm font-medium border border-slate-200 bg-slate-50 rounded px-3 py-2 text-slate-500 cursor-not-allowed" value={order.account_name || ''} readOnly placeholder="Auto-filled from Salesforce" />
                     </div>
+
+                    {/* WAREHOUSE (ADMIN ONLY) */}
+                    {isAdmin && (
+                        <div>
+                            <label className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase mb-1.5"><Warehouse size={14} /> Warehouse</label>
+                            <select 
+                                className="w-full text-sm font-medium border border-slate-200 rounded px-3 py-2 focus:border-[#0176D3] outline-none bg-white text-slate-900"
+                                value={order.warehouse || 'Orca'}
+                                onChange={(e) => updateOrder('warehouse', e.target.value)}
+                                disabled={isLocked}
+                            >
+                                <option value="Orca">Orca</option>
+                                <option value="Bazz">Bazz</option>
+                            </select>
+                        </div>
+                    )}
 
                     <div>
                         <label className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase mb-1.5"><Calendar size={14} /> Pickup Date</label>
@@ -296,7 +278,7 @@ export default function OrderDetails({ params }) {
                 </div>
             </div>
 
-            {/* File Upload Section (Unchanged) */}
+            {/* File Upload (Same as before) */}
             <div className="bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden">
                 <div className="px-5 py-3 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
                     <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wide flex items-center gap-2"><Paperclip size={14}/> Attachments ({files.length})</h3>
@@ -314,13 +296,15 @@ export default function OrderDetails({ params }) {
             </div>
         </div>
 
-        {/* Right Column: Items (Unchanged logic, just re-pasting for completeness) */}
+        {/* Right Column: Items (Same logic) */}
         <div className="lg:col-span-2">
            <div className="bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden">
                <div className="bg-slate-50 px-6 py-4 border-b border-slate-200 flex justify-between items-center">
                   <h3 className="font-bold text-sm text-slate-800 uppercase tracking-wide">Line Items</h3>
-                  {/* ... Total Cost & Item Count ... */}
-                  <span className="bg-white border border-slate-200 text-slate-500 text-xs font-bold px-2 py-1 rounded">{items.length} Items</span>
+                  <div className="flex items-center gap-4">
+                      {isAdmin && (<div className="text-sm font-bold text-slate-700">Total: <span className="text-[#0176D3]">${totalCost.toFixed(2)}</span></div>)}
+                      <span className="bg-white border border-slate-200 text-slate-500 text-xs font-bold px-2 py-1 rounded">{items.length} Items</span>
+                  </div>
                </div>
                
                <table className="w-full text-left border-collapse">
@@ -372,6 +356,7 @@ export default function OrderDetails({ params }) {
         </div>
       </main>
 
+      {/* Ship Modal (Same as before) */}
       {showShipModal && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-xl shadow-2xl max-w-sm w-full p-6 animate-in fade-in zoom-in duration-200 border border-slate-200">
