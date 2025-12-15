@@ -2,271 +2,434 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { useRouter } from 'next/navigation';
-import { Plus, Search, Ship, ChevronRight, Filter, LayoutGrid, Trash2 } from 'lucide-react';
-import Sidebar from './components/Sidebar';
+import { ArrowLeft, Plus, Trash2, Box, Calendar, Ship, Upload, FileText, Paperclip, Lock, Download, Building2, Loader2, Warehouse } from 'lucide-react';
+import * as XLSX from 'xlsx';
+import Sidebar from '../../components/Sidebar'; // <--- FIXED PATH (../../)
 
-export default function Dashboard() {
-  const [orders, setOrders] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  
-  const [kitOptions, setKitOptions] = useState([]);
-  const [loadingKits, setLoadingKits] = useState(true);
-  
-  const [selectedType, setSelectedType] = useState('Full system'); 
-  const [selectedKitId, setSelectedKitId] = useState(''); 
-  const [warehouse, setWarehouse] = useState('Orca');
-
-  const [userEmail, setUserEmail] = useState('');
-  const [isAdmin, setIsAdmin] = useState(false);
-  
+export default function OrderDetails({ params }) {
   const router = useRouter();
+  const [orderId, setOrderId] = useState(null);
+
+  // Data State
+  const [items, setItems] = useState([]);
+  const [order, setOrder] = useState(null);
+  const [files, setFiles] = useState([]);
+  const [masterItems, setMasterItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // UI State
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [shipping, setShipping] = useState(false); 
+  const [showShipModal, setShowShipModal] = useState(false);
+  const [checkingVessel, setCheckingVessel] = useState(false);
 
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
   );
 
+  // 1. SAFELY UNWRAP PARAMS
   useEffect(() => {
-    checkUser();
-    fetchOrders();
-    fetchKitsFromDB(); 
-  }, []);
+    Promise.resolve(params).then((unwrapped) => {
+      setOrderId(unwrapped.id);
+    });
+  }, [params]);
 
+  // 2. FETCH DATA
   useEffect(() => {
-    if (kitOptions.length === 0) return;
-    const defaults = {
-        'Full system': 'MSC003',
-        'Upgrade': 'UPGRD',
-        'Replacement': 'REP001'
-    };
-    const targetKitName = defaults[selectedType];
-    const targetKit = kitOptions.find(k => k.name === targetKitName);
-    if (targetKit) setSelectedKitId(targetKit.id);
-    else setSelectedKitId(''); 
-  }, [selectedType, kitOptions]);
+    if (orderId) fetchData();
+  }, [orderId]);
 
-  async function fetchKitsFromDB() {
-    const { data } = await supabase.from('kits').select('*').order('name');
-    setKitOptions(data || []);
-    setLoadingKits(false);
-  }
-
-  async function checkUser() {
+  async function fetchData() {
     const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      router.push('/login');
-    } else {
-      setUserEmail(session.user.email);
-      const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).single();
-      if (profile?.role === 'admin') setIsAdmin(true);
+    if (session) {
+       const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).single();
+       if (profile?.role === 'admin') setIsAdmin(true);
     }
-  }
 
-  async function fetchOrders() {
-    const { data } = await supabase
-      .from('orders')
-      .select('*, order_items(piece, serial, orca_id)')
-      .order('order_number', { ascending: false });
-    setOrders(data || []);
+    const { data: orderData, error } = await supabase.from('orders').select('*').eq('id', orderId).single();
+    
+    // Sort items by sort_order
+    const { data: itemData } = await supabase
+        .from('order_items')
+        .select('*')
+        .eq('order_id', orderId)
+        .order('sort_order', { ascending: true })
+        .order('created_at', { ascending: true });
+    
+    const { data: fileData } = await supabase.from('order_files').select('*').eq('order_id', orderId).order('created_at', { ascending: false });
+    const { data: allItems } = await supabase.from('items').select('*').order('name');
+
+    if (error) console.error("Order Load Error:", error);
+
+    setOrder(orderData);
+    setItems(itemData || []);
+    setFiles(fileData || []);
+    setMasterItems(allItems || []);
     setLoading(false);
   }
 
-  async function handleCreateOrder(e) {
-    e.preventDefault();
-    const formData = new FormData(e.target);
-    const selectedKitName = kitOptions.find(k => k.id === selectedKitId)?.name || 'Custom';
+  // --- LOGIC ---
+  const isLocked = order?.status === 'Shipped' && !isAdmin;
 
-    const newOrder = {
-      vessel: formData.get('vessel') || 'Unknown Vessel',
-      type: selectedType,
-      kit: selectedKitId ? selectedKitName : 'Custom', 
-      warehouse: isAdmin ? formData.get('warehouse') : 'Bazz', 
-      status: 'New'
-    };
-
-    const { data: orderData, error } = await supabase.from('orders').insert([newOrder]).select().single();
-    
-    if (error) { alert("Error: " + error.message); return; }
-
-    if (selectedKitId) {
-        // FETCH KIT ITEMS ORDERED BY SORT_ORDER
-        const { data: templateItems } = await supabase.from('kit_items').select('*').eq('kit_id', selectedKitId).order('sort_order', { ascending: true });
+  async function handleVesselBlur() {
+    if (isLocked || !order.vessel || order.vessel.trim() === '') return;
+    setCheckingVessel(true);
+    try {
+        const res = await fetch('/api/check-vessel', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ vessel: order.vessel })
+        });
+        const data = await res.json();
         
-        if (templateItems && templateItems.length > 0) {
-            const { data: masterList } = await supabase.from('items').select('id, price');
-
-            const itemsToInsert = templateItems.map((item, index) => {
-                const masterPrice = masterList?.find(m => m.id === item.item_id)?.price || 0;
-                return {
-                    order_id: orderData.id,
-                    piece: item.piece,
-                    quantity: item.quantity,
-                    serial: '',
-                    is_done: false,
-                    price: masterPrice,
-                    sort_order: index + 1 // Save the order
-                };
-            });
-
-            await supabase.from('order_items').insert(itemsToInsert);
+        if (data.account && data.account !== "Account Empty") {
+            setOrder(prev => ({ ...prev, account_name: data.account }));
+            await supabase.from('orders').update({ account_name: data.account }).eq('id', orderId);
+        } else {
+            alert(`⚠️ Vessel "${order.vessel}" does not exist in Salesforce.`);
+            setOrder(prev => ({ ...prev, vessel: '', account_name: '' }));
+            await supabase.from('orders').update({ vessel: null, account_name: null }).eq('id', orderId);
         }
+    } catch (e) {
+        console.error("Vessel Check Failed", e);
+    }
+    setCheckingVessel(false);
+  }
+
+  async function updateOrder(field, value) {
+    if (isLocked) return;
+
+    if (field === 'status' && value === 'Shipped') {
+        if (!order.vessel || order.vessel.trim() === '' || order.vessel === 'Unknown Vessel') {
+            alert("⚠️ Cannot Ship: Vessel Name is required.");
+            return; 
+        }
+        setShowShipModal(true); 
+        return; 
     }
 
-    setShowCreateModal(false);
-    fetchOrders();
+    setOrder({ ...order, [field]: value });
+    await supabase.from('orders').update({ [field]: value }).eq('id', orderId);
   }
 
-  // --- DELETE ORDER LOGIC ---
-  async function handleDeleteOrder(e, order) {
-    e.stopPropagation(); // Stop click from opening details
-    
-    // Status Check
-    const allowedStatuses = ['New', 'In preparation', 'In Box'];
-    if (!allowedStatuses.includes(order.status)) {
-        alert("Cannot delete orders that are Ready, Shipped, or Completed.");
-        return;
+  async function confirmShipping() {
+    setShipping(true);
+    try {
+        const res = await fetch('/api/trigger-shipping', { method: 'POST', body: JSON.stringify({ orderId: orderId }) });
+        const json = await res.json();
+        if (json.error) alert("Error: " + json.error);
+        else { setOrder({ ...order, status: 'Shipped' }); setShowShipModal(false); }
+    } catch (e) { alert(e.message); }
+    setShipping(false);
+  }
+
+  function exportToExcel() {
+    const dataToExport = items.map(item => ({
+        "Order #": order.order_number, 
+        "Vessel": order.vessel, 
+        "Account": order.account_name || '-',
+        "Warehouse": order.warehouse || '-',
+        "Item Name": item.piece,
+        "SKU": masterItems.find(m => m.name === item.piece)?.sku || '-', 
+        "Serial Number": item.serial || '-',
+        "Quantity": item.quantity,
+        ...(isAdmin ? { "Unit Price": item.price, "Total Price": item.price * item.quantity } : {})
+    }));
+    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Order Details");
+    XLSX.writeFile(workbook, `Order_${order.order_number}.xlsx`);
+  }
+
+  async function updateItem(itemId, field, value) {
+    if (isLocked) return;
+    let updateData = { [field]: value };
+    if (field === 'piece') {
+        const selectedMaster = masterItems.find(m => m.name === value);
+        if (selectedMaster) updateData.price = selectedMaster.price;
     }
-
-    if (!confirm(`Are you sure you want to delete Order #${order.order_number}?`)) return;
-
-    const { error } = await supabase.from('orders').delete().eq('id', order.id);
-    if (error) alert("Delete failed: " + error.message);
-    else fetchOrders();
+    const newItems = items.map(i => i.id === itemId ? { ...i, ...updateData } : i);
+    setItems(newItems);
+    await supabase.from('order_items').update(updateData).eq('id', itemId);
   }
 
-  async function handleLogout() {
-    await supabase.auth.signOut();
-    router.push('/login');
+  async function addItem() {
+    if (isLocked) return;
+    const firstMaster = masterItems[0];
+    const nextOrder = items.length > 0 ? Math.max(...items.map(i => i.sort_order || 0)) + 1 : 1;
+
+    const newItem = { 
+        order_id: orderId, 
+        piece: firstMaster ? firstMaster.name : 'New Item', 
+        quantity: 1, 
+        serial: '', 
+        price: firstMaster ? firstMaster.price : 0, 
+        is_done: false,
+        sort_order: nextOrder 
+    };
+    const { data } = await supabase.from('order_items').insert([newItem]).select().single();
+    if(data) setItems([...items, data]);
   }
 
-  const filteredOrders = orders.filter(o => 
-    o.order_number?.toString().includes(searchTerm) || 
-    o.vessel?.toLowerCase().includes(searchTerm.toLowerCase())
+  async function deleteItem(itemId) {
+    if (isLocked) return;
+    if(!confirm('Remove this item?')) return;
+    setItems(items.filter(i => i.id !== itemId));
+    await supabase.from('order_items').delete().eq('id', itemId);
+  }
+
+  async function handleFileUpload(e) {
+    if (isLocked) return;
+    if (!e.target.files || e.target.files.length === 0) return;
+    setUploading(true);
+    const file = e.target.files[0];
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Date.now()}_${Math.floor(Math.random()*1000)}.${fileExt}`;
+    const filePath = `${orderId}/${fileName}`;
+    const { error: uploadError } = await supabase.storage.from('order-attachments').upload(filePath, file);
+    if (uploadError) { alert(uploadError.message); setUploading(false); return; }
+    const { data: fileRecord } = await supabase.from('order_files').insert([{ order_id: orderId, file_name: file.name, file_path: filePath, uploaded_by: isAdmin ? 'Admin' : 'Vendor' }]).select().single();
+    if (fileRecord) setFiles([fileRecord, ...files]);
+    setUploading(false);
+  }
+
+  function openFile(path) {
+    const { data } = supabase.storage.from('order-attachments').getPublicUrl(path);
+    if (data?.publicUrl) window.open(data.publicUrl, '_blank');
+  }
+
+  // --- RENDER ---
+  if (loading || !orderId) return (
+    <div className="flex min-h-screen bg-[#F3F4F6] font-sans">
+        <Sidebar />
+        <div className="flex-1 ml-64 p-10 text-center text-slate-500">Loading Order...</div>
+    </div>
   );
 
-  const getStatusColor = (status) => {
-    switch(status) {
-      case 'New': return 'bg-blue-100 text-blue-700 border-blue-200';
-      case 'In preparation': return 'bg-purple-100 text-purple-700 border-purple-200';
-      case 'In Box': return 'bg-orange-100 text-orange-700 border-orange-200';
-      case 'Shipped': return 'bg-green-100 text-green-700 border-green-200';
-      default: return 'bg-gray-100 text-gray-700 border-gray-200';
-    }
-  };
+  if (!order) return (
+    <div className="flex min-h-screen bg-[#F3F4F6] font-sans">
+        <Sidebar />
+        <div className="flex-1 ml-64 p-10 text-center text-red-500">
+            Order not found.
+            <br/>
+            <button onClick={() => router.push('/')} className="mt-4 text-blue-600 hover:underline">Return to List</button>
+        </div>
+    </div>
+  );
 
-  const getItemValue = (items, keyword, field) => {
-    if (!items) return '-';
-    const found = items.find(i => i.piece?.toLowerCase().includes(keyword.toLowerCase()));
-    return found ? (found[field] || '-') : '-';
-  };
+  const totalCost = items.reduce((sum, item) => sum + ((item.quantity || 0) * (item.price || 0)), 0);
 
   return (
     <div className="flex min-h-screen bg-[#F3F4F6] font-sans">
       <Sidebar />
-      <main className="flex-1 ml-64 p-8">
-        
-        {/* Header */}
-        <div className="flex flex-col md:flex-row justify-between items-end mb-6 gap-4">
-          <div>
-            <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Orders</h1>
-            <p className="text-slate-500 mt-1 text-sm">{orders.length} items • Sorted by Date</p>
-          </div>
-          <div className="flex gap-3">
-            {isAdmin && (
-              <button onClick={() => setShowCreateModal(true)} className="px-4 py-2 bg-[#0176D3] text-white text-sm font-semibold rounded-md hover:bg-blue-700 shadow-md shadow-blue-200 flex items-center gap-2 transition-all">
-                <Plus size={16} /> New Order
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Search */}
-        <div className="bg-white p-3 rounded-t-lg border border-slate-200 border-b-0 flex justify-between items-center">
-          <div className="relative max-w-md w-full">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-            <input type="text" placeholder="Search by ID or Vessel..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-9 pr-4 py-2 bg-white border border-slate-300 rounded-md text-sm focus:ring-2 focus:ring-[#0176D3] focus:border-transparent outline-none transition-all" />
-          </div>
-        </div>
-
-        {/* Table */}
-        <div className="bg-white border border-slate-200 rounded-b-lg shadow-sm overflow-hidden overflow-x-auto">
-          <table className="w-full text-left border-collapse min-w-[1000px]">
-            <thead className="bg-slate-50 text-xs font-bold text-slate-500 uppercase tracking-wide border-b border-slate-200">
-              <tr>
-                <th className="px-6 py-4 w-24">Order #</th>
-                <th className="px-6 py-4 w-48">Vessel</th>
-                <th className="px-6 py-4">Seapod S/N</th>
-                <th className="px-6 py-4">Modem ID</th>
-                <th className="px-6 py-4">PU ID</th>
-                <th className="px-6 py-4">Status</th>
-                <th className="px-6 py-4 text-right">Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {filteredOrders.map((order) => (
-                <tr key={order.id} onClick={() => router.push(`/order/${order.id}`)} className="hover:bg-blue-50/50 cursor-pointer transition-colors group">
-                  <td className="px-6 py-4 font-semibold text-[#0176D3] hover:underline">{order.order_number}</td>
-                  <td className="px-6 py-4 text-sm text-slate-700 font-medium">
-                    <div className="flex items-center gap-2">{order.vessel ? <Ship size={14} className="text-slate-400"/> : null}{order.vessel || <span className="text-slate-400 italic">No Vessel Name</span>}</div>
-                  </td>
-                  <td className="px-6 py-4 text-xs font-mono text-slate-600">{getItemValue(order.order_items, 'Seapod', 'serial')}</td>
-                  <td className="px-6 py-4 text-xs font-mono text-slate-600">{getItemValue(order.order_items, 'Modem', 'orca_id')}</td>
-                  <td className="px-6 py-4 text-xs font-mono text-slate-600">{getItemValue(order.order_items, 'Asus', 'orca_id')}</td>
-                  <td className="px-6 py-4">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded text-xs font-bold border ${getStatusColor(order.status)}`}>{order.status}</span>
-                  </td>
-                  <td className="px-6 py-4 text-right flex items-center justify-end gap-3">
-                    {/* VIEW LINK */}
-                    <span className="text-slate-400 text-xs group-hover:text-[#0176D3] font-bold uppercase flex items-center justify-end gap-1">
-                        View <ChevronRight size={14}/>
-                    </span>
-                    
-                    {/* DELETE BUTTON (Stop propagation to prevent opening row) */}
-                    {isAdmin && (
-                        <button 
-                            onClick={(e) => handleDeleteOrder(e, order)}
-                            className="p-1.5 text-slate-300 hover:text-red-600 hover:bg-red-50 rounded transition-all"
-                            title="Delete Order"
-                        >
-                            <Trash2 size={16} />
-                        </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-              {filteredOrders.length === 0 && (<tr><td colSpan={7} className="p-10 text-center text-slate-400">No orders found.</td></tr>)}
-            </tbody>
-          </table>
-        </div>
-      </main>
-
-      {/* Modal code - Same as before */}
-      {showCreateModal && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg shadow-2xl max-w-lg w-full overflow-hidden border border-slate-200 animate-in fade-in zoom-in duration-200">
-            <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-              <h3 className="font-bold text-slate-800 text-lg">New Order</h3>
-              <button onClick={() => setShowCreateModal(false)} className="text-slate-400 hover:text-slate-700">✕</button>
-            </div>
-            <form onSubmit={handleCreateOrder} className="p-6 space-y-5">
-              <div className="p-3 bg-blue-50 border border-blue-100 rounded-md"><p className="text-xs text-blue-800 font-semibold">Order Number will be auto-generated by the system.</p></div>
-              <div><label className="block text-xs font-bold text-slate-500 mb-1">Vessel Name (Optional)</label><input name="vessel" className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-[#0176D3] focus:ring-1 focus:ring-[#0176D3] outline-none" placeholder="e.g. Evergreen A" /></div>
-              <div className="grid grid-cols-2 gap-4">
-                <div><label className="block text-xs font-bold text-slate-500 mb-1">Type</label>
-                    <select name="type" value={selectedType} onChange={(e) => setSelectedType(e.target.value)} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-[#0176D3] outline-none bg-white">
-                        <option value="Full system">Full system</option><option value="Upgrade">Upgrade</option><option value="Replacement">Replacement</option><option value="Spare Parts">Spare Parts</option>
-                    </select>
+      
+      {/* Main Content */}
+      <div className="flex-1 ml-64">
+          
+          {/* Header */}
+          <div className="bg-white border-b border-slate-200 shadow-sm sticky top-0 z-10">
+            <div className="max-w-[1600px] mx-auto px-6 py-4">
+              
+              <div className="flex flex-col md:flex-row justify-between items-start gap-4">
+                <div className="flex items-center gap-4">
+                   <div className="w-12 h-12 bg-[#0176D3]/10 text-[#0176D3] border border-[#0176D3]/20 rounded-lg flex items-center justify-center">
+                     <Box size={24} />
+                   </div>
+                   <div>
+                     <div className="flex items-center gap-2">
+                        <h1 className="text-2xl font-bold text-slate-900">{order.vessel || 'No Vessel Name'}</h1>
+                        {isLocked && <Lock size={18} className="text-red-500" title="Order Locked" />}
+                     </div>
+                     <div className="flex items-center gap-3 text-sm text-slate-500 mt-1">
+                        <span className="font-mono bg-slate-100 px-2 py-0.5 rounded text-xs border border-slate-200 text-slate-600">#{order.order_number}</span>
+                        <span className="flex items-center gap-1 text-slate-600 font-medium"><Building2 size={12} /> {order.account_name || 'No Account'}</span>
+                     </div>
+                   </div>
                 </div>
-                <div><label className="block text-xs font-bold text-slate-500 mb-1">Kit Preset</label><select name="kit" className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-[#0176D3] outline-none bg-white" disabled={loadingKits} value={selectedKitId} onChange={(e) => setSelectedKitId(e.target.value)}><option value="">- Custom (Empty) -</option>{loadingKits ? <option>Loading...</option> : (kitOptions.map((kit) => (<option key={kit.id} value={kit.id}>{kit.name}</option>)))}</select></div>
+
+                <div className="flex items-end gap-3">
+                    <button onClick={exportToExcel} className="bg-white border border-slate-300 text-slate-700 font-bold px-3 py-2 rounded-md text-sm shadow-sm hover:bg-slate-50 flex items-center gap-2">
+                        <Download size={16}/> Export Excel
+                    </button>
+
+                    <div className="flex flex-col items-end">
+                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Status</label>
+                        <select 
+                        value={order.status || 'New'} 
+                        onChange={(e) => updateOrder('status', e.target.value)}
+                        disabled={isLocked && !isAdmin} 
+                        className={`bg-white border border-slate-300 text-slate-900 text-sm font-bold rounded-md shadow-sm focus:ring-2 focus:ring-[#0176D3] block w-44 p-2 outline-none ${isLocked ? 'bg-gray-100 text-gray-500' : ''}`}
+                        >
+                        <option value="New">New</option>
+                        <option value="In preparation">In preparation</option>
+                        <option value="In Box">In Box</option>
+                        <option value="Ready for Pickup">Ready for Pickup</option>
+                        {(isAdmin || order.status === 'Shipped') && <option value="Shipped">Shipped</option>}
+                        </select>
+                    </div>
+                </div>
               </div>
-              {isAdmin && (<div><label className="block text-xs font-bold text-slate-500 mb-1">Warehouse</label><select name="warehouse" value={warehouse} onChange={(e) => setWarehouse(e.target.value)} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-[#0176D3] outline-none bg-white"><option value="Orca">Orca</option><option value="Bazz">Bazz</option></select></div>)}
-              <div className="pt-4 flex justify-end gap-2 border-t border-slate-100 mt-4"><button type="button" onClick={() => setShowCreateModal(false)} className="px-4 py-2 border border-slate-300 rounded text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-all">Cancel</button><button type="submit" className="px-4 py-2 bg-[#0176D3] text-white rounded text-sm font-semibold hover:bg-blue-700 shadow-sm transition-all">Save & Create</button></div>
-            </form>
+            </div>
           </div>
-        </div>
-      )}
+
+          <main className="max-w-[1600px] mx-auto px-6 py-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            {/* Left Column */}
+            <div className="lg:col-span-1 space-y-6">
+                <div className="bg-white border border-slate-200 rounded-lg shadow-sm">
+                    <div className="px-5 py-3 border-b border-slate-100 bg-slate-50/50">
+                        <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wide">Order Details</h3>
+                    </div>
+                    <div className="p-5 space-y-5">
+                        
+                        {/* VESSEL INPUT */}
+                        <div>
+                            <label className="flex items-center justify-between text-xs font-bold text-slate-400 uppercase mb-1.5">
+                                <span className="flex items-center gap-2"><Ship size={14} /> Vessel Name <span className="text-red-500">*</span></span>
+                                {checkingVessel && <span className="text-[#0176D3] flex items-center gap-1"><Loader2 size={12} className="animate-spin"/> Checking...</span>}
+                            </label>
+                            <input 
+                                className="w-full text-sm font-medium border border-slate-200 rounded px-3 py-2 focus:border-[#0176D3] focus:ring-1 focus:ring-[#0176D3] outline-none text-slate-900" 
+                                placeholder="Enter Name & Click Away" 
+                                value={order.vessel || ''} 
+                                disabled={isLocked || checkingVessel}
+                                onChange={(e) => updateOrder('vessel', e.target.value)}
+                                onBlur={handleVesselBlur} 
+                            />
+                        </div>
+
+                        {/* ACCOUNT NAME (READ ONLY) */}
+                        <div>
+                            <label className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase mb-1.5"><Building2 size={14} /> Account Name</label>
+                            <input className="w-full text-sm font-medium border border-slate-200 bg-slate-50 rounded px-3 py-2 text-slate-500 cursor-not-allowed" value={order.account_name || ''} readOnly placeholder="Auto-filled" />
+                        </div>
+
+                        {/* WAREHOUSE (ADMIN ONLY) */}
+                        {isAdmin && (
+                            <div>
+                                <label className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase mb-1.5"><Warehouse size={14} /> Warehouse</label>
+                                <select 
+                                    className="w-full text-sm font-medium border border-slate-200 rounded px-3 py-2 focus:border-[#0176D3] outline-none bg-white text-slate-900"
+                                    value={order.warehouse || 'Orca'}
+                                    onChange={(e) => updateOrder('warehouse', e.target.value)}
+                                    disabled={isLocked}
+                                >
+                                    <option value="Orca">Orca</option>
+                                    <option value="Bazz">Bazz</option>
+                                </select>
+                            </div>
+                        )}
+
+                        <div>
+                            <label className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase mb-1.5"><Calendar size={14} /> Pickup Date</label>
+                            <input type="date" className="w-full text-sm font-medium border border-slate-200 rounded px-3 py-2 focus:border-[#0176D3] outline-none text-slate-700" value={order.pickup_date || ''} disabled={isLocked} onChange={(e) => updateOrder('pickup_date', e.target.value)} />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-bold text-slate-400 uppercase mb-1.5">Kit Type</label>
+                            <select className="w-full text-sm font-medium border border-slate-200 rounded px-3 py-2 focus:border-[#0176D3] outline-none bg-white" value={order.type || ''} disabled={isLocked} onChange={(e) => updateOrder('type', e.target.value)} >
+                            <option>Full system</option><option>Upgrade</option><option>Replacement</option><option>Spare Parts</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                {/* File Upload */}
+                <div className="bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden">
+                    <div className="px-5 py-3 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
+                        <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wide flex items-center gap-2"><Paperclip size={14}/> Attachments ({files.length})</h3>
+                        {isAdmin && !isLocked && (<label className="cursor-pointer text-xs font-bold text-[#0176D3] hover:underline flex items-center gap-1">{uploading ? 'Uploading...' : '+ Upload'}<input type="file" className="hidden" onChange={handleFileUpload} disabled={uploading || isLocked} /></label>)}
+                    </div>
+                    <div className="divide-y divide-slate-50">
+                        {files.map(file => (
+                            <div key={file.id} onClick={() => openFile(file.file_path)} className="px-5 py-3 flex items-center gap-3 hover:bg-blue-50 cursor-pointer transition-colors group">
+                                <div className="bg-blue-100 p-1.5 rounded text-blue-600"><FileText size={16}/></div>
+                                <div className="overflow-hidden"><p className="text-sm font-medium text-slate-700 truncate group-hover:text-[#0176D3] group-hover:underline">{file.file_name}</p><p className="text-[10px] text-slate-400">Uploaded by {file.uploaded_by}</p></div>
+                            </div>
+                        ))}
+                        {files.length === 0 && <div className="p-6 text-center text-slate-400 text-xs italic">No files attached.</div>}
+                    </div>
+                </div>
+            </div>
+
+            {/* Right Column: Items */}
+            <div className="lg:col-span-2">
+               <div className="bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden">
+                   <div className="bg-slate-50 px-6 py-4 border-b border-slate-200 flex justify-between items-center">
+                      <h3 className="font-bold text-sm text-slate-800 uppercase tracking-wide">Line Items</h3>
+                      <div className="flex items-center gap-4">
+                          {isAdmin && (<div className="text-sm font-bold text-slate-700">Total: <span className="text-[#0176D3]">${totalCost.toFixed(2)}</span></div>)}
+                          <span className="bg-white border border-slate-200 text-slate-500 text-xs font-bold px-2 py-1 rounded">{items.length} Items</span>
+                      </div>
+                   </div>
+                   
+                   <table className="w-full text-left border-collapse">
+                     <thead className="bg-white border-b border-slate-200 text-xs uppercase text-slate-400 font-bold">
+                       <tr>
+                         <th className="px-6 py-3 w-10 text-center"></th>
+                         <th className="px-6 py-3">Item</th>
+                         <th className="px-6 py-3 w-20">Qty</th>
+                         <th className="px-6 py-3 w-32">Serial #</th>
+                         <th className="px-6 py-3 w-32">Orca ID</th>
+                         {isAdmin && <th className="px-6 py-3 w-24 text-right">Price</th>}
+                         <th className="w-10"></th>
+                       </tr>
+                     </thead>
+                     <tbody className="divide-y divide-slate-50">
+                       {items.map((item) => (
+                         <tr key={item.id} className="group hover:bg-slate-50 transition-colors">
+                            <td className="px-6 py-3 text-center">
+                               <input type="checkbox" checked={item.is_done || false} onChange={(e) => updateItem(item.id, 'is_done', e.target.checked)} disabled={isLocked} className="w-5 h-5 rounded border-slate-300 text-[#0176D3] focus:ring-[#0176D3] accent-[#0176D3] cursor-pointer" />
+                            </td>
+                            <td className="px-6 py-3">
+                               <select className="w-full bg-transparent border-none outline-none focus:ring-0 text-sm font-medium text-slate-900" value={item.piece || ''} disabled={isLocked} onChange={(e) => updateItem(item.id, 'piece', e.target.value)}>
+                                    <option value="">Select Item...</option>
+                                    {masterItems.map(m => <option key={m.id} value={m.name}>{m.sku} - {m.name}</option>)}
+                               </select>
+                            </td>
+                            <td className="px-6 py-3">
+                               <input type="number" className="w-full bg-transparent border-none outline-none" value={item.quantity || 1} disabled={isLocked} onChange={(e) => updateItem(item.id, 'quantity', e.target.value)} />
+                            </td>
+                            <td className="px-6 py-3">
+                               <input className="w-full bg-transparent border-none outline-none text-[#0176D3] font-medium placeholder-slate-300" value={item.serial || ''} disabled={isLocked} onChange={(e) => updateItem(item.id, 'serial', e.target.value)} placeholder="---" />
+                            </td>
+                            <td className="px-6 py-3">
+                               <input className="w-full bg-transparent border-none outline-none text-slate-600 placeholder-slate-300" value={item.orca_id || ''} disabled={isLocked} onChange={(e) => updateItem(item.id, 'orca_id', e.target.value)} placeholder="---" />
+                            </td>
+                            {isAdmin && (<td className="px-6 py-3 text-right text-xs font-mono text-slate-600">${(item.price * item.quantity).toFixed(2)}</td>)}
+                            <td className="px-4 py-3 text-right">
+                               {!isLocked && (<button onClick={() => deleteItem(item.id)} className="text-slate-300 hover:text-red-600 opacity-0 group-hover:opacity-100"><Trash2 size={16}/></button>)}
+                            </td>
+                         </tr>
+                       ))}
+                     </tbody>
+                   </table>
+                   
+                   {!isLocked && (
+                       <button onClick={addItem} className="w-full py-4 text-sm font-bold text-slate-500 hover:bg-slate-50 hover:text-[#0176D3] transition-colors flex items-center justify-center gap-2 border-t border-slate-200"><Plus size={16} /> Add New Line Item</button>
+                   )}
+                </div>
+            </div>
+          </main>
+
+          {/* Ship Modal */}
+          {showShipModal && (
+            <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+              <div className="bg-white rounded-xl shadow-2xl max-w-sm w-full p-6 animate-in fade-in zoom-in duration-200 border border-slate-200">
+                <div className="flex flex-col items-center text-center">
+                  <div className="w-12 h-12 bg-blue-100 text-[#0176D3] rounded-full flex items-center justify-center mb-4"><Ship size={24} /></div>
+                  <h3 className="text-lg font-bold text-slate-900">Confirm Shipment?</h3>
+                  <p className="text-sm text-slate-500 mt-2 mb-6">This will <strong>lock the order</strong> and send data. Cannot be undone.</p>
+                  <div className="flex gap-3 w-full">
+                    <button onClick={() => setShowShipModal(false)} disabled={shipping} className="flex-1 px-4 py-2.5 border border-slate-300 rounded-lg text-sm font-bold text-slate-700 hover:bg-slate-50">Cancel</button>
+                    <button onClick={confirmShipping} disabled={shipping} className="flex-1 px-4 py-2.5 bg-[#0176D3] text-white rounded-lg text-sm font-bold hover:bg-blue-700 shadow-sm">{shipping ? 'Processing...' : 'Confirm & Ship'}</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+      </div>
     </div>
   );
 }
