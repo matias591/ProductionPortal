@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { usePathname, useRouter } from 'next/navigation';
-import { LayoutDashboard, Package, Users, LogOut, Tag } from 'lucide-react';
+import { LayoutDashboard, Package, Users, LogOut, Tag, Cpu, Factory } from 'lucide-react';
 
 export default function Sidebar() {
   const router = useRouter();
@@ -43,7 +43,8 @@ export default function Sidebar() {
 
   // Helper to style active vs inactive links
   const getLinkClass = (path) => {
-    const isActive = pathname === path;
+    // Check if the current path starts with the link path (for sub-pages)
+    const isActive = pathname === path || (path !== '/' && pathname.startsWith(path));
     return `flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-all duration-200 cursor-pointer mb-1
       ${isActive 
         ? 'bg-[#0176D3]/10 text-[#0176D3]' 
@@ -64,20 +65,28 @@ export default function Sidebar() {
       {/* Navigation Items */}
       <nav className="flex-1 px-4 py-6 space-y-1">
         
-        {/* 1. Orders (Available to Everyone) */}
+        {/* --- WORKSPACE (Everyone) --- */}
+        <div className="pb-2 px-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+          Workspace
+        </div>
+
         <div onClick={() => router.push('/')} className={getLinkClass('/')}>
           <LayoutDashboard size={18} />
           <span>Orders</span>
         </div>
 
-        {/* 2. Admin Only Links */}
+        <div onClick={() => router.push('/seapod-production')} className={getLinkClass('/seapod-production')}>
+          <Factory size={18} />
+          <span>Seapod Production</span>
+        </div>
+
+        {/* --- ADMIN ONLY --- */}
         {isAdmin && (
           <>
             <div className="pt-6 pb-2 px-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
               Admin Controls
             </div>
 
-            {/* NEW: Master Items Database */}
             <div onClick={() => router.push('/admin/items')} className={getLinkClass('/admin/items')}>
               <Tag size={18} />
               <span>Master Items</span>
@@ -86,6 +95,11 @@ export default function Sidebar() {
             <div onClick={() => router.push('/admin/kits')} className={getLinkClass('/admin/kits')}>
               <Package size={18} />
               <span>Manage Kits</span>
+            </div>
+
+            <div onClick={() => router.push('/admin/seapod-templates')} className={getLinkClass('/admin/seapod-templates')}>
+              <Cpu size={18} />
+              <span>Seapod Templates</span>
             </div>
 
             <div onClick={() => router.push('/admin/users')} className={getLinkClass('/admin/users')}>
