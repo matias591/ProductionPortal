@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Plus, Trash2, Box, Calendar, Ship, Upload, FileText, Paperclip, Lock, Download, Building2, Loader2, Warehouse, Cpu } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Box, Calendar, Ship, Upload, FileText, Paperclip, Lock, Download, Building2, Loader2, Warehouse, Cpu, Save, Check } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import Sidebar from '../../components/Sidebar';
 
@@ -24,11 +24,17 @@ export default function OrderDetails({ params }) {
   const [showShipModal, setShowShipModal] = useState(false);
   const [checkingVessel, setCheckingVessel] = useState(false);
 
-  // NEW SEAPOD LOGIC STATES
+  // --- SEAPOD WIZARD STATES ---
   const [showSeapodModal, setShowSeapodModal] = useState(false);
+  const [seapodStep, setSeapodStep] = useState(1); // 1 = Select Template, 2 = Edit Items
   const [missingSeapodSerial, setMissingSeapodSerial] = useState('');
   const [seapodTemplates, setSeapodTemplates] = useState([]);
   const [selectedSeapodTemplate, setSelectedSeapodTemplate] = useState('');
+  
+  // State to manage the inline Seapod creation
+  const [newSeapodId, setNewSeapodId] = useState(null);
+  const [newSeapodItems, setNewSeapodItems] = useState([]);
+  const [pendingStatus, setPendingStatus] = useState(null); // Remembers "In Box" while you create seapod
 
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -45,17 +51,15 @@ export default function OrderDetails({ params }) {
        if (profile?.role === 'admin') setIsAdmin(true);
     }
 
-    const { data: orderData, error } = await supabase.from('orders').select('*').eq('id', orderId).single();
+    const { data: orderData } = await supabase.from('orders').select('*').eq('id', orderId).single();
     const { data: itemData } = await supabase.from('order_items').select('*').eq('order_id', orderId).order('sort_order', { ascending: true }).order('created_at', { ascending: true });
     const { data: fileData } = await supabase.from('order_files').select('*').eq('order_id', orderId).order('created_at', { ascending: false });
     const { data: allItems } = await supabase.from('items').select('*').order('name');
     
-    // NEW: Fetch Seapod Templates for the modal
+    // Fetch Seapod Templates
     const { data: tpls } = await supabase.from('seapod_templates').select('*').order('name');
     setSeapodTemplates(tpls || []);
     if (tpls?.length > 0) setSelectedSeapodTemplate(tpls[0].id);
-
-    if (error) console.error("Order Load Error:", error);
 
     setOrder(orderData);
     setItems(itemData || []);
@@ -85,40 +89,33 @@ export default function OrderDetails({ params }) {
     setCheckingVessel(false);
   }
 
-  // --- MAIN STATUS UPDATE LOGIC ---
+  // --- STATUS UPDATE INTERCEPTOR ---
   async function updateOrder(field, value) {
     if (isLocked) return;
 
-    // --- CHECK SEAPOD EXISTENCE LOGIC (New/InProgress -> Something Else) ---
+    // Check Seapod Logic
     if (field === 'status' && (value === 'In Box' || value === 'Ready for Pickup' || value === 'Shipped')) {
-        
-        // 1. Find Seapod Item (Case insensitive search)
         const seapodItem = items.find(i => i.piece && i.piece.toLowerCase().includes('seapod'));
         
         if (seapodItem) {
-            // Check if Serial exists
             if (!seapodItem.serial || seapodItem.serial.trim() === '' || seapodItem.serial === '-') {
                 alert("⚠️ Seapod Item exists but has no Serial Number.\nPlease enter the Seapod Serial Number first.");
                 return;
             }
 
-            // 2. Check Database for this Serial
-            const { data: existingSeapod } = await supabase
-                .from('seapod_production')
-                .select('id')
-                .eq('serial_number', seapodItem.serial)
-                .single();
+            const { data: existingSeapod } = await supabase.from('seapod_production').select('id').eq('serial_number', seapodItem.serial).single();
 
             if (!existingSeapod) {
-                // 3. SEAPOD MISSING -> Show Modal & Stop Save
+                // STOP: Open Wizard
                 setMissingSeapodSerial(seapodItem.serial);
+                setPendingStatus(value); // Remember where we wanted to go
+                setSeapodStep(1); // Reset wizard
                 setShowSeapodModal(true);
                 return; 
             }
         }
     }
 
-    // --- SHIPPING LOGIC ---
     if (field === 'status' && value === 'Shipped') {
         if (!order.vessel || order.vessel.trim() === '' || order.vessel === 'Unknown Vessel') {
             alert("⚠️ Cannot Ship: Vessel Name is required.");
@@ -132,8 +129,8 @@ export default function OrderDetails({ params }) {
     await supabase.from('orders').update({ [field]: value }).eq('id', orderId);
   }
 
-  // --- CREATE SEAPOD & REDIRECT ---
-  async function createSeapodAndRedirect() {
+  // --- WIZARD STEP 1: CREATE HEADER & ITEMS ---
+  async function startSeapodCreation() {
     if (!selectedSeapodTemplate) return alert("Select a template");
 
     // 1. Create Header
@@ -144,6 +141,8 @@ export default function OrderDetails({ params }) {
     }]).select().single();
 
     if (error) { alert("Error: " + error.message); return; }
+
+    setNewSeapodId(newSeapod.id);
 
     // 2. Copy Items from Template
     const { data: tItems } = await supabase.from('seapod_template_items').select('*').eq('template_id', selectedSeapodTemplate);
@@ -157,12 +156,38 @@ export default function OrderDetails({ params }) {
             sort_order: i.sort_order
         }));
         await supabase.from('seapod_items').insert(itemsToInsert);
+        
+        // 3. Fetch them back to display in Step 2
+        const { data: createdItems } = await supabase.from('seapod_items').select('*').eq('seapod_id', newSeapod.id).order('sort_order');
+        setNewSeapodItems(createdItems || []);
     }
 
-    // 3. Go There
-    router.push(`/seapod-production/${newSeapod.id}`);
+    // Move to Step 2 (Inline Editing)
+    setSeapodStep(2);
   }
 
+  // --- WIZARD STEP 2: INLINE EDITING ---
+  async function updateSeapodItemSerial(itemId, newSerial) {
+    // Optimistic UI
+    setNewSeapodItems(prev => prev.map(i => i.id === itemId ? { ...i, serial: newSerial } : i));
+    // DB Update
+    await supabase.from('seapod_items').update({ serial: newSerial }).eq('id', itemId);
+  }
+
+  // --- WIZARD FINISH ---
+  async function completeSeapodCreation() {
+    // 1. Close Modal
+    setShowSeapodModal(false);
+    
+    // 2. Apply the Status Change that was pending (e.g. change Order to "In Box")
+    if (pendingStatus) {
+        setOrder(prev => ({ ...prev, status: pendingStatus }));
+        await supabase.from('orders').update({ status: pendingStatus }).eq('id', orderId);
+        setPendingStatus(null);
+    }
+  }
+
+  // ... (Rest of logic: Export, Delete, Upload - Unchanged) ...
   async function confirmShipping() {
     setShipping(true);
     try {
@@ -235,6 +260,7 @@ export default function OrderDetails({ params }) {
     if (data?.publicUrl) window.open(data.publicUrl, '_blank');
   }
 
+  // --- RENDER ---
   if (loading || !orderId) return <div className="flex min-h-screen bg-[#F3F4F6]"><Sidebar /><div className="ml-64 p-10 text-slate-500">Loading Order...</div></div>;
   if (!order) return <div className="flex min-h-screen bg-[#F3F4F6]"><Sidebar /><div className="ml-64 p-10 text-red-500">Order not found.</div></div>;
 
@@ -272,10 +298,7 @@ export default function OrderDetails({ params }) {
                 <div className="bg-white border border-slate-200 rounded-lg shadow-sm">
                     <div className="px-5 py-3 border-b border-slate-100 bg-slate-50/50"><h3 className="text-xs font-bold text-slate-500 uppercase tracking-wide">Order Details</h3></div>
                     <div className="p-5 space-y-5">
-                        <div>
-                            <label className="flex items-center justify-between text-xs font-bold text-slate-400 uppercase mb-1.5"><span className="flex items-center gap-2"><Ship size={14} /> Vessel Name <span className="text-red-500">*</span></span>{checkingVessel && <span className="text-[#0176D3] flex items-center gap-1"><Loader2 size={12} className="animate-spin"/> Checking...</span>}</label>
-                            <input className="w-full text-sm font-medium border border-slate-200 rounded px-3 py-2 focus:border-[#0176D3] focus:ring-1 focus:ring-[#0176D3] outline-none text-slate-900" placeholder="Enter Name & Click Away" value={order.vessel || ''} disabled={isLocked || checkingVessel} onChange={(e) => updateOrder('vessel', e.target.value)} onBlur={handleVesselBlur} />
-                        </div>
+                        <div><label className="flex items-center justify-between text-xs font-bold text-slate-400 uppercase mb-1.5"><span className="flex items-center gap-2"><Ship size={14} /> Vessel Name <span className="text-red-500">*</span></span>{checkingVessel && <span className="text-[#0176D3] flex items-center gap-1"><Loader2 size={12} className="animate-spin"/> Checking...</span>}</label><input className="w-full text-sm font-medium border border-slate-200 rounded px-3 py-2 focus:border-[#0176D3] focus:ring-1 focus:ring-[#0176D3] outline-none text-slate-900" placeholder="Enter Name & Click Away" value={order.vessel || ''} disabled={isLocked || checkingVessel} onChange={(e) => updateOrder('vessel', e.target.value)} onBlur={handleVesselBlur} /></div>
                         <div><label className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase mb-1.5"><Building2 size={14} /> Account Name</label><input className="w-full text-sm font-medium border border-slate-200 bg-slate-50 rounded px-3 py-2 text-slate-500 cursor-not-allowed" value={order.account_name || ''} readOnly placeholder="Auto-filled" /></div>
                         {isAdmin && (<div><label className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase mb-1.5"><Warehouse size={14} /> Warehouse</label><select className="w-full text-sm font-medium border border-slate-200 rounded px-3 py-2 focus:border-[#0176D3] outline-none bg-white text-slate-900" value={order.warehouse || 'Orca'} onChange={(e) => updateOrder('warehouse', e.target.value)} disabled={isLocked}><option value="Orca">Orca</option><option value="Bazz">Bazz</option></select></div>)}
                         <div><label className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase mb-1.5"><Calendar size={14} /> Pickup Date</label><input type="date" className="w-full text-sm font-medium border border-slate-200 rounded px-3 py-2 focus:border-[#0176D3] outline-none text-slate-700" value={order.pickup_date || ''} disabled={isLocked} onChange={(e) => updateOrder('pickup_date', e.target.value)} /></div>
@@ -326,36 +349,68 @@ export default function OrderDetails({ params }) {
             </div>
           )}
 
-          {/* NEW: SEAPOD MISSING MODAL */}
+          {/* --- SEAPOD WIZARD MODAL --- */}
           {showSeapodModal && (
             <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md border border-red-100">
-                    <div className="flex flex-col items-center text-center">
-                        <div className="w-12 h-12 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center mb-4">
-                            <Cpu size={24} />
-                        </div>
-                        <h3 className="text-xl font-bold text-slate-900">Seapod Not Found</h3>
-                        <p className="text-sm text-slate-500 mt-2 mb-6">
-                            Seapod <strong>{missingSeapodSerial}</strong> does not exist in the Production system yet. 
-                            <br/>You must create it to proceed.
-                        </p>
+                <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-2xl border border-blue-100 h-[80vh] flex flex-col">
+                    
+                    {/* Header */}
+                    <div className="flex flex-col items-center text-center mb-6">
+                        <div className="w-12 h-12 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center mb-2"><Cpu size={24} /></div>
+                        <h3 className="text-xl font-bold text-slate-900">
+                            {seapodStep === 1 ? "Seapod Not Found" : `Build Seapod: ${missingSeapodSerial}`}
+                        </h3>
+                        {seapodStep === 1 && (
+                            <p className="text-sm text-slate-500">Seapod <strong>{missingSeapodSerial}</strong> does not exist. Create it now to proceed.</p>
+                        )}
+                    </div>
 
-                        <div className="w-full text-left mb-6">
-                            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Select Template</label>
-                            <select 
-                                className="w-full border border-slate-300 rounded px-3 py-2 text-sm font-medium"
-                                value={selectedSeapodTemplate}
-                                onChange={(e) => setSelectedSeapodTemplate(e.target.value)}
-                            >
+                    {/* STEP 1: SELECT TEMPLATE */}
+                    {seapodStep === 1 && (
+                        <div className="flex-1 flex flex-col justify-center">
+                            <label className="block text-xs font-bold text-slate-500 uppercase mb-2 text-center">Select Seapod Template</label>
+                            <select className="w-full max-w-sm mx-auto border border-slate-300 rounded px-3 py-2 text-sm font-medium" value={selectedSeapodTemplate} onChange={(e) => setSelectedSeapodTemplate(e.target.value)}>
                                 {seapodTemplates.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                             </select>
+                            <div className="mt-8 flex gap-3 max-w-sm mx-auto w-full">
+                                <button onClick={() => setShowSeapodModal(false)} className="flex-1 px-4 py-2 border rounded font-bold text-slate-700">Cancel</button>
+                                <button onClick={startSeapodCreation} className="flex-1 px-4 py-2 bg-[#0176D3] text-white rounded font-bold shadow">Start Build</button>
+                            </div>
                         </div>
-                        
-                        <div className="flex gap-3 w-full">
-                            <button onClick={() => setShowSeapodModal(false)} className="flex-1 px-4 py-2 border rounded font-bold text-slate-700">Cancel</button>
-                            <button onClick={createSeapodAndRedirect} className="flex-1 px-4 py-2 bg-[#0176D3] text-white rounded font-bold shadow">Create & Go</button>
+                    )}
+
+                    {/* STEP 2: EDIT ITEMS */}
+                    {seapodStep === 2 && (
+                        <div className="flex-1 flex flex-col overflow-hidden">
+                            <div className="overflow-y-auto flex-1 border border-slate-200 rounded-lg mb-6">
+                                <table className="w-full text-left">
+                                    <thead className="bg-slate-50 text-xs font-bold text-slate-500 uppercase border-b sticky top-0">
+                                        <tr><th className="px-4 py-2">Item</th><th className="px-4 py-2 w-20">Qty</th><th className="px-4 py-2">Serial Number</th></tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100">
+                                        {newSeapodItems.map(item => (
+                                            <tr key={item.id} className="hover:bg-slate-50">
+                                                <td className="px-4 py-2 text-sm">{item.piece}</td>
+                                                <td className="px-4 py-2 text-sm">{item.quantity}</td>
+                                                <td className="px-4 py-2">
+                                                    <input 
+                                                        className="w-full border rounded px-2 py-1 text-sm focus:border-[#0176D3] outline-none font-medium text-[#0176D3]"
+                                                        value={item.serial || ''}
+                                                        onChange={(e) => updateSeapodItemSerial(item.id, e.target.value)}
+                                                        placeholder="Enter Serial..."
+                                                        autoFocus={!item.serial} // Autofocus first empty field
+                                                    />
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                            <button onClick={completeSeapodCreation} className="w-full py-3 bg-green-600 text-white rounded-lg font-bold hover:bg-green-700 shadow-md flex items-center justify-center gap-2">
+                                <Check size={20}/> Complete & Return to Order
+                            </button>
                         </div>
-                    </div>
+                    )}
                 </div>
             </div>
           )}
