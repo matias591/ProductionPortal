@@ -36,11 +36,6 @@ export default function SeapodBuildDetails({ params }) {
     setLoading(false);
   }
 
-  async function updateHeader(field, value) {
-    setSeapod({ ...seapod, [field]: value });
-    await supabase.from('seapod_production').update({ [field]: value }).eq('id', seapodId);
-  }
-
   async function updateItem(itemId, field, value) {
     const newItems = items.map(i => i.id === itemId ? { ...i, [field]: value } : i);
     setItems(newItems);
@@ -82,18 +77,7 @@ export default function SeapodBuildDetails({ params }) {
                             <p className="text-sm text-slate-500">Template: {seapod.template_name}</p>
                         </div>
                     </div>
-                    <div>
-                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block text-right">Status</label>
-                        <select 
-                            value={seapod.status} 
-                            onChange={(e) => updateHeader('status', e.target.value)}
-                            className="bg-white border border-slate-300 rounded px-3 py-2 text-sm font-bold focus:border-[#0176D3] outline-none"
-                        >
-                            <option>In Progress</option>
-                            <option>Completed</option>
-                            <option>Failed / Scrapped</option>
-                        </select>
-                    </div>
+                    {/* Status Dropdown Removed */}
                 </div>
             </div>
         </div>

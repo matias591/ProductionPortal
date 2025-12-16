@@ -82,7 +82,6 @@ export default function SeapodList() {
                     <tr>
                         <th className="px-6 py-4">Seapod Serial</th>
                         <th className="px-6 py-4">Template</th>
-                        <th className="px-6 py-4">Status</th>
                         <th className="px-6 py-4 text-right">Action</th>
                     </tr>
                 </thead>
@@ -91,7 +90,6 @@ export default function SeapodList() {
                         <tr key={s.id} onClick={() => router.push(`/seapod-production/${s.id}`)} className="hover:bg-blue-50 cursor-pointer">
                             <td className="px-6 py-4 font-bold text-[#0176D3]">{s.serial_number}</td>
                             <td className="px-6 py-4 text-sm">{s.template_name}</td>
-                            <td className="px-6 py-4"><span className="bg-slate-100 px-2 py-1 rounded text-xs font-bold border">{s.status}</span></td>
                             <td className="px-6 py-4 text-right"><ChevronRight className="ml-auto text-slate-400" size={18}/></td>
                         </tr>
                     ))}
