@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Plus, Trash2, Box, Calendar, Ship, Upload, FileText, Paperclip, Lock, Download, Building2, Loader2, Warehouse, Cpu, Save, Check } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Box, Calendar, Ship, Upload, FileText, Paperclip, Lock, Download, Building2, Loader2, Warehouse, Cpu, Check, AlertTriangle } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import Sidebar from '../../components/Sidebar';
 
@@ -26,15 +26,14 @@ export default function OrderDetails({ params }) {
 
   // --- SEAPOD WIZARD STATES ---
   const [showSeapodModal, setShowSeapodModal] = useState(false);
-  const [seapodStep, setSeapodStep] = useState(1); // 1 = Select Template, 2 = Edit Items
+  const [seapodStep, setSeapodStep] = useState(1); // 1=Select, 2=Ack, 3=Edit
   const [missingSeapodSerial, setMissingSeapodSerial] = useState('');
   const [seapodTemplates, setSeapodTemplates] = useState([]);
   const [selectedSeapodTemplate, setSelectedSeapodTemplate] = useState('');
   
-  // State to manage the inline Seapod creation
-  const [newSeapodId, setNewSeapodId] = useState(null);
+  // New: Wizard Data
   const [newSeapodItems, setNewSeapodItems] = useState([]);
-  const [pendingStatus, setPendingStatus] = useState(null); // Remembers "In Box" while you create seapod
+  const [pendingStatus, setPendingStatus] = useState(null); 
 
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -56,7 +55,7 @@ export default function OrderDetails({ params }) {
     const { data: fileData } = await supabase.from('order_files').select('*').eq('order_id', orderId).order('created_at', { ascending: false });
     const { data: allItems } = await supabase.from('items').select('*').order('name');
     
-    // Fetch Seapod Templates
+    // Fetch Seapod Templates (including versions)
     const { data: tpls } = await supabase.from('seapod_templates').select('*').order('name');
     setSeapodTemplates(tpls || []);
     if (tpls?.length > 0) setSelectedSeapodTemplate(tpls[0].id);
@@ -89,11 +88,9 @@ export default function OrderDetails({ params }) {
     setCheckingVessel(false);
   }
 
-  // --- STATUS UPDATE INTERCEPTOR ---
   async function updateOrder(field, value) {
     if (isLocked) return;
 
-    // Check Seapod Logic
     if (field === 'status' && (value === 'In Box' || value === 'Ready for Pickup' || value === 'Shipped')) {
         const seapodItem = items.find(i => i.piece && i.piece.toLowerCase().includes('seapod'));
         
@@ -106,10 +103,9 @@ export default function OrderDetails({ params }) {
             const { data: existingSeapod } = await supabase.from('seapod_production').select('id').eq('serial_number', seapodItem.serial).single();
 
             if (!existingSeapod) {
-                // STOP: Open Wizard
                 setMissingSeapodSerial(seapodItem.serial);
-                setPendingStatus(value); // Remember where we wanted to go
-                setSeapodStep(1); // Reset wizard
+                setPendingStatus(value); 
+                setSeapodStep(1); // Start Wizard
                 setShowSeapodModal(true);
                 return; 
             }
@@ -129,22 +125,30 @@ export default function OrderDetails({ params }) {
     await supabase.from('orders').update({ [field]: value }).eq('id', orderId);
   }
 
-  // --- WIZARD STEP 1: CREATE HEADER & ITEMS ---
-  async function startSeapodCreation() {
-    if (!selectedSeapodTemplate) return alert("Select a template");
+  // --- WIZARD FLOW ---
+  
+  // Step 1 -> Step 2 (Show Ack)
+  function goToAckStep() {
+    setSeapodStep(2);
+  }
+
+  // Step 2 -> Step 3 (Create & Edit)
+  async function confirmAndCreateSeapod() {
+    const tpl = seapodTemplates.find(t => t.id === selectedSeapodTemplate);
+    if (!tpl) return;
 
     // 1. Create Header
     const { data: newSeapod, error } = await supabase.from('seapod_production').insert([{
         serial_number: missingSeapodSerial,
-        template_name: seapodTemplates.find(t => t.id === selectedSeapodTemplate)?.name,
+        template_name: tpl.name,
+        hw_version: tpl.hw_version,
+        sw_version: tpl.sw_version,
         status: 'In Progress'
     }]).select().single();
 
     if (error) { alert("Error: " + error.message); return; }
 
-    setNewSeapodId(newSeapod.id);
-
-    // 2. Copy Items from Template
+    // 2. Copy Items
     const { data: tItems } = await supabase.from('seapod_template_items').select('*').eq('template_id', selectedSeapodTemplate);
     
     if (tItems && tItems.length > 0) {
@@ -157,29 +161,21 @@ export default function OrderDetails({ params }) {
         }));
         await supabase.from('seapod_items').insert(itemsToInsert);
         
-        // 3. Fetch them back to display in Step 2
         const { data: createdItems } = await supabase.from('seapod_items').select('*').eq('seapod_id', newSeapod.id).order('sort_order');
         setNewSeapodItems(createdItems || []);
     }
 
-    // Move to Step 2 (Inline Editing)
-    setSeapodStep(2);
+    // Move to Inline Edit
+    setSeapodStep(3);
   }
 
-  // --- WIZARD STEP 2: INLINE EDITING ---
   async function updateSeapodItemSerial(itemId, newSerial) {
-    // Optimistic UI
     setNewSeapodItems(prev => prev.map(i => i.id === itemId ? { ...i, serial: newSerial } : i));
-    // DB Update
     await supabase.from('seapod_items').update({ serial: newSerial }).eq('id', itemId);
   }
 
-  // --- WIZARD FINISH ---
   async function completeSeapodCreation() {
-    // 1. Close Modal
     setShowSeapodModal(false);
-    
-    // 2. Apply the Status Change that was pending (e.g. change Order to "In Box")
     if (pendingStatus) {
         setOrder(prev => ({ ...prev, status: pendingStatus }));
         await supabase.from('orders').update({ status: pendingStatus }).eq('id', orderId);
@@ -187,7 +183,7 @@ export default function OrderDetails({ params }) {
     }
   }
 
-  // ... (Rest of logic: Export, Delete, Upload - Unchanged) ...
+  // ... (Export, Upload, Delete - Unchanged) ...
   async function confirmShipping() {
     setShipping(true);
     try {
@@ -260,16 +256,19 @@ export default function OrderDetails({ params }) {
     if (data?.publicUrl) window.open(data.publicUrl, '_blank');
   }
 
-  // --- RENDER ---
   if (loading || !orderId) return <div className="flex min-h-screen bg-[#F3F4F6]"><Sidebar /><div className="ml-64 p-10 text-slate-500">Loading Order...</div></div>;
   if (!order) return <div className="flex min-h-screen bg-[#F3F4F6]"><Sidebar /><div className="ml-64 p-10 text-red-500">Order not found.</div></div>;
 
   const totalCost = items.reduce((sum, item) => sum + ((item.quantity || 0) * (item.price || 0)), 0);
 
+  // Helper to get template name/version for display
+  const currentTemplate = seapodTemplates.find(t => t.id === selectedSeapodTemplate);
+
   return (
     <div className="flex min-h-screen bg-[#F3F4F6] font-sans">
       <Sidebar />
       <div className="flex-1 ml-64">
+          
           <div className="bg-white border-b border-slate-200 shadow-sm sticky top-0 z-10">
             <div className="max-w-[1600px] mx-auto px-6 py-4">
               <div className="flex flex-col md:flex-row justify-between items-start gap-4">
@@ -294,6 +293,7 @@ export default function OrderDetails({ params }) {
           </div>
 
           <main className="max-w-[1600px] mx-auto px-6 py-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Same Main Content as before... */}
             <div className="lg:col-span-1 space-y-6">
                 <div className="bg-white border border-slate-200 rounded-lg shadow-sm">
                     <div className="px-5 py-3 border-b border-slate-100 bg-slate-50/50"><h3 className="text-xs font-bold text-slate-500 uppercase tracking-wide">Order Details</h3></div>
@@ -335,6 +335,81 @@ export default function OrderDetails({ params }) {
             </div>
           </main>
 
+          {/* --- WIZARD MODAL --- */}
+          {showSeapodModal && (
+            <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-2xl border border-blue-100 h-[80vh] flex flex-col">
+                    
+                    {/* Header */}
+                    <div className="flex flex-col items-center text-center mb-6">
+                        <div className="w-12 h-12 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center mb-2"><Cpu size={24} /></div>
+                        <h3 className="text-xl font-bold text-slate-900">
+                            {seapodStep === 1 ? "Seapod Not Found" : seapodStep === 2 ? "Verify Versions" : `Build Seapod: ${missingSeapodSerial}`}
+                        </h3>
+                        {seapodStep === 1 && <p className="text-sm text-slate-500">Seapod <strong>{missingSeapodSerial}</strong> does not exist.</p>}
+                    </div>
+
+                    {/* STEP 1: SELECT TEMPLATE */}
+                    {seapodStep === 1 && (
+                        <div className="flex-1 flex flex-col justify-center">
+                            <label className="block text-xs font-bold text-slate-500 uppercase mb-2 text-center">Select Template</label>
+                            <select className="w-full max-w-sm mx-auto border border-slate-300 rounded px-3 py-2 text-sm font-medium" value={selectedSeapodTemplate} onChange={(e) => setSelectedSeapodTemplate(e.target.value)}>
+                                {seapodTemplates.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                            </select>
+                            <div className="mt-8 flex gap-3 max-w-sm mx-auto w-full">
+                                <button onClick={() => setShowSeapodModal(false)} className="flex-1 px-4 py-2 border rounded font-bold text-slate-700">Cancel</button>
+                                <button onClick={goToAckStep} className="flex-1 px-4 py-2 bg-[#0176D3] text-white rounded font-bold shadow">Next</button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* STEP 2: ACKNOWLEDGE */}
+                    {seapodStep === 2 && currentTemplate && (
+                        <div className="flex-1 flex flex-col justify-center text-center px-8">
+                            <p className="text-slate-600 mb-6">Please confirm the unit matches the template requirements:</p>
+                            <div className="bg-slate-50 border border-slate-200 rounded-lg p-6 mb-8 text-left grid grid-cols-2 gap-6">
+                                <div>
+                                    <span className="text-[10px] font-bold text-slate-400 uppercase block">Hardware Ver.</span>
+                                    <span className="text-xl font-bold text-slate-900">{currentTemplate.hw_version || 'N/A'}</span>
+                                </div>
+                                <div>
+                                    <span className="text-[10px] font-bold text-slate-400 uppercase block">Software Ver.</span>
+                                    <span className="text-xl font-bold text-slate-900">{currentTemplate.sw_version || 'N/A'}</span>
+                                </div>
+                            </div>
+                            <div className="flex gap-3 max-w-sm mx-auto w-full">
+                                <button onClick={() => setSeapodStep(1)} className="flex-1 px-4 py-2 border rounded font-bold text-slate-700">Back</button>
+                                <button onClick={confirmAndCreateSeapod} className="flex-1 px-4 py-2 bg-[#0176D3] text-white rounded font-bold shadow">I Acknowledge & Build</button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* STEP 3: EDIT ITEMS */}
+                    {seapodStep === 3 && (
+                        <div className="flex-1 flex flex-col overflow-hidden">
+                            <div className="overflow-y-auto flex-1 border border-slate-200 rounded-lg mb-6">
+                                <table className="w-full text-left">
+                                    <thead className="bg-slate-50 text-xs font-bold text-slate-500 uppercase border-b sticky top-0"><tr><th className="px-4 py-2">Item</th><th className="px-4 py-2 w-20">Qty</th><th className="px-4 py-2">Serial Number</th></tr></thead>
+                                    <tbody className="divide-y divide-slate-100">
+                                        {newSeapodItems.map(item => (
+                                            <tr key={item.id} className="hover:bg-slate-50">
+                                                <td className="px-4 py-2 text-sm">{item.piece}</td>
+                                                <td className="px-4 py-2 text-sm">{item.quantity}</td>
+                                                <td className="px-4 py-2">
+                                                    <input className="w-full border rounded px-2 py-1 text-sm focus:border-[#0176D3] outline-none font-medium text-[#0176D3]" value={item.serial || ''} onChange={(e) => updateSeapodItemSerial(item.id, e.target.value)} placeholder="Enter Serial..." />
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                            <button onClick={completeSeapodCreation} className="w-full py-3 bg-green-600 text-white rounded-lg font-bold hover:bg-green-700 shadow-md flex items-center justify-center gap-2"><Check size={20}/> Complete & Return to Order</button>
+                        </div>
+                    )}
+                </div>
+            </div>
+          )}
+
           {/* Ship Modal (Unchanged) */}
           {showShipModal && (
             <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -348,73 +423,6 @@ export default function OrderDetails({ params }) {
               </div>
             </div>
           )}
-
-          {/* --- SEAPOD WIZARD MODAL --- */}
-          {showSeapodModal && (
-            <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-2xl border border-blue-100 h-[80vh] flex flex-col">
-                    
-                    {/* Header */}
-                    <div className="flex flex-col items-center text-center mb-6">
-                        <div className="w-12 h-12 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center mb-2"><Cpu size={24} /></div>
-                        <h3 className="text-xl font-bold text-slate-900">
-                            {seapodStep === 1 ? "Seapod Not Found" : `Build Seapod: ${missingSeapodSerial}`}
-                        </h3>
-                        {seapodStep === 1 && (
-                            <p className="text-sm text-slate-500">Seapod <strong>{missingSeapodSerial}</strong> does not exist. Create it now to proceed.</p>
-                        )}
-                    </div>
-
-                    {/* STEP 1: SELECT TEMPLATE */}
-                    {seapodStep === 1 && (
-                        <div className="flex-1 flex flex-col justify-center">
-                            <label className="block text-xs font-bold text-slate-500 uppercase mb-2 text-center">Select Seapod Template</label>
-                            <select className="w-full max-w-sm mx-auto border border-slate-300 rounded px-3 py-2 text-sm font-medium" value={selectedSeapodTemplate} onChange={(e) => setSelectedSeapodTemplate(e.target.value)}>
-                                {seapodTemplates.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-                            </select>
-                            <div className="mt-8 flex gap-3 max-w-sm mx-auto w-full">
-                                <button onClick={() => setShowSeapodModal(false)} className="flex-1 px-4 py-2 border rounded font-bold text-slate-700">Cancel</button>
-                                <button onClick={startSeapodCreation} className="flex-1 px-4 py-2 bg-[#0176D3] text-white rounded font-bold shadow">Start Build</button>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* STEP 2: EDIT ITEMS */}
-                    {seapodStep === 2 && (
-                        <div className="flex-1 flex flex-col overflow-hidden">
-                            <div className="overflow-y-auto flex-1 border border-slate-200 rounded-lg mb-6">
-                                <table className="w-full text-left">
-                                    <thead className="bg-slate-50 text-xs font-bold text-slate-500 uppercase border-b sticky top-0">
-                                        <tr><th className="px-4 py-2">Item</th><th className="px-4 py-2 w-20">Qty</th><th className="px-4 py-2">Serial Number</th></tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-slate-100">
-                                        {newSeapodItems.map(item => (
-                                            <tr key={item.id} className="hover:bg-slate-50">
-                                                <td className="px-4 py-2 text-sm">{item.piece}</td>
-                                                <td className="px-4 py-2 text-sm">{item.quantity}</td>
-                                                <td className="px-4 py-2">
-                                                    <input 
-                                                        className="w-full border rounded px-2 py-1 text-sm focus:border-[#0176D3] outline-none font-medium text-[#0176D3]"
-                                                        value={item.serial || ''}
-                                                        onChange={(e) => updateSeapodItemSerial(item.id, e.target.value)}
-                                                        placeholder="Enter Serial..."
-                                                        autoFocus={!item.serial} // Autofocus first empty field
-                                                    />
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                            <button onClick={completeSeapodCreation} className="w-full py-3 bg-green-600 text-white rounded-lg font-bold hover:bg-green-700 shadow-md flex items-center justify-center gap-2">
-                                <Check size={20}/> Complete & Return to Order
-                            </button>
-                        </div>
-                    )}
-                </div>
-            </div>
-          )}
-
       </div>
     </div>
   );
