@@ -17,7 +17,10 @@ export default function SeapodList() {
   const [selectedTemplateDetails, setSelectedTemplateDetails] = useState(null);
 
   const router = useRouter();
-  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL, 
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  );
 
   useEffect(() => { fetchSeapods(); fetchTemplates(); }, []);
 
@@ -47,7 +50,7 @@ export default function SeapodList() {
     setShowAck(true);    // Show Ack form
   }
 
-  // Step 2: Actually Create
+  // Step 2: Actually Create & REDIRECT
   async function handleFinalCreate() {
     const { templateId, serialNumber } = pendingData;
     const tpl = selectedTemplateDetails;
@@ -77,7 +80,9 @@ export default function SeapodList() {
     }
 
     setShowAck(false);
-    fetchSeapods();
+    
+    // --- FIX: Redirect to the new record instead of staying on list ---
+    router.push(`/seapod-production/${newSeapod.id}`);
   }
 
   const filtered = seapods.filter(s => s.serial_number.toLowerCase().includes(searchTerm.toLowerCase()));
