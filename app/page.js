@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { useRouter } from 'next/navigation';
-import { Plus, Search, Ship, ChevronRight, Filter, LayoutGrid, Trash2 } from 'lucide-react';
+import { Plus, Search, Ship, ChevronRight, Filter, LayoutGrid, Trash2, AlertTriangle, X } from 'lucide-react';
 import Sidebar from './components/Sidebar';
 
 export default function Dashboard() {
@@ -11,15 +11,22 @@ export default function Dashboard() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   
+  // Data States
   const [kitOptions, setKitOptions] = useState([]);
   const [loadingKits, setLoadingKits] = useState(true);
   
+  // Form States
   const [selectedType, setSelectedType] = useState('Full system'); 
   const [selectedKitId, setSelectedKitId] = useState(''); 
   const [warehouse, setWarehouse] = useState('Orca');
 
+  // User State
   const [userEmail, setUserEmail] = useState('');
   const [isAdmin, setIsAdmin] = useState(false);
+
+  // --- NEW DELETE MODAL STATE ---
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [orderToDelete, setOrderToDelete] = useState(null);
   
   const router = useRouter();
 
@@ -118,15 +125,35 @@ export default function Dashboard() {
     fetchOrders();
   }
 
-  // --- DELETE ORDER LOGIC ---
-  async function handleDeleteOrder(e, order) {
+  // --- STEP 1: TRIGGER DELETE MODAL ---
+  function clickDeleteOrder(e, order) {
     e.stopPropagation(); // Prevents clicking the row
     
-    if (!confirm(`Are you sure you want to delete Order #${order.order_number}?`)) return;
+    // Check status logic
+    const allowedStatuses = ['New', 'In preparation', 'In Box'];
+    if (!allowedStatuses.includes(order.status)) {
+        alert("Cannot delete orders that are Ready, Shipped, or Completed.");
+        return;
+    }
 
-    const { error } = await supabase.from('orders').delete().eq('id', order.id);
-    if (error) alert("Delete failed: " + error.message);
-    else fetchOrders();
+    // Open Modal
+    setOrderToDelete(order);
+    setShowDeleteModal(true);
+  }
+
+  // --- STEP 2: ACTUALLY DELETE ---
+  async function confirmDeleteOrder() {
+    if (!orderToDelete) return;
+
+    const { error } = await supabase.from('orders').delete().eq('id', orderToDelete.id);
+    
+    if (error) {
+        alert("Delete failed: " + error.message);
+    } else {
+        fetchOrders();
+        setShowDeleteModal(false);
+        setOrderToDelete(null);
+    }
   }
 
   async function handleLogout() {
@@ -215,10 +242,10 @@ export default function Dashboard() {
                         View <ChevronRight size={14}/>
                     </span>
                     
-                    {/* DELETE BUTTON - ONLY ADMINS - ONLY IF ALLOWED STATUS */}
+                    {/* DELETE BUTTON */}
                     {isAdmin && ['New', 'In preparation', 'In Box'].includes(order.status) && (
                         <button 
-                            onClick={(e) => handleDeleteOrder(e, order)}
+                            onClick={(e) => clickDeleteOrder(e, order)}
                             className="p-1.5 text-slate-300 hover:text-red-600 hover:bg-red-50 rounded transition-all"
                             title="Delete Order"
                         >
@@ -234,7 +261,7 @@ export default function Dashboard() {
         </div>
       </main>
 
-      {/* Modal - Same as before */}
+      {/* CREATE MODAL */}
       {showCreateModal && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-lg shadow-2xl max-w-lg w-full overflow-hidden border border-slate-200 animate-in fade-in zoom-in duration-200">
@@ -259,6 +286,40 @@ export default function Dashboard() {
           </div>
         </div>
       )}
+
+      {/* NEW DELETE CONFIRMATION MODAL */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-xl shadow-2xl max-w-sm w-full p-6 animate-in fade-in zoom-in duration-200 border border-slate-200">
+                <div className="flex flex-col items-center text-center">
+                    <div className="w-12 h-12 bg-red-50 text-red-600 rounded-full flex items-center justify-center mb-4">
+                        <AlertTriangle size={24} />
+                    </div>
+                    <h3 className="text-lg font-bold text-slate-900">Delete Order?</h3>
+                    <p className="text-sm text-slate-500 mt-2 mb-6">
+                        Are you sure you want to delete <span className="font-bold text-slate-800">Order #{orderToDelete?.order_number}</span>?
+                        <br/> This action cannot be undone.
+                    </p>
+                    
+                    <div className="flex gap-3 w-full">
+                        <button 
+                            onClick={() => setShowDeleteModal(false)}
+                            className="flex-1 px-4 py-2 border border-slate-300 rounded-lg text-sm font-bold text-slate-700 hover:bg-slate-50"
+                        >
+                            Cancel
+                        </button>
+                        <button 
+                            onClick={confirmDeleteOrder}
+                            className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-bold hover:bg-red-700 shadow-sm"
+                        >
+                            Delete Order
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+      )}
+
     </div>
   );
 }
