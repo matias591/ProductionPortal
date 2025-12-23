@@ -2,13 +2,13 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Plus, Trash2, Cpu, GripVertical, Save } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Cpu, GripVertical } from 'lucide-react';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import Sidebar from '../../../components/Sidebar';
 
-// Sortable Row Component
+// Sortable Row
 function SortableItem({ item, onDelete, onUpdate, masterItems }) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: item.id });
   const style = { transform: CSS.Transform.toString(transform), transition };
@@ -40,7 +40,7 @@ export default function SeapodTemplateDetails({ params }) {
   const [templateId, setTemplateId] = useState(null);
   
   // Template Data State
-  const [template, setTemplate] = useState({ name: '', hw_version: '', sw_version: '' });
+  const [template, setTemplate] = useState({ name: '', seapod_version: '', hw_version: '', sw_version: '' });
   const [items, setItems] = useState([]);
   const [masterItems, setMasterItems] = useState([]);
   
@@ -51,11 +51,8 @@ export default function SeapodTemplateDetails({ params }) {
   useEffect(() => { if(templateId) fetchData(); }, [templateId]);
 
   async function fetchData() {
-    // Fetch Template Header
     const { data: t } = await supabase.from('seapod_templates').select('*').eq('id', templateId).single();
-    // Fetch Items
     const { data: i } = await supabase.from('seapod_template_items').select('*').eq('template_id', templateId).order('sort_order', { ascending: true });
-    // Fetch Master List
     const { data: m } = await supabase.from('items').select('*').order('name');
     
     if(t) setTemplate(t);
@@ -63,26 +60,16 @@ export default function SeapodTemplateDetails({ params }) {
     setMasterItems(m || []);
   }
 
-  // --- UPDATE TEMPLATE HEADER (Name, HW, SW) ---
   async function updateHeader(field, value) {
     setTemplate(prev => ({ ...prev, [field]: value }));
     await supabase.from('seapod_templates').update({ [field]: value }).eq('id', templateId);
   }
 
-  // --- ITEM LOGIC ---
   async function addItem() {
     const firstMaster = masterItems[0];
     if (!firstMaster) return alert("Create Master Items first!");
     const nextOrder = items.length > 0 ? Math.max(...items.map(i => i.sort_order || 0)) + 1 : 1;
-    
-    const newItem = { 
-        template_id: templateId, 
-        piece: firstMaster.name, 
-        item_id: firstMaster.id, 
-        quantity: 1, 
-        sort_order: nextOrder 
-    };
-    
+    const newItem = { template_id: templateId, piece: firstMaster.name, item_id: firstMaster.id, quantity: 1, sort_order: nextOrder };
     const { data } = await supabase.from('seapod_template_items').insert([newItem]).select().single();
     if(data) setItems([...items, data]);
   }
@@ -125,45 +112,32 @@ export default function SeapodTemplateDetails({ params }) {
             <div className="max-w-3xl mx-auto">
                 <button onClick={() => router.push('/admin/seapod-templates')} className="text-xs font-bold text-slate-500 hover:text-black mb-6 flex items-center gap-2"><ArrowLeft size={14}/> Back</button>
                 
-                {/* EDITABLE HEADER SECTION */}
+                {/* EDITABLE HEADER */}
                 <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-6 mb-8 flex items-start gap-4">
-                    <div className="w-12 h-12 bg-blue-50 border border-blue-100 rounded-lg flex items-center justify-center text-[#0176D3]">
-                        <Cpu size={24}/>
-                    </div>
+                    <div className="w-12 h-12 bg-blue-50 border border-blue-100 rounded-lg flex items-center justify-center text-[#0176D3]"><Cpu size={24}/></div>
                     <div className="flex-1 space-y-4">
                         <div>
                             <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Template Name</label>
-                            <input 
-                                className="w-full text-2xl font-bold text-slate-900 border-b border-transparent hover:border-slate-300 focus:border-[#0176D3] focus:outline-none transition-all placeholder-slate-300"
-                                value={template.name || ''}
-                                onChange={(e) => updateHeader('name', e.target.value)}
-                                placeholder="Template Name"
-                            />
+                            <input className="w-full text-2xl font-bold text-slate-900 border-b border-transparent hover:border-slate-300 focus:border-[#0176D3] focus:outline-none transition-all placeholder-slate-300" value={template.name || ''} onChange={(e) => updateHeader('name', e.target.value)} placeholder="Template Name" />
                         </div>
                         <div className="flex gap-6">
+                            {/* NEW SEAPOD VERSION FIELD */}
                             <div>
-                                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Hardware Version</label>
-                                <input 
-                                    className="text-sm font-medium bg-slate-50 border border-slate-200 rounded px-2 py-1 w-32 focus:border-[#0176D3] outline-none"
-                                    value={template.hw_version || ''}
-                                    onChange={(e) => updateHeader('hw_version', e.target.value)}
-                                    placeholder="e.g. v1.0"
-                                />
+                                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Seapod Version</label>
+                                <input className="text-sm font-medium bg-slate-50 border border-slate-200 rounded px-2 py-1 w-32 focus:border-[#0176D3] outline-none" value={template.seapod_version || ''} onChange={(e) => updateHeader('seapod_version', e.target.value)} placeholder="e.g. Gen 3.5" />
                             </div>
                             <div>
-                                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Software Version</label>
-                                <input 
-                                    className="text-sm font-medium bg-slate-50 border border-slate-200 rounded px-2 py-1 w-32 focus:border-[#0176D3] outline-none"
-                                    value={template.sw_version || ''}
-                                    onChange={(e) => updateHeader('sw_version', e.target.value)}
-                                    placeholder="e.g. v2.4"
-                                />
+                                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">HW Version</label>
+                                <input className="text-sm font-medium bg-slate-50 border border-slate-200 rounded px-2 py-1 w-32 focus:border-[#0176D3] outline-none" value={template.hw_version || ''} onChange={(e) => updateHeader('hw_version', e.target.value)} placeholder="e.g. v1.0" />
+                            </div>
+                            <div>
+                                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">SW Version</label>
+                                <input className="text-sm font-medium bg-slate-50 border border-slate-200 rounded px-2 py-1 w-32 focus:border-[#0176D3] outline-none" value={template.sw_version || ''} onChange={(e) => updateHeader('sw_version', e.target.value)} placeholder="e.g. v2.4" />
                             </div>
                         </div>
                     </div>
                 </div>
 
-                {/* ITEMS LIST */}
                 <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
                     <div className="px-14 py-3 bg-slate-50 border-b border-slate-200 flex justify-between"><span className="text-xs font-bold text-slate-500 uppercase">Item Selection</span><span className="text-xs font-bold text-slate-500 uppercase mr-12">Qty</span></div>
                     <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>

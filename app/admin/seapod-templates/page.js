@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Plus, Trash2, Cpu, ChevronRight } from 'lucide-react';
+import { Plus, Trash2, Cpu, ChevronRight } from 'lucide-react';
 import Sidebar from '../../components/Sidebar';
 
 export default function SeapodTemplates() {
@@ -23,8 +23,9 @@ export default function SeapodTemplates() {
     const formData = new FormData(e.target);
     const newTemplate = {
         name: formData.get('name'),
-        hw_version: formData.get('hw'), // Save HW
-        sw_version: formData.get('sw')  // Save SW
+        seapod_version: formData.get('seapod_version'), // <--- New Field
+        hw_version: formData.get('hw'),
+        sw_version: formData.get('sw')
     };
 
     const { error } = await supabase.from('seapod_templates').insert([newTemplate]);
@@ -63,8 +64,9 @@ export default function SeapodTemplates() {
                             <div>
                                 <div className="font-bold text-slate-700">{t.name}</div>
                                 <div className="text-xs text-slate-500 mt-1 flex gap-3">
-                                    <span className="bg-slate-100 px-1.5 rounded border">HW: {t.hw_version || 'N/A'}</span>
-                                    <span className="bg-slate-100 px-1.5 rounded border">SW: {t.sw_version || 'N/A'}</span>
+                                    <span className="bg-slate-100 px-1.5 rounded border font-medium text-slate-600">Ver: {t.seapod_version || 'N/A'}</span>
+                                    <span className="bg-slate-50 px-1.5 rounded border">HW: {t.hw_version || 'N/A'}</span>
+                                    <span className="bg-slate-50 px-1.5 rounded border">SW: {t.sw_version || 'N/A'}</span>
                                 </div>
                             </div>
                             <div className="flex items-center gap-4">
@@ -77,6 +79,7 @@ export default function SeapodTemplates() {
             </div>
          </div>
        </main>
+       
        {showModal && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
             <div className="bg-white p-6 rounded-lg shadow-xl w-full max-w-sm">
@@ -85,6 +88,11 @@ export default function SeapodTemplates() {
                     <div>
                         <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Template Name</label>
                         <input name="name" className="w-full border border-slate-300 rounded px-3 py-2 text-sm outline-none focus:border-[#0176D3]" placeholder="e.g. Standard Seapod V3" required />
+                    </div>
+                    {/* NEW FIELD */}
+                    <div>
+                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Seapod Version</label>
+                        <input name="seapod_version" className="w-full border border-slate-300 rounded px-3 py-2 text-sm outline-none focus:border-[#0176D3]" placeholder="e.g. Generation 3.5" />
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                         <div>
