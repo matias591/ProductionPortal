@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { useRouter } from 'next/navigation';
-import { Plus, Search, Cpu, ChevronRight, Download } from 'lucide-react';
+import { Plus, Search, Cpu, ChevronRight, Download, Trash2 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import Sidebar from '../components/Sidebar';
 
@@ -11,11 +11,24 @@ export default function SeapodList() {
   const [templates, setTemplates] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [isAdmin, setIsAdmin] = useState(false); // Permission State
   
   const router = useRouter();
   const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 
-  useEffect(() => { fetchSeapods(); fetchTemplates(); }, []);
+  useEffect(() => { 
+    checkUser();
+    fetchSeapods(); 
+    fetchTemplates(); 
+  }, []);
+
+  async function checkUser() {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) {
+       const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).single();
+       if (profile?.role === 'admin') setIsAdmin(true);
+    }
+  }
 
   async function fetchSeapods() {
     const { data } = await supabase.from('seapod_production').select('*').order('created_at', { ascending: false });
@@ -43,7 +56,6 @@ export default function SeapodList() {
     XLSX.writeFile(workbook, "Seapod_Production_List.xlsx");
   }
 
-  // --- SIMPLE CREATE (NO ACKNOWLEDGEMENT HERE) ---
   async function handleCreate(e) {
     e.preventDefault();
     const formData = new FormData(e.target);
@@ -79,8 +91,17 @@ export default function SeapodList() {
     }
 
     setShowModal(false);
-    // Redirect immediately
     router.push(`/seapod-production/${newSeapod.id}`);
+  }
+
+  // --- DELETE LOGIC (Admin Only) ---
+  async function handleDelete(e, id) {
+    e.stopPropagation();
+    if(!confirm("Are you sure you want to delete this Seapod record?")) return;
+    
+    const { error } = await supabase.from('seapod_production').delete().eq('id', id);
+    if(error) alert("Delete failed: " + error.message);
+    else fetchSeapods();
   }
 
   const filtered = seapods.filter(s => s.serial_number.toLowerCase().includes(searchTerm.toLowerCase()));
@@ -114,7 +135,7 @@ export default function SeapodList() {
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                     {filtered.map(s => (
-                        <tr key={s.id} onClick={() => router.push(`/seapod-production/${s.id}`)} className="hover:bg-blue-50 cursor-pointer">
+                        <tr key={s.id} onClick={() => router.push(`/seapod-production/${s.id}`)} className="hover:bg-blue-50 cursor-pointer group">
                             <td className="px-6 py-4 font-bold text-[#0176D3]">{s.serial_number}</td>
                             <td className="px-6 py-4 text-sm">{s.template_name}</td>
                             <td className="px-6 py-4 text-xs text-slate-500">
@@ -122,11 +143,21 @@ export default function SeapodList() {
                                 <div className="text-[10px]">HW: {s.hw_version}</div>
                             </td>
                             <td className="px-6 py-4">
-                                <span className={`px-2 py-1 rounded text-xs font-bold border ${s.status === 'Completed' ? 'bg-green-100 text-green-700 border-green-200' : 'bg-slate-100 text-slate-600'}`}>
+                                <span className={`px-2 py-1 rounded text-xs font-bold border 
+                                    ${s.status === 'Completed' ? 'bg-green-100 text-green-700 border-green-200' : 
+                                      s.status === 'Assigned to Order' ? 'bg-purple-100 text-purple-700 border-purple-200' :
+                                      'bg-slate-100 text-slate-600'}`}>
                                     {s.status}
                                 </span>
                             </td>
-                            <td className="px-6 py-4 text-right"><ChevronRight className="ml-auto text-slate-400" size={18}/></td>
+                            <td className="px-6 py-4 text-right flex items-center justify-end gap-3">
+                                <ChevronRight className="text-slate-400" size={18}/>
+                                {isAdmin && (
+                                    <button onClick={(e) => handleDelete(e, s.id)} className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded transition-all opacity-0 group-hover:opacity-100">
+                                        <Trash2 size={16}/>
+                                    </button>
+                                )}
+                            </td>
                         </tr>
                     ))}
                 </tbody>
@@ -141,7 +172,7 @@ export default function SeapodList() {
                 <form onSubmit={handleCreate} className="space-y-4">
                     <div><label className="block text-xs font-bold text-slate-500 uppercase mb-1">Seapod Serial #</label><input name="serial" className="w-full border rounded p-2 outline-none focus:border-[#0176D3]" required placeholder="e.g. SP-29291" /></div>
                     <div><label className="block text-xs font-bold text-slate-500 uppercase mb-1">Select Template</label><select name="template" className="w-full border rounded p-2 bg-white" required>{templates.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}</select></div>
-                    <div className="flex justify-end gap-2 pt-4"><button type="button" onClick={() => setShowModal(false)} className="px-4 py-2 border rounded font-bold text-slate-600">Cancel</button><button type="submit" className="px-4 py-2 bg-[#0176D3] text-white rounded font-bold hover:bg-blue-700">Create</button></div>
+                    <div className="flex justify-end gap-2 pt-4"><button type="button" onClick={() => setShowModal(false)} className="px-4 py-2 border rounded font-bold text-slate-600">Cancel</button><button type="submit" className="px-4 py-2 bg-[#0176D3] text-white rounded font-bold">Create</button></div>
                 </form>
             </div>
         </div>
