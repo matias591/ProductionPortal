@@ -2,7 +2,8 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { useRouter } from 'next/navigation';
-import { Plus, Search, Cpu, ChevronRight, AlertTriangle } from 'lucide-react';
+import { Plus, Search, Cpu, ChevronRight, AlertTriangle, Download } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import Sidebar from '../components/Sidebar';
 
 export default function SeapodList() {
@@ -11,6 +12,7 @@ export default function SeapodList() {
   const [showModal, setShowModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   
+  // ACKNOWLEDGEMENT STATES
   const [showAck, setShowAck] = useState(false);
   const [pendingData, setPendingData] = useState(null); 
   const [selectedTemplateDetails, setSelectedTemplateDetails] = useState(null);
@@ -28,6 +30,22 @@ export default function SeapodList() {
   async function fetchTemplates() {
     const { data } = await supabase.from('seapod_templates').select('*');
     setTemplates(data || []);
+  }
+
+  function exportList() {
+    const dataToExport = seapods.map(s => ({
+        "Serial": s.serial_number,
+        "Template": s.template_name,
+        "Status": s.status,
+        "HW Ver": s.hw_version,
+        "SW Ver": s.sw_version,
+        "Seapod Ver": s.seapod_version,
+        "Order #": s.order_number || '-'
+    }));
+    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Seapod List");
+    XLSX.writeFile(workbook, "Seapod_Production_List.xlsx");
   }
 
   function handlePreCreate(e) {
@@ -49,11 +67,10 @@ export default function SeapodList() {
     const { templateId, serialNumber } = pendingData;
     const tpl = selectedTemplateDetails;
 
-    // 1. Create Header with ALL Versions
     const { data: newSeapod, error } = await supabase.from('seapod_production').insert([{
         serial_number: serialNumber,
         template_name: tpl.name,
-        seapod_version: tpl.seapod_version, // <--- COPIED HERE
+        seapod_version: tpl.seapod_version,
         hw_version: tpl.hw_version,
         sw_version: tpl.sw_version,
         status: 'In Progress'
@@ -79,7 +96,10 @@ export default function SeapodList() {
       <main className="flex-1 ml-64 p-8">
         <div className="flex justify-between items-center mb-6">
             <h1 className="text-3xl font-bold text-slate-900">Seapod Production</h1>
-            <button onClick={() => setShowModal(true)} className="px-4 py-2 bg-[#0176D3] text-white rounded font-bold shadow flex items-center gap-2"><Plus size={16}/> Start Build</button>
+            <div className="flex gap-2">
+                <button onClick={exportList} className="px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded font-bold shadow-sm flex items-center gap-2 hover:bg-slate-50"><Download size={16}/> Export List</button>
+                <button onClick={() => setShowModal(true)} className="px-4 py-2 bg-[#0176D3] text-white rounded font-bold shadow flex items-center gap-2"><Plus size={16}/> Start Build</button>
+            </div>
         </div>
 
         <div className="bg-white p-4 rounded-lg shadow-sm border border-slate-200 mb-6">
@@ -93,6 +113,7 @@ export default function SeapodList() {
                         <th className="px-6 py-4">Seapod Serial</th>
                         <th className="px-6 py-4">Template</th>
                         <th className="px-6 py-4">Versions</th>
+                        <th className="px-6 py-4">Status</th>
                         <th className="px-6 py-4 text-right">Action</th>
                     </tr>
                 </thead>
@@ -102,8 +123,13 @@ export default function SeapodList() {
                             <td className="px-6 py-4 font-bold text-[#0176D3]">{s.serial_number}</td>
                             <td className="px-6 py-4 text-sm">{s.template_name}</td>
                             <td className="px-6 py-4 text-xs text-slate-500">
-                                <div>Ver: <strong className="text-slate-700">{s.seapod_version || '-'}</strong></div>
-                                <div>HW: {s.hw_version || '-'} | SW: {s.sw_version || '-'}</div>
+                                <div>Ver: {s.seapod_version || '-'}</div>
+                                <div className="text-[10px]">HW: {s.hw_version}</div>
+                            </td>
+                            <td className="px-6 py-4">
+                                <span className={`px-2 py-1 rounded text-xs font-bold border ${s.status === 'Completed' ? 'bg-green-100 text-green-700 border-green-200' : 'bg-slate-100 text-slate-600'}`}>
+                                    {s.status}
+                                </span>
                             </td>
                             <td className="px-6 py-4 text-right"><ChevronRight className="ml-auto text-slate-400" size={18}/></td>
                         </tr>
@@ -113,7 +139,6 @@ export default function SeapodList() {
         </div>
       </main>
 
-      {/* INPUT MODAL */}
       {showModal && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
             <div className="bg-white rounded-lg shadow-2xl p-6 w-full max-w-md">
@@ -127,25 +152,19 @@ export default function SeapodList() {
         </div>
       )}
 
-      {/* ACKNOWLEDGEMENT MODAL - UPDATED */}
       {showAck && selectedTemplateDetails && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
             <div className="bg-white rounded-xl shadow-2xl p-8 w-full max-w-md text-center border-t-4 border-[#0176D3]">
                 <div className="w-16 h-16 bg-blue-50 text-[#0176D3] rounded-full flex items-center justify-center mx-auto mb-4"><AlertTriangle size={32}/></div>
                 <h2 className="text-xl font-bold text-slate-900 mb-2">Build Verification</h2>
                 <p className="text-slate-500 text-sm mb-6">You are starting a build for Seapod <strong>{pendingData.serialNumber}</strong>. Please confirm versions match.</p>
-
                 <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 mb-6 text-left">
-                    <div className="mb-4 pb-4 border-b border-slate-200">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase block">Seapod Version</span>
-                        <span className="text-lg font-bold text-[#0176D3]">{selectedTemplateDetails.seapod_version || 'N/A'}</span>
-                    </div>
+                    <div className="mb-4 pb-4 border-b border-slate-200"><span className="text-[10px] font-bold text-slate-400 uppercase block">Seapod Version</span><span className="text-lg font-bold text-[#0176D3]">{selectedTemplateDetails.seapod_version || 'N/A'}</span></div>
                     <div className="grid grid-cols-2 gap-4">
                         <div><span className="text-[10px] font-bold text-slate-400 uppercase block">Hardware Ver.</span><span className="text-lg font-bold text-slate-800">{selectedTemplateDetails.hw_version || 'N/A'}</span></div>
                         <div><span className="text-[10px] font-bold text-slate-400 uppercase block">Software Ver.</span><span className="text-lg font-bold text-slate-800">{selectedTemplateDetails.sw_version || 'N/A'}</span></div>
                     </div>
                 </div>
-
                 <div className="flex gap-3"><button onClick={() => setShowAck(false)} className="flex-1 py-3 border border-slate-300 rounded-lg font-bold text-slate-600 hover:bg-slate-50">Cancel</button><button onClick={handleFinalCreate} className="flex-1 py-3 bg-[#0176D3] text-white rounded-lg font-bold hover:bg-blue-700 shadow-lg">Confirm & Build</button></div>
                 <p className="text-xs text-slate-400 mt-4">By confirming, you acknowledge the Seapod contains these versions.</p>
             </div>
