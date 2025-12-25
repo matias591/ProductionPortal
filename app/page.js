@@ -20,6 +20,7 @@ export default function Dashboard() {
 
   const [userEmail, setUserEmail] = useState('');
   const [isAdmin, setIsAdmin] = useState(false);
+  const [canCreate, setCanCreate] = useState(false); // Operation or Admin
   
   const router = useRouter();
 
@@ -34,7 +35,6 @@ export default function Dashboard() {
     fetchKitsFromDB(); 
   }, []);
 
-  // Auto-select kit based on type
   useEffect(() => {
     if (kitOptions.length === 0) return;
     const defaults = {
@@ -62,6 +62,7 @@ export default function Dashboard() {
       setUserEmail(session.user.email);
       const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).single();
       if (profile?.role === 'admin') setIsAdmin(true);
+      if (['admin', 'operation'].includes(profile?.role)) setCanCreate(true);
     }
   }
 
@@ -88,15 +89,12 @@ export default function Dashboard() {
     };
 
     const { data: orderData, error } = await supabase.from('orders').insert([newOrder]).select().single();
-    
     if (error) { alert("Error: " + error.message); return; }
 
     if (selectedKitId) {
         const { data: templateItems } = await supabase.from('kit_items').select('*').eq('kit_id', selectedKitId).order('sort_order', { ascending: true });
-        
         if (templateItems && templateItems.length > 0) {
             const { data: masterList } = await supabase.from('items').select('id, price');
-
             const itemsToInsert = templateItems.map((item, index) => {
                 const masterPrice = masterList?.find(m => m.id === item.item_id)?.price || 0;
                 return {
@@ -109,18 +107,11 @@ export default function Dashboard() {
                     sort_order: index + 1
                 };
             });
-
             await supabase.from('order_items').insert(itemsToInsert);
         }
     }
-
     setShowCreateModal(false);
     fetchOrders();
-  }
-
-  async function handleLogout() {
-    await supabase.auth.signOut();
-    router.push('/login');
   }
 
   const filteredOrders = orders.filter(o => 
@@ -138,10 +129,8 @@ export default function Dashboard() {
     }
   };
 
-  // --- FIXED FUNCTION: SAFE STRING CHECK ---
   const getItemValue = (items, keyword, field) => {
     if (!items || !Array.isArray(items)) return '-';
-    // The "?.piece" and checks prevent the crash
     const found = items.find(i => i.piece && i.piece.toLowerCase().includes(keyword.toLowerCase()));
     return found ? (found[field] || '-') : '-';
   };
@@ -153,7 +142,7 @@ export default function Dashboard() {
         <div className="flex flex-col md:flex-row justify-between items-end mb-6 gap-4">
           <div><h1 className="text-3xl font-bold text-slate-900 tracking-tight">Orders</h1><p className="text-slate-500 mt-1 text-sm">{orders.length} items • Sorted by Date</p></div>
           <div className="flex gap-3">
-            {isAdmin && (
+            {canCreate && (
               <button onClick={() => setShowCreateModal(true)} className="px-4 py-2 bg-[#0176D3] text-white text-sm font-semibold rounded-md hover:bg-blue-700 shadow-md shadow-blue-200 flex items-center gap-2 transition-all">
                 <Plus size={16} /> New Order
               </button>
@@ -162,10 +151,7 @@ export default function Dashboard() {
         </div>
 
         <div className="bg-white p-3 rounded-t-lg border border-slate-200 border-b-0 flex justify-between items-center">
-          <div className="relative max-w-md w-full">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-            <input type="text" placeholder="Search by ID or Vessel..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-9 pr-4 py-2 bg-white border border-slate-300 rounded-md text-sm focus:ring-2 focus:ring-[#0176D3] focus:border-transparent outline-none transition-all" />
-          </div>
+          <div className="relative max-w-md w-full"><Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} /><input type="text" placeholder="Search by ID or Vessel..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-9 pr-4 py-2 bg-white border border-slate-300 rounded-md text-sm focus:ring-2 focus:ring-[#0176D3] focus:border-transparent outline-none transition-all" /></div>
         </div>
 
         <div className="bg-white border border-slate-200 rounded-b-lg shadow-sm overflow-hidden overflow-x-auto">
@@ -195,7 +181,6 @@ export default function Dashboard() {
                   <td className="px-6 py-4 text-right"><span className="text-slate-400 text-xs group-hover:text-[#0176D3] font-bold uppercase flex items-center justify-end gap-1">View <ChevronRight size={14}/></span></td>
                 </tr>
               ))}
-              {filteredOrders.length === 0 && (<tr><td colSpan={7} className="p-10 text-center text-slate-400">No orders found.</td></tr>)}
             </tbody>
           </table>
         </div>
