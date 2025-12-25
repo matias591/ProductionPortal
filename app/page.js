@@ -2,7 +2,8 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { useRouter } from 'next/navigation';
-import { Plus, Search, Ship, ChevronRight, Filter, LayoutGrid } from 'lucide-react';
+import { Plus, Search, Ship, ChevronRight, Filter, LayoutGrid, Trash2, Download, AlertTriangle } from 'lucide-react';
+import * as XLSX from 'xlsx'; // <--- RESTORED EXPORT LIB
 import Sidebar from './components/Sidebar';
 
 export default function Dashboard() {
@@ -18,9 +19,14 @@ export default function Dashboard() {
   const [selectedKitId, setSelectedKitId] = useState(''); 
   const [warehouse, setWarehouse] = useState('Orca');
 
+  // Permissions
   const [userEmail, setUserEmail] = useState('');
   const [isAdmin, setIsAdmin] = useState(false);
-  const [canCreate, setCanCreate] = useState(false); // Operation or Admin
+  const [canCreate, setCanCreate] = useState(false); // Admin + Operation
+
+  // Delete Modal State
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [orderToDelete, setOrderToDelete] = useState(null);
   
   const router = useRouter();
 
@@ -61,8 +67,10 @@ export default function Dashboard() {
     } else {
       setUserEmail(session.user.email);
       const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).single();
-      if (profile?.role === 'admin') setIsAdmin(true);
-      if (['admin', 'operation'].includes(profile?.role)) setCanCreate(true);
+      const role = profile?.role || 'vendor';
+      
+      if (role === 'admin') setIsAdmin(true);
+      if (role === 'admin' || role === 'operation') setCanCreate(true);
     }
   }
 
@@ -73,6 +81,25 @@ export default function Dashboard() {
       .order('order_number', { ascending: false });
     setOrders(data || []);
     setLoading(false);
+  }
+
+  // --- RESTORED EXPORT FUNCTION ---
+  function exportList() {
+    const dataToExport = orders.map(o => ({
+        "Order #": o.order_number, 
+        "Vessel": o.vessel, 
+        "Type": o.type, 
+        "Status": o.status, 
+        "Warehouse": o.warehouse,
+        "Created": new Date(o.created_at).toLocaleDateString(),
+        "Seapod S/N": getItemValue(o.order_items, 'Seapod', 'serial'),
+        "Modem ID": getItemValue(o.order_items, 'Modem', 'orca_id'),
+        "PU ID": getItemValue(o.order_items, 'Asus', 'orca_id')
+    }));
+    const ws = XLSX.utils.json_to_sheet(dataToExport);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Orders");
+    XLSX.writeFile(wb, "Orders_List.xlsx");
   }
 
   async function handleCreateOrder(e) {
@@ -89,12 +116,15 @@ export default function Dashboard() {
     };
 
     const { data: orderData, error } = await supabase.from('orders').insert([newOrder]).select().single();
+    
     if (error) { alert("Error: " + error.message); return; }
 
     if (selectedKitId) {
         const { data: templateItems } = await supabase.from('kit_items').select('*').eq('kit_id', selectedKitId).order('sort_order', { ascending: true });
+        
         if (templateItems && templateItems.length > 0) {
             const { data: masterList } = await supabase.from('items').select('id, price');
+
             const itemsToInsert = templateItems.map((item, index) => {
                 const masterPrice = masterList?.find(m => m.id === item.item_id)?.price || 0;
                 return {
@@ -107,11 +137,44 @@ export default function Dashboard() {
                     sort_order: index + 1
                 };
             });
+
             await supabase.from('order_items').insert(itemsToInsert);
         }
     }
+
     setShowCreateModal(false);
     fetchOrders();
+  }
+
+  // --- DELETE LOGIC ---
+  function clickDeleteOrder(e, order) {
+    e.stopPropagation();
+    
+    // Validate Status
+    const allowedStatuses = ['New', 'In preparation', 'In Box'];
+    if (!allowedStatuses.includes(order.status)) {
+        alert("Cannot delete orders that are Ready, Shipped, or Completed.");
+        return;
+    }
+
+    setOrderToDelete(order);
+    setShowDeleteModal(true);
+  }
+
+  async function confirmDeleteOrder() {
+    if (!orderToDelete) return;
+    const { error } = await supabase.from('orders').delete().eq('id', orderToDelete.id);
+    if (error) alert("Delete failed: " + error.message);
+    else {
+        fetchOrders();
+        setShowDeleteModal(false);
+        setOrderToDelete(null);
+    }
+  }
+
+  async function handleLogout() {
+    await supabase.auth.signOut();
+    router.push('/login');
   }
 
   const filteredOrders = orders.filter(o => 
@@ -139,11 +202,23 @@ export default function Dashboard() {
     <div className="flex min-h-screen bg-[#F3F4F6] font-sans">
       <Sidebar />
       <main className="flex-1 ml-64 p-8">
+        
         <div className="flex flex-col md:flex-row justify-between items-end mb-6 gap-4">
-          <div><h1 className="text-3xl font-bold text-slate-900 tracking-tight">Orders</h1><p className="text-slate-500 mt-1 text-sm">{orders.length} items • Sorted by Date</p></div>
-          <div className="flex gap-3">
+          <div>
+            <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Orders</h1>
+            <p className="text-slate-500 mt-1 text-sm">{orders.length} items • Sorted by Date</p>
+          </div>
+          
+          <div className="flex gap-2">
+            {/* EXPORT BUTTON RESTORED */}
+            <button onClick={exportList} className="px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded font-bold shadow-sm flex items-center gap-2 hover:bg-slate-50">
+                <Download size={16}/> Export List
+            </button>
             {canCreate && (
-              <button onClick={() => setShowCreateModal(true)} className="px-4 py-2 bg-[#0176D3] text-white text-sm font-semibold rounded-md hover:bg-blue-700 shadow-md shadow-blue-200 flex items-center gap-2 transition-all">
+              <button 
+                onClick={() => setShowCreateModal(true)}
+                className="px-4 py-2 bg-[#0176D3] text-white text-sm font-semibold rounded-md hover:bg-blue-700 shadow-md shadow-blue-200 flex items-center gap-2 transition-all"
+              >
                 <Plus size={16} /> New Order
               </button>
             )}
@@ -151,7 +226,16 @@ export default function Dashboard() {
         </div>
 
         <div className="bg-white p-3 rounded-t-lg border border-slate-200 border-b-0 flex justify-between items-center">
-          <div className="relative max-w-md w-full"><Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} /><input type="text" placeholder="Search by ID or Vessel..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-9 pr-4 py-2 bg-white border border-slate-300 rounded-md text-sm focus:ring-2 focus:ring-[#0176D3] focus:border-transparent outline-none transition-all" /></div>
+          <div className="relative max-w-md w-full">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+            <input 
+              type="text" 
+              placeholder="Search by ID or Vessel..." 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-9 pr-4 py-2 bg-white border border-slate-300 rounded-md text-sm focus:ring-2 focus:ring-[#0176D3] focus:border-transparent outline-none transition-all"
+            />
+          </div>
         </div>
 
         <div className="bg-white border border-slate-200 rounded-b-lg shadow-sm overflow-hidden overflow-x-auto">
@@ -169,28 +253,62 @@ export default function Dashboard() {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {filteredOrders.map((order) => (
-                <tr key={order.id} onClick={() => router.push(`/order/${order.id}`)} className="hover:bg-blue-50/50 cursor-pointer transition-colors group">
+                <tr 
+                  key={order.id} 
+                  onClick={() => router.push(`/order/${order.id}`)}
+                  className="hover:bg-blue-50/50 cursor-pointer transition-colors group"
+                >
                   <td className="px-6 py-4 font-semibold text-[#0176D3] hover:underline">{order.order_number}</td>
                   <td className="px-6 py-4 text-sm text-slate-700 font-medium">
-                    <div className="flex items-center gap-2">{order.vessel ? <Ship size={14} className="text-slate-400"/> : null}{order.vessel || <span className="text-slate-400 italic">No Vessel Name</span>}</div>
+                    <div className="flex items-center gap-2">
+                       {order.vessel ? <Ship size={14} className="text-slate-400"/> : null}
+                       {order.vessel || <span className="text-slate-400 italic">No Vessel Name</span>}
+                    </div>
                   </td>
                   <td className="px-6 py-4 text-xs font-mono text-slate-600">{getItemValue(order.order_items, 'Seapod', 'serial')}</td>
                   <td className="px-6 py-4 text-xs font-mono text-slate-600">{getItemValue(order.order_items, 'Modem', 'orca_id')}</td>
                   <td className="px-6 py-4 text-xs font-mono text-slate-600">{getItemValue(order.order_items, 'Asus', 'orca_id')}</td>
-                  <td className="px-6 py-4"><span className={`inline-flex items-center px-2.5 py-0.5 rounded text-xs font-bold border ${getStatusColor(order.status)}`}>{order.status}</span></td>
-                  <td className="px-6 py-4 text-right"><span className="text-slate-400 text-xs group-hover:text-[#0176D3] font-bold uppercase flex items-center justify-end gap-1">View <ChevronRight size={14}/></span></td>
+                  <td className="px-6 py-4">
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded text-xs font-bold border ${getStatusColor(order.status)}`}>
+                      {order.status}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-right flex items-center justify-end gap-3">
+                    <span className="text-slate-400 text-xs group-hover:text-[#0176D3] font-bold uppercase flex items-center justify-end gap-1">
+                        View <ChevronRight size={14}/>
+                    </span>
+                    
+                    {/* RESTORED DELETE BUTTON LOGIC */}
+                    {canCreate && ['New', 'In preparation', 'In Box'].includes(order.status) && (
+                        <button 
+                            onClick={(e) => clickDeleteOrder(e, order)}
+                            className="p-1.5 text-slate-300 hover:text-red-600 hover:bg-red-50 rounded transition-all"
+                            title="Delete Order"
+                        >
+                            <Trash2 size={16} />
+                        </button>
+                    )}
+                  </td>
                 </tr>
               ))}
+              {filteredOrders.length === 0 && (
+                <tr><td colSpan={7} className="p-10 text-center text-slate-400">No orders found.</td></tr>
+              )}
             </tbody>
           </table>
         </div>
       </main>
 
+      {/* Create Modal */}
       {showCreateModal && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-lg shadow-2xl max-w-lg w-full overflow-hidden border border-slate-200 animate-in fade-in zoom-in duration-200">
-            <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50"><h3 className="font-bold text-slate-800 text-lg">New Order</h3><button onClick={() => setShowCreateModal(false)} className="text-slate-400 hover:text-slate-700">✕</button></div>
+            <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+              <h3 className="font-bold text-slate-800 text-lg">New Order</h3>
+              <button onClick={() => setShowCreateModal(false)} className="text-slate-400 hover:text-slate-700">✕</button>
+            </div>
             <form onSubmit={handleCreateOrder} className="p-6 space-y-5">
+              {/* ... Form Inputs Same as Before ... */}
               <div className="p-3 bg-blue-50 border border-blue-100 rounded-md"><p className="text-xs text-blue-800 font-semibold">Order Number will be auto-generated by the system.</p></div>
               <div><label className="block text-xs font-bold text-slate-500 mb-1">Vessel Name (Optional)</label><input name="vessel" className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-[#0176D3] focus:ring-1 focus:ring-[#0176D3] outline-none" placeholder="e.g. Evergreen A" /></div>
               <div className="grid grid-cols-2 gap-4">
@@ -201,6 +319,33 @@ export default function Dashboard() {
               <div className="pt-4 flex justify-end gap-2 border-t border-slate-100 mt-4"><button type="button" onClick={() => setShowCreateModal(false)} className="px-4 py-2 border border-slate-300 rounded text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-all">Cancel</button><button type="submit" className="px-4 py-2 bg-[#0176D3] text-white rounded text-sm font-semibold hover:bg-blue-700 shadow-sm transition-all">Save & Create</button></div>
             </form>
           </div>
+        </div>
+      )}
+
+      {/* RESTORED DELETE MODAL */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-xl shadow-2xl max-w-sm w-full p-6 animate-in fade-in zoom-in duration-200 border border-slate-200">
+                <div className="flex flex-col items-center text-center">
+                    <div className="w-12 h-12 bg-red-50 text-red-600 rounded-full flex items-center justify-center mb-4">
+                        <AlertTriangle size={24} />
+                    </div>
+                    <h3 className="text-lg font-bold text-slate-900">Delete Order?</h3>
+                    <p className="text-sm text-slate-500 mt-2 mb-6">
+                        Are you sure you want to delete <span className="font-bold text-slate-800">Order #{orderToDelete?.order_number}</span>?
+                        <br/> This action cannot be undone.
+                    </p>
+                    
+                    <div className="flex gap-3 w-full">
+                        <button onClick={() => setShowDeleteModal(false)} className="flex-1 px-4 py-2 border border-slate-300 rounded-lg text-sm font-bold text-slate-700 hover:bg-slate-50">
+                            Cancel
+                        </button>
+                        <button onClick={confirmDeleteOrder} className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-bold hover:bg-red-700 shadow-sm">
+                            Delete Order
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
       )}
     </div>

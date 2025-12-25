@@ -27,7 +27,7 @@ export default function OrderDetails({ params }) {
   const [showShipModal, setShowShipModal] = useState(false);
   const [checkingVessel, setCheckingVessel] = useState(false);
 
-  // Seapod Wizard
+  // Wizards
   const [showSeapodModal, setShowSeapodModal] = useState(false);
   const [seapodStep, setSeapodStep] = useState(1);
   const [missingSeapodSerial, setMissingSeapodSerial] = useState('');
@@ -38,7 +38,7 @@ export default function OrderDetails({ params }) {
   const [pendingStatus, setPendingStatus] = useState(null);
   const [tplDetails, setTplDetails] = useState(null);
 
-  // NEW: Assigned Error Modal
+  // NEW: ASSIGNED ERROR MODAL
   const [showAssignedModal, setShowAssignedModal] = useState(false);
   const [conflictDetails, setConflictDetails] = useState(null);
 
@@ -79,7 +79,6 @@ export default function OrderDetails({ params }) {
     const isOrderLocked = order?.status === 'Shipped' && !isAdmin;
     if (isOrderLocked) return;
 
-    // 1. IN BOX LOGIC
     if (field === 'status' && value === 'In Box') {
         const seapodItem = items.find(i => i.piece && i.piece.toLowerCase().includes('seapod'));
         
@@ -88,7 +87,6 @@ export default function OrderDetails({ params }) {
                 alert("⚠️ Seapod Item exists but has no Serial Number. Fill it first."); return;
             }
 
-            // Check Seapod Status in DB
             const { data: existingSeapod } = await supabase
                 .from('seapod_production')
                 .select('id, status, order_number')
@@ -102,13 +100,12 @@ export default function OrderDetails({ params }) {
                 setShowSeapodModal(true);
                 return; 
             } else {
-                // FOUND -> VALIDATE
                 if (existingSeapod.status !== 'Completed') {
-                    alert(`⚠️ Seapod ${seapodItem.serial} exists but status is '${existingSeapod.status}'. It must be 'Completed' first.`);
+                    alert(`⚠️ Seapod ${seapodItem.serial} status is '${existingSeapod.status}'. It must be 'Completed' first.`);
                     return;
                 }
                 
-                // NEW: IF ASSIGNED TO ANOTHER ORDER
+                // --- TRIGGER NICE POPUP IF TAKEN ---
                 if (existingSeapod.order_number && existingSeapod.order_number !== order.order_number) {
                     setConflictDetails({
                         serial: seapodItem.serial,
@@ -116,10 +113,9 @@ export default function OrderDetails({ params }) {
                         itemId: seapodItem.id
                     });
                     setShowAssignedModal(true);
-                    return; // STOP
+                    return; 
                 }
                 
-                // VALID -> LINK IT
                 await supabase.from('seapod_production').update({ 
                     order_number: order.order_number, 
                     status: 'Assigned to Order' 
@@ -128,24 +124,19 @@ export default function OrderDetails({ params }) {
         }
     }
 
-    // 2. SHIPPING LOGIC
     if (field === 'status' && value === 'Shipped') {
         if (!order.vessel || order.vessel === 'Unknown Vessel') { alert("Vessel Name required."); return; }
         setShowShipModal(true); return; 
     }
 
-    // Normal Update
     setOrder({ ...order, [field]: value });
     await supabase.from('orders').update({ [field]: value }).eq('id', orderId);
   }
 
   // --- HANDLE CONFLICT ---
   async function handleClearConflict() {
-    // Clear in UI
-    setItems(items.map(i => i.id === conflictDetails.itemId ? { ...i, serial: '' } : i));
-    // Clear in DB
+    setItems(prev => prev.map(i => i.id === conflictDetails.itemId ? { ...i, serial: '' } : i));
     await supabase.from('order_items').update({ serial: '' }).eq('id', conflictDetails.itemId);
-    
     setShowAssignedModal(false);
     setConflictDetails(null);
   }
@@ -155,7 +146,6 @@ export default function OrderDetails({ params }) {
     const tpl = seapodTemplates.find(t => t.id === selectedSeapodTemplate);
     setTplDetails(tpl);
     
-    // Create 'In Progress' record
     supabase.from('seapod_production').insert([{
         serial_number: missingSeapodSerial,
         template_name: tpl.name,
@@ -172,7 +162,7 @@ export default function OrderDetails({ params }) {
             supabase.from('seapod_items').insert(itemsToInsert).then(() => {
                 supabase.from('seapod_items').select('*').eq('seapod_id', data.id).order('sort_order').then(({data: i}) => {
                     setNewSeapodItems(i);
-                    setSeapodStep(2); // Edit Items
+                    setSeapodStep(2); 
                 });
             });
         });
@@ -305,6 +295,8 @@ export default function OrderDetails({ params }) {
     <div className="flex min-h-screen bg-[#F3F4F6] font-sans">
       <Sidebar />
       <div className="flex-1 ml-64">
+          {/* Header & Main Content (Same as before) ... */}
+          {/* ... */}
           <div className="bg-white border-b border-slate-200 shadow-sm sticky top-0 z-10">
             <div className="max-w-[1600px] mx-auto px-6 py-4">
               <div className="flex flex-col md:flex-row justify-between items-start gap-4">
@@ -330,6 +322,7 @@ export default function OrderDetails({ params }) {
 
           <main className="max-w-[1600px] mx-auto px-6 py-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-1 space-y-6">
+                {/* Details & Files Cards (Standard) */}
                 <div className="bg-white border border-slate-200 rounded-lg shadow-sm">
                     <div className="px-5 py-3 border-b border-slate-100 bg-slate-50/50"><h3 className="text-xs font-bold text-slate-500 uppercase tracking-wide">Order Details</h3></div>
                     <div className="p-5 space-y-5">
@@ -370,7 +363,7 @@ export default function OrderDetails({ params }) {
             </div>
           </main>
 
-          {/* Ship Modal */}
+          {/* SHIP & SEAPOD MODALS (Unchanged) */}
           {showShipModal && (
             <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
               <div className="bg-white rounded-xl shadow-2xl max-w-sm w-full p-6 animate-in fade-in zoom-in duration-200 border border-slate-200">
@@ -384,7 +377,7 @@ export default function OrderDetails({ params }) {
             </div>
           )}
 
-          {/* NEW: ASSIGNED ERROR MODAL */}
+          {/* ASSIGNED ERROR MODAL - RESTORED AND STYLED */}
           {showAssignedModal && conflictDetails && (
             <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
               <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 animate-in fade-in zoom-in duration-200 border border-red-200">
@@ -403,7 +396,7 @@ export default function OrderDetails({ params }) {
             </div>
           )}
 
-          {/* SEAPOD WIZARD MODAL */}
+          {/* SEAPOD WIZARD MODAL (Standard, same as before) */}
           {showSeapodModal && (
             <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
                 <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-2xl border border-blue-100 h-[80vh] flex flex-col">
@@ -412,6 +405,7 @@ export default function OrderDetails({ params }) {
                         <h3 className="text-xl font-bold text-slate-900">
                             {seapodStep === 1 ? "Seapod Not Found" : seapodStep === 3 ? "Verify Versions" : `Build: ${missingSeapodSerial}`}
                         </h3>
+                        {seapodStep === 1 && <p className="text-sm text-slate-500">Seapod <strong>{missingSeapodSerial}</strong> does not exist. Create it now to proceed.</p>}
                     </div>
 
                     {seapodStep === 1 && (
