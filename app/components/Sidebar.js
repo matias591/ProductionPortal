@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { usePathname, useRouter } from 'next/navigation';
-import { LayoutDashboard, Package, Users, LogOut, Tag, Cpu, Factory } from 'lucide-react';
+import { LayoutDashboard, Package, Users, LogOut, Tag, Cpu, Factory, List } from 'lucide-react';
 
 export default function Sidebar() {
   const router = useRouter();
@@ -38,7 +38,8 @@ export default function Sidebar() {
   }
 
   const getLinkClass = (path) => {
-    const isActive = pathname === path || (path !== '/' && pathname.startsWith(path));
+    // Exact match for root, startsWith for others
+    const isActive = path === '/' ? pathname === '/' : pathname.startsWith(path);
     return `flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-all duration-200 cursor-pointer mb-1
       ${isActive ? 'bg-[#0176D3]/10 text-[#0176D3]' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'}`;
   };
@@ -53,15 +54,25 @@ export default function Sidebar() {
       </div>
 
       <nav className="flex-1 px-4 py-6 space-y-1">
-        <div className="pb-2 px-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Workspace</div>
-        <div onClick={() => router.push('/')} className={getLinkClass('/')}>
-          <LayoutDashboard size={18} /><span>Orders</span>
+        
+        {/* --- DASHBOARD (Admin Only Logic handled in page) --- */}
+        {isAdmin && (
+            <div onClick={() => router.push('/')} className={getLinkClass('/')}>
+            <LayoutDashboard size={18} /><span>Overview</span>
+            </div>
+        )}
+
+        <div className="pt-4 pb-2 px-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Workspace</div>
+        
+        {/* MOVED ORDERS LINK */}
+        <div onClick={() => router.push('/orders')} className={getLinkClass('/orders')}>
+          <List size={18} /><span>Orders List</span>
         </div>
+        
         <div onClick={() => router.push('/seapod-production')} className={getLinkClass('/seapod-production')}>
           <Factory size={18} /><span>Seapod Production</span>
         </div>
 
-        {/* ONLY ADMIN SEES THIS */}
         {isAdmin && (
           <>
             <div className="pt-6 pb-2 px-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Admin Controls</div>

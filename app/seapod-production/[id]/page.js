@@ -16,7 +16,6 @@ export default function SeapodBuildDetails({ params }) {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   
-  // Ack Modal State for Completion
   const [showAck, setShowAck] = useState(false);
 
   const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
@@ -46,10 +45,16 @@ export default function SeapodBuildDetails({ params }) {
     }
   }
 
+  // --- UPDATED COMPLETION LOGIC ---
   async function confirmCompletion() {
     setShowAck(false);
+    const now = new Date().toISOString();
     setSeapod(prev => ({ ...prev, status: 'Completed' }));
-    await supabase.from('seapod_production').update({ status: 'Completed' }).eq('id', seapodId);
+    
+    await supabase.from('seapod_production').update({ 
+        status: 'Completed',
+        completed_at: now // <--- SAVE DATE
+    }).eq('id', seapodId);
   }
 
   async function updateItem(itemId, field, value) {
@@ -103,7 +108,6 @@ export default function SeapodBuildDetails({ params }) {
       <Sidebar />
       <main className="flex-1 ml-64">
         
-        {/* Header */}
         <div className="bg-white border-b border-slate-200 sticky top-0 z-10 shadow-sm">
             <div className="px-8 py-4 max-w-5xl mx-auto">
                 <button onClick={() => router.push('/seapod-production')} className="text-xs font-bold text-[#0176D3] hover:underline mb-2 flex items-center gap-1">
@@ -143,7 +147,6 @@ export default function SeapodBuildDetails({ params }) {
             </div>
         </div>
 
-        {/* Content */}
         <div className="p-8 max-w-5xl mx-auto grid grid-cols-3 gap-8">
             <div className="col-span-1">
                 <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
@@ -187,7 +190,7 @@ export default function SeapodBuildDetails({ params }) {
             </div>
         </div>
 
-        {/* ACKNOWLEDGEMENT MODAL - ADDED SEAPOD VERSION */}
+        {/* ACKNOWLEDGEMENT MODAL */}
         {showAck && (
             <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
                 <div className="bg-white rounded-xl shadow-2xl p-8 w-full max-w-md text-center border-t-4 border-[#0176D3]">
@@ -196,7 +199,7 @@ export default function SeapodBuildDetails({ params }) {
                     <p className="text-slate-500 text-sm mb-6">You are marking Seapod <strong>{seapod.serial_number}</strong> as Completed.</p>
                     <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 mb-6 text-left">
                         
-                        {/* ADDED SEAPOD VERSION */}
+                        {/* SEAPOD VERSION */}
                         <div className="mb-4 pb-4 border-b border-slate-200">
                             <span className="text-[10px] font-bold text-slate-400 uppercase block">Seapod Version</span>
                             <span className="text-lg font-bold text-[#0176D3]">{seapod.seapod_version || 'N/A'}</span>
