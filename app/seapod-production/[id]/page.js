@@ -35,25 +35,17 @@ export default function SeapodBuildDetails({ params }) {
     setLoading(false);
   }
 
-  // --- LOGIC: STATUS UPDATE (Check Serials & Show Ack) ---
   async function handleStatusChange(newStatus) {
     if (newStatus === 'Completed') {
-        // 1. Check all serials
         const missing = items.some(i => !i.serial || i.serial.trim() === '');
-        if (missing) {
-            alert("⚠️ Cannot complete: All Item Serial Numbers must be filled.");
-            return;
-        }
-        // 2. Show Ack Modal (Delay DB update)
+        if (missing) { alert("⚠️ Cannot complete: All Item Serial Numbers must be filled."); return; }
         setShowAck(true);
     } else {
-        // Normal Update
         setSeapod(prev => ({ ...prev, status: newStatus }));
         await supabase.from('seapod_production').update({ status: newStatus }).eq('id', seapodId);
     }
   }
 
-  // --- LOGIC: CONFIRM COMPLETION ---
   async function confirmCompletion() {
     setShowAck(false);
     setSeapod(prev => ({ ...prev, status: 'Completed' }));
@@ -143,7 +135,7 @@ export default function SeapodBuildDetails({ params }) {
                         >
                             <option>In Progress</option>
                             <option>Completed</option>
-                            <option disabled>Assigned to Order</option> {/* Read Only Status */}
+                            <option disabled>Assigned to Order</option>
                         </select>
                         <button onClick={exportExcel} className="text-xs font-bold text-slate-500 flex items-center gap-1 hover:text-[#0176D3]"><Download size={12}/> Export Details</button>
                     </div>
@@ -151,8 +143,8 @@ export default function SeapodBuildDetails({ params }) {
             </div>
         </div>
 
+        {/* Content */}
         <div className="p-8 max-w-5xl mx-auto grid grid-cols-3 gap-8">
-            {/* Left Col: Files */}
             <div className="col-span-1">
                 <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
                     <div className="px-5 py-3 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
@@ -170,7 +162,6 @@ export default function SeapodBuildDetails({ params }) {
                 </div>
             </div>
 
-            {/* Right Col: Items */}
             <div className="col-span-2">
                 <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
                     <div className="bg-slate-50 px-6 py-3 border-b border-slate-200 flex justify-between items-center">
@@ -178,9 +169,7 @@ export default function SeapodBuildDetails({ params }) {
                         <span className="text-xs font-bold bg-white border border-slate-200 px-2 py-1 rounded text-slate-500">{items.length} Items</span>
                     </div>
                     <table className="w-full text-left">
-                        <thead className="text-xs font-bold text-slate-400 uppercase border-b border-slate-200">
-                            <tr><th className="px-6 py-3 w-12 text-center">Done</th><th className="px-6 py-3">Component</th><th className="px-6 py-3 w-20">Qty</th><th className="px-6 py-3">Serial Number</th><th className="w-10"></th></tr>
-                        </thead>
+                        <thead className="text-xs font-bold text-slate-400 uppercase border-b border-slate-200"><tr><th className="px-6 py-3 w-16 text-center">Done</th><th className="px-6 py-3">Component</th><th className="px-6 py-3 w-24">Qty</th><th className="px-6 py-3 w-48">Serial Number</th><th className="w-12"></th></tr></thead>
                         <tbody className="divide-y divide-slate-100">
                             {items.map(item => (
                                 <tr key={item.id} className="group hover:bg-slate-50">
@@ -198,7 +187,7 @@ export default function SeapodBuildDetails({ params }) {
             </div>
         </div>
 
-        {/* ACKNOWLEDGEMENT MODAL (Pop-up when status -> Completed) */}
+        {/* ACKNOWLEDGEMENT MODAL - ADDED SEAPOD VERSION */}
         {showAck && (
             <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
                 <div className="bg-white rounded-xl shadow-2xl p-8 w-full max-w-md text-center border-t-4 border-[#0176D3]">
@@ -206,6 +195,13 @@ export default function SeapodBuildDetails({ params }) {
                     <h2 className="text-xl font-bold text-slate-900 mb-2">Build Verification</h2>
                     <p className="text-slate-500 text-sm mb-6">You are marking Seapod <strong>{seapod.serial_number}</strong> as Completed.</p>
                     <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 mb-6 text-left">
+                        
+                        {/* ADDED SEAPOD VERSION */}
+                        <div className="mb-4 pb-4 border-b border-slate-200">
+                            <span className="text-[10px] font-bold text-slate-400 uppercase block">Seapod Version</span>
+                            <span className="text-lg font-bold text-[#0176D3]">{seapod.seapod_version || 'N/A'}</span>
+                        </div>
+
                         <div className="grid grid-cols-2 gap-4">
                             <div><span className="text-[10px] font-bold text-slate-400 uppercase block">Hardware Ver.</span><span className="text-lg font-bold text-slate-800">{seapod.hw_version || 'N/A'}</span></div>
                             <div><span className="text-[10px] font-bold text-slate-400 uppercase block">Software Ver.</span><span className="text-lg font-bold text-slate-800">{seapod.sw_version || 'N/A'}</span></div>

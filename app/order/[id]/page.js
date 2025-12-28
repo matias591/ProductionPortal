@@ -10,24 +10,20 @@ export default function OrderDetails({ params }) {
   const router = useRouter();
   const [orderId, setOrderId] = useState(null);
 
-  // Data State
   const [items, setItems] = useState([]);
   const [order, setOrder] = useState(null);
   const [files, setFiles] = useState([]);
   const [masterItems, setMasterItems] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Permissions
   const [isAdmin, setIsAdmin] = useState(false);
   const [canShip, setCanShip] = useState(false);
 
-  // UI State
   const [uploading, setUploading] = useState(false);
   const [shipping, setShipping] = useState(false); 
   const [showShipModal, setShowShipModal] = useState(false);
   const [checkingVessel, setCheckingVessel] = useState(false);
 
-  // Wizards
   const [showSeapodModal, setShowSeapodModal] = useState(false);
   const [seapodStep, setSeapodStep] = useState(1);
   const [missingSeapodSerial, setMissingSeapodSerial] = useState('');
@@ -37,15 +33,11 @@ export default function OrderDetails({ params }) {
   const [newSeapodId, setNewSeapodId] = useState(null);
   const [pendingStatus, setPendingStatus] = useState(null);
   const [tplDetails, setTplDetails] = useState(null);
-
-  // NEW: ASSIGNED ERROR MODAL
+  
   const [showAssignedModal, setShowAssignedModal] = useState(false);
   const [conflictDetails, setConflictDetails] = useState(null);
 
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  );
+  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 
   useEffect(() => { Promise.resolve(params).then((r) => setOrderId(r.id)); }, [params]);
   useEffect(() => { if (orderId) fetchData(); }, [orderId]);
@@ -74,52 +66,29 @@ export default function OrderDetails({ params }) {
     setLoading(false);
   }
 
-  // --- LOGIC: LINK SEAPOD ON "IN BOX" ---
+  // --- LOCKED LOGIC ---
+  // Locked if Shipped AND NOT Admin (Strict read-only for Vendor/Ops after shipping)
+  const isLocked = order?.status === 'Shipped' && !isAdmin;
+
   async function updateOrder(field, value) {
-    const isOrderLocked = order?.status === 'Shipped' && !isAdmin;
-    if (isOrderLocked) return;
+    if (isLocked) return;
 
     if (field === 'status' && value === 'In Box') {
         const seapodItem = items.find(i => i.piece && i.piece.toLowerCase().includes('seapod'));
-        
         if (seapodItem) {
             if (!seapodItem.serial || seapodItem.serial.trim() === '' || seapodItem.serial === '-') {
                 alert("⚠️ Seapod Item exists but has no Serial Number. Fill it first."); return;
             }
-
-            const { data: existingSeapod } = await supabase
-                .from('seapod_production')
-                .select('id, status, order_number')
-                .eq('serial_number', seapodItem.serial)
-                .single();
-
+            const { data: existingSeapod } = await supabase.from('seapod_production').select('id, status, order_number').eq('serial_number', seapodItem.serial).single();
             if (!existingSeapod) {
-                setMissingSeapodSerial(seapodItem.serial);
-                setPendingStatus(value);
-                setSeapodStep(1); 
-                setShowSeapodModal(true);
-                return; 
+                setMissingSeapodSerial(seapodItem.serial); setPendingStatus(value); setSeapodStep(1); setShowSeapodModal(true); return; 
             } else {
-                if (existingSeapod.status !== 'Completed') {
-                    alert(`⚠️ Seapod ${seapodItem.serial} status is '${existingSeapod.status}'. It must be 'Completed' first.`);
-                    return;
-                }
-                
-                // --- TRIGGER NICE POPUP IF TAKEN ---
+                if (existingSeapod.status !== 'Completed') { alert(`⚠️ Seapod ${seapodItem.serial} status is '${existingSeapod.status}'. It must be 'Completed' first.`); return; }
                 if (existingSeapod.order_number && existingSeapod.order_number !== order.order_number) {
-                    setConflictDetails({
-                        serial: seapodItem.serial,
-                        assignedTo: existingSeapod.order_number,
-                        itemId: seapodItem.id
-                    });
-                    setShowAssignedModal(true);
-                    return; 
+                    setConflictDetails({ serial: seapodItem.serial, assignedTo: existingSeapod.order_number, itemId: seapodItem.id });
+                    setShowAssignedModal(true); return; 
                 }
-                
-                await supabase.from('seapod_production').update({ 
-                    order_number: order.order_number, 
-                    status: 'Assigned to Order' 
-                }).eq('id', existingSeapod.id);
+                await supabase.from('seapod_production').update({ order_number: order.order_number, status: 'Assigned to Order' }).eq('id', existingSeapod.id);
             }
         }
     }
@@ -133,37 +102,25 @@ export default function OrderDetails({ params }) {
     await supabase.from('orders').update({ [field]: value }).eq('id', orderId);
   }
 
-  // --- HANDLE CONFLICT ---
   async function handleClearConflict() {
     setItems(prev => prev.map(i => i.id === conflictDetails.itemId ? { ...i, serial: '' } : i));
     await supabase.from('order_items').update({ serial: '' }).eq('id', conflictDetails.itemId);
-    setShowAssignedModal(false);
-    setConflictDetails(null);
+    setShowAssignedModal(false); setConflictDetails(null);
   }
 
-  // --- WIZARD LOGIC ---
   function goToAckStep() {
     const tpl = seapodTemplates.find(t => t.id === selectedSeapodTemplate);
     setTplDetails(tpl);
     
     supabase.from('seapod_production').insert([{
-        serial_number: missingSeapodSerial,
-        template_name: tpl.name,
-        seapod_version: tpl.seapod_version,
-        hw_version: tpl.hw_version,
-        sw_version: tpl.sw_version,
-        status: 'In Progress'
+        serial_number: missingSeapodSerial, template_name: tpl.name, seapod_version: tpl.seapod_version, hw_version: tpl.hw_version, sw_version: tpl.sw_version, status: 'In Progress'
     }]).select().single().then(({data, error}) => {
         if(error) { alert(error.message); return; }
         setNewSeapodId(data.id);
-        
         supabase.from('seapod_template_items').select('*').eq('template_id', selectedSeapodTemplate).then(({data: tItems}) => {
             const itemsToInsert = tItems.map(i => ({ seapod_id: data.id, piece: i.piece, item_id: i.item_id, quantity: i.quantity, sort_order: i.sort_order }));
             supabase.from('seapod_items').insert(itemsToInsert).then(() => {
-                supabase.from('seapod_items').select('*').eq('seapod_id', data.id).order('sort_order').then(({data: i}) => {
-                    setNewSeapodItems(i);
-                    setSeapodStep(2); 
-                });
+                supabase.from('seapod_items').select('*').eq('seapod_id', data.id).order('sort_order').then(({data: i}) => { setNewSeapodItems(i); setSeapodStep(2); });
             });
         });
     });
@@ -181,28 +138,17 @@ export default function OrderDetails({ params }) {
   }
 
   async function finalWizardSubmit() {
-    await supabase.from('seapod_production').update({ 
-        status: 'Assigned to Order', 
-        order_number: order.order_number 
-    }).eq('id', newSeapodId);
-
+    await supabase.from('seapod_production').update({ status: 'Assigned to Order', order_number: order.order_number }).eq('id', newSeapodId);
     setShowSeapodModal(false);
-    
-    if (pendingStatus) {
-        setOrder(prev => ({ ...prev, status: pendingStatus }));
-        await supabase.from('orders').update({ status: pendingStatus }).eq('id', orderId);
-        setPendingStatus(null);
-    }
+    if (pendingStatus) { setOrder(prev => ({ ...prev, status: pendingStatus })); await supabase.from('orders').update({ status: pendingStatus }).eq('id', orderId); setPendingStatus(null); }
   }
 
-  // --- ACTIONS ---
   async function confirmShipping() {
     setShipping(true);
     try {
         const res = await fetch('/api/trigger-shipping', { method: 'POST', body: JSON.stringify({ orderId: orderId }) });
         const json = await res.json();
-        if (json.error) alert("Error: " + json.error);
-        else { setOrder({ ...order, status: 'Shipped' }); setShowShipModal(false); }
+        if (json.error) alert("Error: " + json.error); else { setOrder({ ...order, status: 'Shipped' }); setShowShipModal(false); }
     } catch (e) { alert(e.message); }
     setShipping(false);
   }
@@ -210,8 +156,7 @@ export default function OrderDetails({ params }) {
   function exportToExcel() {
     const dataToExport = items.map(item => ({
         "Order #": order.order_number, "Vessel": order.vessel, "Account": order.account_name || '-', "Warehouse": order.warehouse || '-',
-        "Item Name": item.piece, "SKU": masterItems.find(m => m.name === item.piece)?.sku || '-', 
-        "Serial Number": item.serial || '-', "Quantity": item.quantity,
+        "Item Name": item.piece, "SKU": masterItems.find(m => m.name === item.piece)?.sku || '-', "Serial Number": item.serial || '-', "Quantity": item.quantity,
         ...(isAdmin ? { "Unit Price": item.price, "Total Price": item.price * item.quantity } : {})
     }));
     const worksheet = XLSX.utils.json_to_sheet(dataToExport);
@@ -221,19 +166,16 @@ export default function OrderDetails({ params }) {
   }
 
   async function updateItem(itemId, field, value) {
-    if (order?.status === 'Shipped' && !isAdmin) return;
+    if (isLocked) return;
     let updateData = { [field]: value };
-    if (field === 'piece') {
-        const selectedMaster = masterItems.find(m => m.name === value);
-        if (selectedMaster) updateData.price = selectedMaster.price;
-    }
+    if (field === 'piece') { const selectedMaster = masterItems.find(m => m.name === value); if (selectedMaster) updateData.price = selectedMaster.price; }
     const newItems = items.map(i => i.id === itemId ? { ...i, ...updateData } : i);
     setItems(newItems);
     await supabase.from('order_items').update(updateData).eq('id', itemId);
   }
 
   async function addItem() {
-    if (order?.status === 'Shipped' && !isAdmin) return;
+    if (isLocked) return;
     const firstMaster = masterItems[0];
     const nextOrder = items.length > 0 ? Math.max(...items.map(i => i.sort_order || 0)) + 1 : 1;
     const newItem = { order_id: orderId, piece: firstMaster ? firstMaster.name : 'New Item', quantity: 1, serial: '', price: firstMaster ? firstMaster.price : 0, is_done: false, sort_order: nextOrder };
@@ -242,14 +184,14 @@ export default function OrderDetails({ params }) {
   }
 
   async function deleteItem(itemId) {
-    if (order?.status === 'Shipped' && !isAdmin) return;
-    if(!confirm('Remove item?')) return;
+    if (isLocked) return;
+    if(!confirm('Remove this item?')) return;
     setItems(items.filter(i => i.id !== itemId));
     await supabase.from('order_items').delete().eq('id', itemId);
   }
 
   async function handleFileUpload(e) {
-    if (order?.status === 'Shipped' && !isAdmin) return;
+    if (isLocked) return;
     if (!e.target.files || e.target.files.length === 0) return;
     setUploading(true);
     const file = e.target.files[0];
@@ -263,7 +205,7 @@ export default function OrderDetails({ params }) {
   }
 
   async function handleVesselBlur() {
-    if ((order?.status === 'Shipped' && !isAdmin) || !order.vessel || order.vessel.trim() === '') return;
+    if (isLocked || !order.vessel || order.vessel.trim() === '') return;
     setCheckingVessel(true);
     try {
         const res = await fetch('/api/check-vessel', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ vessel: order.vessel }) });
@@ -280,30 +222,24 @@ export default function OrderDetails({ params }) {
     setCheckingVessel(false);
   }
 
-  function openFile(path) {
-    const { data } = supabase.storage.from('order-attachments').getPublicUrl(path);
-    if (data?.publicUrl) window.open(data.publicUrl, '_blank');
-  }
+  function openFile(path) { const { data } = supabase.storage.from('order-attachments').getPublicUrl(path); if (data?.publicUrl) window.open(data.publicUrl, '_blank'); }
 
   if (loading) return <div className="flex min-h-screen bg-[#F3F4F6]"><Sidebar /><div className="ml-64 p-10 text-slate-500">Loading Order...</div></div>;
   if (!order) return <div className="flex min-h-screen bg-[#F3F4F6]"><Sidebar /><div className="ml-64 p-10 text-red-500">Order not found.</div></div>;
 
   const totalCost = items.reduce((sum, item) => sum + ((item.quantity || 0) * (item.price || 0)), 0);
-  const isLockedOrder = order.status === 'Shipped' && !isAdmin;
 
   return (
     <div className="flex min-h-screen bg-[#F3F4F6] font-sans">
       <Sidebar />
       <div className="flex-1 ml-64">
-          {/* Header & Main Content (Same as before) ... */}
-          {/* ... */}
           <div className="bg-white border-b border-slate-200 shadow-sm sticky top-0 z-10">
             <div className="max-w-[1600px] mx-auto px-6 py-4">
               <div className="flex flex-col md:flex-row justify-between items-start gap-4">
                 <div className="flex items-center gap-4">
                    <div className="w-12 h-12 bg-[#0176D3]/10 text-[#0176D3] border border-[#0176D3]/20 rounded-lg flex items-center justify-center"><Box size={24} /></div>
                    <div>
-                     <div className="flex items-center gap-2"><h1 className="text-2xl font-bold text-slate-900">{order.vessel || 'No Vessel Name'}</h1>{isLockedOrder && <Lock size={18} className="text-red-500" title="Order Locked" />}</div>
+                     <div className="flex items-center gap-2"><h1 className="text-2xl font-bold text-slate-900">{order.vessel || 'No Vessel Name'}</h1>{isLocked && <Lock size={18} className="text-red-500" title="Order Locked" />}</div>
                      <div className="flex items-center gap-3 text-sm text-slate-500 mt-1"><span className="font-mono bg-slate-100 px-2 py-0.5 rounded text-xs border border-slate-200 text-slate-600">#{order.order_number}</span><span className="flex items-center gap-1 text-slate-600 font-medium"><Building2 size={12} /> {order.account_name || 'No Account'}</span></div>
                    </div>
                 </div>
@@ -311,7 +247,7 @@ export default function OrderDetails({ params }) {
                     <button onClick={exportToExcel} className="bg-white border border-slate-300 text-slate-700 font-bold px-3 py-2 rounded-md text-sm shadow-sm hover:bg-slate-50 flex items-center gap-2"><Download size={16}/> Export Excel</button>
                     <div className="flex flex-col items-end">
                         <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Status</label>
-                        <select value={order.status || 'New'} onChange={(e) => updateOrder('status', e.target.value)} disabled={isLockedOrder && !isAdmin} className={`bg-white border border-slate-300 text-slate-900 text-sm font-bold rounded-md shadow-sm focus:ring-2 focus:ring-[#0176D3] block w-44 p-2 outline-none ${isLockedOrder ? 'bg-gray-100 text-gray-500' : ''}`}>
+                        <select value={order.status || 'New'} onChange={(e) => updateOrder('status', e.target.value)} disabled={isLocked && !canShip} className={`bg-white border border-slate-300 text-slate-900 text-sm font-bold rounded-md shadow-sm focus:ring-2 focus:ring-[#0176D3] block w-44 p-2 outline-none ${isLocked ? 'bg-gray-100 text-gray-500' : ''}`}>
                         <option value="New">New</option><option value="In preparation">In preparation</option><option value="In Box">In Box</option><option value="Ready for Pickup">Ready for Pickup</option>{(canShip || order.status === 'Shipped') && <option value="Shipped">Shipped</option>}
                         </select>
                     </div>
@@ -322,19 +258,22 @@ export default function OrderDetails({ params }) {
 
           <main className="max-w-[1600px] mx-auto px-6 py-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-1 space-y-6">
-                {/* Details & Files Cards (Standard) */}
                 <div className="bg-white border border-slate-200 rounded-lg shadow-sm">
                     <div className="px-5 py-3 border-b border-slate-100 bg-slate-50/50"><h3 className="text-xs font-bold text-slate-500 uppercase tracking-wide">Order Details</h3></div>
                     <div className="p-5 space-y-5">
-                        <div><label className="flex items-center justify-between text-xs font-bold text-slate-400 uppercase mb-1.5"><span className="flex items-center gap-2"><Ship size={14} /> Vessel Name <span className="text-red-500">*</span></span>{checkingVessel && <span className="text-[#0176D3] flex items-center gap-1"><Loader2 size={12} className="animate-spin"/> Checking...</span>}</label><input className="w-full text-sm font-medium border border-slate-200 rounded px-3 py-2 focus:border-[#0176D3] focus:ring-1 focus:ring-[#0176D3] outline-none text-slate-900" placeholder="Enter Name & Click Away" value={order.vessel || ''} disabled={isLockedOrder || checkingVessel} onChange={(e) => updateOrder('vessel', e.target.value)} onBlur={handleVesselBlur} /></div>
+                        <div>
+                            <label className="flex items-center justify-between text-xs font-bold text-slate-400 uppercase mb-1.5"><span className="flex items-center gap-2"><Ship size={14} /> Vessel Name <span className="text-red-500">*</span></span>{checkingVessel && <span className="text-[#0176D3] flex items-center gap-1"><Loader2 size={12} className="animate-spin"/> Checking...</span>}</label>
+                            {/* LOCKED IF NOT CANSHIP (Admin/Ops) OR IF ORDER IS SHIPPED */}
+                            <input className="w-full text-sm font-medium border border-slate-200 rounded px-3 py-2 focus:border-[#0176D3] focus:ring-1 focus:ring-[#0176D3] outline-none text-slate-900" placeholder="Enter Name & Click Away" value={order.vessel || ''} disabled={!canShip || isLocked || checkingVessel} onChange={(e) => updateOrder('vessel', e.target.value)} onBlur={handleVesselBlur} />
+                        </div>
                         <div><label className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase mb-1.5"><Building2 size={14} /> Account Name</label><input className="w-full text-sm font-medium border border-slate-200 bg-slate-50 rounded px-3 py-2 text-slate-500 cursor-not-allowed" value={order.account_name || ''} readOnly placeholder="Auto-filled" /></div>
-                        {isAdmin && (<div><label className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase mb-1.5"><Warehouse size={14} /> Warehouse</label><select className="w-full text-sm font-medium border border-slate-200 rounded px-3 py-2 focus:border-[#0176D3] outline-none bg-white text-slate-900" value={order.warehouse || 'Orca'} onChange={(e) => updateOrder('warehouse', e.target.value)} disabled={isLockedOrder}><option value="Orca">Orca</option><option value="Bazz">Bazz</option></select></div>)}
-                        <div><label className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase mb-1.5"><Calendar size={14} /> Pickup Date</label><input type="date" className="w-full text-sm font-medium border border-slate-200 rounded px-3 py-2 focus:border-[#0176D3] outline-none text-slate-700" value={order.pickup_date || ''} disabled={isLockedOrder} onChange={(e) => updateOrder('pickup_date', e.target.value)} /></div>
-                        <div><label className="block text-xs font-bold text-slate-400 uppercase mb-1.5">Kit Type</label><select className="w-full text-sm font-medium border border-slate-200 rounded px-3 py-2 focus:border-[#0176D3] outline-none bg-white" value={order.type || ''} disabled={isLockedOrder} onChange={(e) => updateOrder('type', e.target.value)} ><option>Full system</option><option>Upgrade</option><option>Replacement</option><option>Spare Parts</option></select></div>
+                        {isAdmin && (<div><label className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase mb-1.5"><Warehouse size={14} /> Warehouse</label><select className="w-full text-sm font-medium border border-slate-200 rounded px-3 py-2 focus:border-[#0176D3] outline-none bg-white text-slate-900" value={order.warehouse || 'Orca'} onChange={(e) => updateOrder('warehouse', e.target.value)} disabled={isLocked}><option value="Orca">Orca</option><option value="Baz">Baz</option></select></div>)}
+                        <div><label className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase mb-1.5"><Calendar size={14} /> Pickup Date</label><input type="date" className="w-full text-sm font-medium border border-slate-200 rounded px-3 py-2 focus:border-[#0176D3] outline-none text-slate-700" value={order.pickup_date || ''} disabled={isLocked} onChange={(e) => updateOrder('pickup_date', e.target.value)} /></div>
+                        <div><label className="block text-xs font-bold text-slate-400 uppercase mb-1.5">Kit Type</label><select className="w-full text-sm font-medium border border-slate-200 rounded px-3 py-2 focus:border-[#0176D3] outline-none bg-white" value={order.type || ''} disabled={isLocked} onChange={(e) => updateOrder('type', e.target.value)} ><option>Full system</option><option>Upgrade</option><option>Replacement</option><option>Spare Parts</option></select></div>
                     </div>
                 </div>
                 <div className="bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden">
-                    <div className="px-5 py-3 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center"><h3 className="text-xs font-bold text-slate-500 uppercase tracking-wide flex items-center gap-2"><Paperclip size={14}/> Attachments ({files.length})</h3>{canShip && !isLockedOrder && (<label className="cursor-pointer text-xs font-bold text-[#0176D3] hover:underline flex items-center gap-1">{uploading ? 'Uploading...' : '+ Upload'}<input type="file" className="hidden" onChange={handleFileUpload} disabled={uploading || isLockedOrder} /></label>)}</div>
+                    <div className="px-5 py-3 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center"><h3 className="text-xs font-bold text-slate-500 uppercase tracking-wide flex items-center gap-2"><Paperclip size={14}/> Attachments ({files.length})</h3>{canShip && !isLocked && (<label className="cursor-pointer text-xs font-bold text-[#0176D3] hover:underline flex items-center gap-1">{uploading ? 'Uploading...' : '+ Upload'}<input type="file" className="hidden" onChange={handleFileUpload} disabled={uploading || isLocked} /></label>)}</div>
                     <div className="divide-y divide-slate-50">{files.map(file => (<div key={file.id} onClick={() => openFile(file.file_path)} className="px-5 py-3 flex items-center gap-3 hover:bg-blue-50 cursor-pointer transition-colors group"><div className="bg-blue-100 p-1.5 rounded text-blue-600"><FileText size={16}/></div><div className="overflow-hidden"><p className="text-sm font-medium text-slate-700 truncate group-hover:text-[#0176D3] group-hover:underline">{file.file_name}</p><p className="text-[10px] text-slate-400">Uploaded by {file.uploaded_by}</p></div></div>))}{files.length === 0 && <div className="p-6 text-center text-slate-400 text-xs italic">No files attached.</div>}</div>
                 </div>
             </div>
@@ -347,23 +286,23 @@ export default function OrderDetails({ params }) {
                      <tbody className="divide-y divide-slate-50">
                        {items.map((item) => (
                          <tr key={item.id} className="group hover:bg-slate-50 transition-colors">
-                            <td className="px-6 py-3 text-center"><input type="checkbox" checked={item.is_done || false} onChange={(e) => updateItem(item.id, 'is_done', e.target.checked)} disabled={isLockedOrder} className="w-5 h-5 rounded border-slate-300 text-[#0176D3] focus:ring-[#0176D3] accent-[#0176D3] cursor-pointer" /></td>
-                            <td className="px-6 py-3"><select className="w-full bg-transparent border-none outline-none focus:ring-0 text-sm font-medium text-slate-900" value={item.piece || ''} disabled={isLockedOrder} onChange={(e) => updateItem(item.id, 'piece', e.target.value)}><option value="">Select Item...</option>{masterItems.map(m => <option key={m.id} value={m.name}>{m.sku} - {m.name}</option>)}</select></td>
-                            <td className="px-6 py-3"><input type="number" className="w-full bg-transparent border-none outline-none" value={item.quantity || 1} disabled={isLockedOrder} onChange={(e) => updateItem(item.id, 'quantity', e.target.value)} /></td>
-                            <td className="px-6 py-3"><input className="w-full bg-transparent border-none outline-none text-[#0176D3] font-medium placeholder-slate-300" value={item.serial || ''} disabled={isLockedOrder} onChange={(e) => updateItem(item.id, 'serial', e.target.value)} placeholder="---" /></td>
-                            <td className="px-6 py-3"><input className="w-full bg-transparent border-none outline-none text-slate-600 placeholder-slate-300" value={item.orca_id || ''} disabled={isLockedOrder} onChange={(e) => updateItem(item.id, 'orca_id', e.target.value)} placeholder="---" /></td>
+                            <td className="px-6 py-3 text-center"><input type="checkbox" checked={item.is_done || false} onChange={(e) => updateItem(item.id, 'is_done', e.target.checked)} disabled={isLocked} className="w-5 h-5 rounded border-slate-300 text-[#0176D3] focus:ring-[#0176D3] accent-[#0176D3] cursor-pointer" /></td>
+                            <td className="px-6 py-3"><select className="w-full bg-transparent border-none outline-none focus:ring-0 text-sm font-medium text-slate-900" value={item.piece || ''} disabled={isLocked} onChange={(e) => updateItem(item.id, 'piece', e.target.value)}><option value="">Select Item...</option>{masterItems.map(m => <option key={m.id} value={m.name}>{m.sku} - {m.name}</option>)}</select></td>
+                            <td className="px-6 py-3"><input type="number" className="w-full bg-transparent border-none outline-none" value={item.quantity || 1} disabled={isLocked} onChange={(e) => updateItem(item.id, 'quantity', e.target.value)} /></td>
+                            <td className="px-6 py-3"><input className="w-full bg-transparent border-none outline-none text-[#0176D3] font-medium placeholder-slate-300" value={item.serial || ''} disabled={isLocked} onChange={(e) => updateItem(item.id, 'serial', e.target.value)} placeholder="---" /></td>
+                            <td className="px-6 py-3"><input className="w-full bg-transparent border-none outline-none text-slate-600 placeholder-slate-300" value={item.orca_id || ''} disabled={isLocked} onChange={(e) => updateItem(item.id, 'orca_id', e.target.value)} placeholder="---" /></td>
                             {isAdmin && (<td className="px-6 py-3 text-right text-xs font-mono text-slate-600">${(item.price * item.quantity).toFixed(2)}</td>)}
-                            <td className="px-4 py-3 text-right">{!isLockedOrder && (<button onClick={() => deleteItem(item.id)} className="text-slate-300 hover:text-red-600 opacity-0 group-hover:opacity-100"><Trash2 size={16}/></button>)}</td>
+                            <td className="px-4 py-3 text-right">{!isLocked && (<button onClick={() => deleteItem(item.id)} className="text-slate-300 hover:text-red-600 opacity-0 group-hover:opacity-100"><Trash2 size={16}/></button>)}</td>
                          </tr>
                        ))}
                      </tbody>
                    </table>
-                   {!isLockedOrder && (<button onClick={addItem} className="w-full py-4 text-sm font-bold text-slate-500 hover:bg-slate-50 hover:text-[#0176D3] transition-colors flex items-center justify-center gap-2 border-t border-slate-200"><Plus size={16} /> Add New Line Item</button>)}
+                   {!isLocked && (<button onClick={addItem} className="w-full py-4 text-sm font-bold text-slate-500 hover:bg-slate-50 hover:text-[#0176D3] transition-colors flex items-center justify-center gap-2 border-t border-slate-200"><Plus size={16} /> Add New Line Item</button>)}
                 </div>
             </div>
           </main>
 
-          {/* SHIP & SEAPOD MODALS (Unchanged) */}
+          {/* Ship Modal (Unchanged) */}
           {showShipModal && (
             <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
               <div className="bg-white rounded-xl shadow-2xl max-w-sm w-full p-6 animate-in fade-in zoom-in duration-200 border border-slate-200">
@@ -377,26 +316,21 @@ export default function OrderDetails({ params }) {
             </div>
           )}
 
-          {/* ASSIGNED ERROR MODAL - RESTORED AND STYLED */}
+          {/* ASSIGNED ERROR (Unchanged) */}
           {showAssignedModal && conflictDetails && (
             <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
               <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 animate-in fade-in zoom-in duration-200 border border-red-200">
                 <div className="flex flex-col items-center text-center">
                   <div className="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center mb-4"><XCircle size={24} /></div>
                   <h3 className="text-lg font-bold text-slate-900">Seapod Already Assigned</h3>
-                  <p className="text-sm text-slate-500 mt-2 mb-6">
-                    Seapod <strong>{conflictDetails.serial}</strong> is already assigned to <strong>Order #{conflictDetails.assignedTo}</strong>.
-                    <br/>Please use a different Seapod or check the number.
-                  </p>
-                  <div className="flex gap-3 w-full">
-                    <button onClick={handleClearConflict} className="flex-1 px-4 py-2.5 bg-[#0176D3] text-white rounded-lg text-sm font-bold hover:bg-blue-700 shadow-sm">OK, Clear Serial</button>
-                  </div>
+                  <p className="text-sm text-slate-500 mt-2 mb-6">Seapod <strong>{conflictDetails.serial}</strong> is already assigned to <strong>Order #{conflictDetails.assignedTo}</strong>.<br/>Please use a different Seapod or check the number.</p>
+                  <div className="flex gap-3 w-full"><button onClick={handleClearConflict} className="flex-1 px-4 py-2.5 bg-[#0176D3] text-white rounded-lg text-sm font-bold hover:bg-blue-700 shadow-sm">OK, Clear Serial</button></div>
                 </div>
               </div>
             </div>
           )}
 
-          {/* SEAPOD WIZARD MODAL (Standard, same as before) */}
+          {/* SEAPOD WIZARD MODAL - ADDED SEAPOD VERSION */}
           {showSeapodModal && (
             <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
                 <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-2xl border border-blue-100 h-[80vh] flex flex-col">
@@ -411,9 +345,7 @@ export default function OrderDetails({ params }) {
                     {seapodStep === 1 && (
                         <div className="flex-1 flex flex-col justify-center">
                             <label className="block text-xs font-bold text-slate-500 uppercase mb-2 text-center">Select Template</label>
-                            <select className="w-full max-w-sm mx-auto border border-slate-300 rounded px-3 py-2 text-sm font-medium" value={selectedSeapodTemplate} onChange={(e) => setSelectedSeapodTemplate(e.target.value)}>
-                                {seapodTemplates.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-                            </select>
+                            <select className="w-full max-w-sm mx-auto border border-slate-300 rounded px-3 py-2 text-sm font-medium" value={selectedSeapodTemplate} onChange={(e) => setSelectedSeapodTemplate(e.target.value)}>{seapodTemplates.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}</select>
                             <div className="mt-8 flex gap-3 max-w-sm mx-auto w-full">
                                 <button onClick={() => setShowSeapodModal(false)} className="flex-1 px-4 py-2 border rounded font-bold text-slate-700">Cancel</button>
                                 <button onClick={goToAckStep} className="flex-1 px-4 py-2 bg-[#0176D3] text-white rounded font-bold shadow">Start Build</button>
@@ -443,9 +375,16 @@ export default function OrderDetails({ params }) {
 
                     {seapodStep === 3 && tplDetails && (
                         <div className="flex-1 flex flex-col justify-center text-center px-8">
-                            <div className="bg-slate-50 border border-slate-200 rounded-lg p-6 mb-8 text-left grid grid-cols-2 gap-6">
-                                <div><span className="text-[10px] font-bold text-slate-400 uppercase block">HW Ver</span><span className="text-xl font-bold text-slate-900">{tplDetails.hw_version}</span></div>
-                                <div><span className="text-[10px] font-bold text-slate-400 uppercase block">SW Ver</span><span className="text-xl font-bold text-slate-900">{tplDetails.sw_version}</span></div>
+                             <div className="bg-slate-50 border border-slate-200 rounded-lg p-6 mb-8 text-left">
+                                {/* ADDED SEAPOD VERSION */}
+                                <div className="mb-4 pb-4 border-b border-slate-200">
+                                    <span className="text-[10px] font-bold text-slate-400 uppercase block">Seapod Version</span>
+                                    <span className="text-lg font-bold text-[#0176D3]">{tplDetails.seapod_version || 'N/A'}</span>
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div><span className="text-[10px] font-bold text-slate-400 uppercase block">HW Ver</span><span className="text-xl font-bold text-slate-900">{tplDetails.hw_version}</span></div>
+                                    <div><span className="text-[10px] font-bold text-slate-400 uppercase block">SW Ver</span><span className="text-xl font-bold text-slate-900">{tplDetails.sw_version}</span></div>
+                                </div>
                             </div>
                             <div className="flex gap-3 max-w-sm mx-auto w-full">
                                 <button onClick={() => setSeapodStep(2)} className="flex-1 px-4 py-2 border rounded font-bold text-slate-700">Back</button>
