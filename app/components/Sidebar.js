@@ -25,8 +25,9 @@ export default function Sidebar() {
     if (session) {
       setEmail(session.user.email);
       const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).single();
-      setRole(profile?.role || 'vendor');
-      if (profile?.role === 'admin') {
+      const r = profile?.role || 'vendor';
+      setRole(r);
+      if (r === 'admin') {
         setIsAdmin(true);
       }
     }
@@ -38,7 +39,6 @@ export default function Sidebar() {
   }
 
   const getLinkClass = (path) => {
-    // Exact match for root, startsWith for others
     const isActive = path === '/' ? pathname === '/' : pathname.startsWith(path);
     return `flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-all duration-200 cursor-pointer mb-1
       ${isActive ? 'bg-[#0176D3]/10 text-[#0176D3]' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'}`;
@@ -55,8 +55,8 @@ export default function Sidebar() {
 
       <nav className="flex-1 px-4 py-6 space-y-1">
         
-        {/* --- DASHBOARD (Admin Only Logic handled in page) --- */}
-        {isAdmin && (
+        {/* --- OVERVIEW (Admin OR Operations) --- */}
+        {(role === 'admin' || role === 'operation') && (
             <div onClick={() => router.push('/')} className={getLinkClass('/')}>
             <LayoutDashboard size={18} /><span>Overview</span>
             </div>
@@ -64,7 +64,6 @@ export default function Sidebar() {
 
         <div className="pt-4 pb-2 px-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Workspace</div>
         
-        {/* MOVED ORDERS LINK */}
         <div onClick={() => router.push('/orders')} className={getLinkClass('/orders')}>
           <List size={18} /><span>Orders List</span>
         </div>
@@ -73,6 +72,7 @@ export default function Sidebar() {
           <Factory size={18} /><span>Seapod Production</span>
         </div>
 
+        {/* --- ADMIN CONTROLS (Strictly Admin) --- */}
         {isAdmin && (
           <>
             <div className="pt-6 pb-2 px-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Admin Controls</div>

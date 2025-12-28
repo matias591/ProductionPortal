@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { useRouter } from 'next/navigation';
-import { LayoutDashboard, TrendingUp, Package, Truck, CheckCircle, Clock, AlertCircle } from 'lucide-react';
+import { LayoutDashboard, TrendingUp, Package, Truck, CheckCircle, Clock } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import Sidebar from './components/Sidebar';
 
@@ -35,25 +35,26 @@ export default function Home() {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return router.push('/login');
     
-    // Redirect Non-Admins to Orders List
     const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).single();
-    if (profile?.role !== 'admin') {
-        router.push('/orders');
+    
+    // --- CHANGE: Allow Admin OR Operation to see Dashboard ---
+    const allowedRoles = ['admin', 'operation'];
+    if (!allowedRoles.includes(profile?.role)) {
+        router.push('/orders'); // Vendors still go here
     }
   }
 
   async function fetchMetrics() {
     setLoading(true);
     
-    // 1. Fetch Raw Data (We fetch all and filter in JS for simplicity on small datasets)
-    // For scaling, use SQL count queries, but for <10000 records this is instant.
+    // 1. Fetch Raw Data
     const { data: seapods } = await supabase.from('seapod_production').select('status, completed_at, created_at');
     const { data: orders } = await supabase.from('orders').select('status, shipped_at, created_at');
 
     if (!seapods || !orders) return;
 
-    // 2. Calculate Live Counters (Current State)
-    const completedSeapods = seapods.filter(s => s.status === 'Completed').length; // "Available" usually means Completed but not Assigned? Or just Completed count? Assuming 'Completed' status.
+    // 2. Calculate Live Counters
+    const completedSeapods = seapods.filter(s => s.status === 'Completed').length; 
     const inProgressSeapods = seapods.filter(s => s.status === 'In Progress').length;
     const inProgressOrders = orders.filter(o => o.status !== 'Shipped').length;
     const readyOrders = orders.filter(o => o.status === 'Ready for Pickup').length;
@@ -67,35 +68,33 @@ export default function Home() {
     if (timeFilter === 'month') startDate.setMonth(now.getMonth(), 1);
     if (timeFilter === 'week') startDate.setDate(now.getDate() - 7);
 
-    // Filter for the chart
     const relevantSeapods = seapods.filter(s => s.completed_at && new Date(s.completed_at) >= startDate);
     const relevantOrders = orders.filter(o => o.shipped_at && new Date(o.shipped_at) >= startDate);
 
     setStats({
-        completedSeapods, // Total Available
+        completedSeapods, 
         inProgressSeapods,
         inProgressOrders,
         readyOrders,
-        shippedOrdersCount: relevantOrders.length, // Based on filter
-        builtSeapodsCount: relevantSeapods.length  // Based on filter
+        shippedOrdersCount: relevantOrders.length, 
+        builtSeapodsCount: relevantSeapods.length 
     });
 
-    // 4. Build Chart Data (Group by Month/Week)
+    // 4. Build Chart Data
     const chart = processChartData(relevantSeapods, relevantOrders, timeFilter);
     setChartData(chart);
     setLoading(false);
   }
 
-  // Helper to group data for charts
   function processChartData(seapods, orders, filter) {
     const dataMap = {};
 
     const addToMap = (dateStr, type) => {
         const date = new Date(dateStr);
         let key = '';
-        if (filter === 'year' || filter === 'quarter') key = date.toLocaleString('default', { month: 'short' }); // Jan, Feb
-        else if (filter === 'month') key = `${date.getDate()}`; // 1, 2, 3...
-        else if (filter === 'week') key = date.toLocaleDateString('en-US', { weekday: 'short' }); // Mon, Tue
+        if (filter === 'year' || filter === 'quarter') key = date.toLocaleString('default', { month: 'short' });
+        else if (filter === 'month') key = `${date.getDate()}`; 
+        else if (filter === 'week') key = date.toLocaleDateString('en-US', { weekday: 'short' }); 
 
         if (!dataMap[key]) dataMap[key] = { name: key, Built: 0, Shipped: 0 };
         dataMap[key][type]++;
@@ -104,7 +103,6 @@ export default function Home() {
     seapods.forEach(s => addToMap(s.completed_at, 'Built'));
     orders.forEach(o => addToMap(o.shipped_at, 'Shipped'));
 
-    // Convert map to array
     return Object.values(dataMap);
   }
 
@@ -122,7 +120,6 @@ export default function Home() {
                 <p className="text-slate-500 mt-1 text-sm">Performance metrics and production status.</p>
             </div>
             
-            {/* Filter */}
             <div className="flex items-center gap-2 bg-white p-1 rounded-lg border border-slate-200">
                 {['year', 'quarter', 'month', 'week'].map((t) => (
                     <button 
@@ -136,7 +133,7 @@ export default function Home() {
             </div>
         </div>
 
-        {/* --- KPI CARDS ROW 1 (Live Status) --- */}
+        {/* --- KPI CARDS --- */}
         <div className="grid grid-cols-4 gap-6 mb-8">
             <MetricCard title="Seapods Available" value={stats.completedSeapods} icon={<CheckCircle/>} color="text-green-600" bg="bg-green-50" />
             <MetricCard title="Seapods In Progress" value={stats.inProgressSeapods} icon={<Clock/>} color="text-orange-600" bg="bg-orange-50" />
@@ -144,7 +141,7 @@ export default function Home() {
             <MetricCard title="Ready for Pickup" value={stats.readyOrders} icon={<Package/>} color="text-purple-600" bg="bg-purple-50" />
         </div>
 
-        {/* --- KPI CARDS ROW 2 (Historical based on Filter) --- */}
+        {/* --- CHARTS --- */}
         <div className="grid grid-cols-3 gap-6 mb-8">
             <div className="col-span-2 bg-white p-6 rounded-xl shadow-sm border border-slate-200">
                 <h3 className="font-bold text-slate-800 mb-6 flex items-center gap-2">
