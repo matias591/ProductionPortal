@@ -1,10 +1,11 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 
-export default function AuthConfirm() {
+// 1. The Logic Component (Uses SearchParams)
+function ConfirmContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [message, setMessage] = useState('Verifying your invitation...');
@@ -19,12 +20,8 @@ export default function AuthConfirm() {
   }, []);
 
   async function handleSessionExchange() {
-    // 1. Check for the 'code' (PKCE Flow)
     const code = searchParams.get('code');
     
-    // 2. Check for hash (Implicit Flow - uncommon but possible)
-    // Supabase handles hash automatically with onAuthStateChange usually, but code is explicit.
-
     if (code) {
         const { error } = await supabase.auth.exchangeCodeForSession(code);
         if (error) {
@@ -33,20 +30,15 @@ export default function AuthConfirm() {
         }
     }
 
-    // 3. Wait for session to be established
-    const { data: { session }, error } = await supabase.auth.getSession();
+    const { data: { session } } = await supabase.auth.getSession();
 
     if (session) {
-        // SUCCESS: You are logged in! Go set your password.
         router.push('/auth/update-password');
     } else {
-        // Check if we caught a hash fragment event instead
+        // Handle implicit flow hash fragments automatically via listener
         supabase.auth.onAuthStateChange((event, session) => {
             if (event === 'SIGNED_IN' || session) {
                 router.push('/auth/update-password');
-            } else {
-                // If all fails
-                router.push('/login');
             }
         });
     }
@@ -57,5 +49,18 @@ export default function AuthConfirm() {
       <Loader2 size={48} className="animate-spin text-[#0176D3] mb-4" />
       <h2 className="text-lg font-bold">{message}</h2>
     </div>
+  );
+}
+
+// 2. The Main Page (Wraps Logic in Suspense to fix Build Error)
+export default function AuthConfirm() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <Loader2 size={48} className="animate-spin text-slate-300" />
+      </div>
+    }>
+      <ConfirmContent />
+    </Suspense>
   );
 }
