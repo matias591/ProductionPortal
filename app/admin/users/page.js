@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { useRouter } from 'next/navigation';
-import { Trash2, UserPlus, Shield, User, CheckCircle, AlertCircle, X, AlertTriangle } from 'lucide-react';
+import { Trash2, UserPlus, Shield, User, CheckCircle, AlertCircle, X, AlertTriangle, Mail } from 'lucide-react';
 import Sidebar from '../../components/Sidebar';
 
 export default function UserManagement() {
@@ -10,11 +10,13 @@ export default function UserManagement() {
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const router = useRouter();
+  
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [userToDelete, setUserToDelete] = useState(null);
+  
+  // NEW FORM STATE (No Password)
   const [newUserEmail, setNewUserEmail] = useState('');
-  const [newUserPassword, setNewUserPassword] = useState('');
   const [newUserRole, setNewUserRole] = useState('vendor');
   const [processing, setProcessing] = useState(false);
   const [notification, setNotification] = useState(null);
@@ -41,18 +43,26 @@ export default function UserManagement() {
     setLoading(false);
   }
 
-  async function handleCreateUser(e) {
+  async function handleInviteUser(e) {
     e.preventDefault();
     setProcessing(true);
     const { data: { session } } = await supabase.auth.getSession();
+    
+    // Call the updated API (No password sent)
     const res = await fetch('/api/admin/create-user', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
-      body: JSON.stringify({ email: newUserEmail, password: newUserPassword, role: newUserRole }),
+      body: JSON.stringify({ email: newUserEmail, role: newUserRole }),
     });
+
     const json = await res.json();
     if (json.error) showToast('error', json.error);
-    else { showToast('success', 'User created!'); setNewUserEmail(''); setNewUserPassword(''); setShowCreateModal(false); fetchUsers(); }
+    else { 
+        showToast('success', 'Invitation sent successfully!'); 
+        setNewUserEmail(''); 
+        setShowCreateModal(false); 
+        fetchUsers(); 
+    }
     setProcessing(false);
   }
 
@@ -68,7 +78,7 @@ export default function UserManagement() {
     setProcessing(false);
   }
 
-  if (!isAdmin) return <div className="p-10 text-slate-500">Checking permissions...</div>;
+  if (!isAdmin) return <div className="flex min-h-screen bg-slate-50"><Sidebar /><div className="ml-64 p-10 text-slate-500">Checking permissions...</div></div>;
 
   return (
     <div className="flex min-h-screen bg-slate-50 font-sans">
@@ -77,7 +87,7 @@ export default function UserManagement() {
          <div className="max-w-5xl mx-auto">
             <div className="flex justify-between items-center mb-8">
                 <div><h1 className="text-2xl font-bold text-slate-800 mb-1 flex items-center gap-2"><Shield className="text-[#0176D3]"/> User Management</h1><p className="text-slate-500 text-sm">Manage system access and roles.</p></div>
-                <button onClick={() => setShowCreateModal(true)} className="bg-[#0176D3] text-white px-4 py-2 rounded-md text-sm font-bold shadow-sm flex items-center gap-2 hover:bg-blue-700 transition-all"><UserPlus size={18}/> Add New User</button>
+                <button onClick={() => setShowCreateModal(true)} className="bg-[#0176D3] text-white px-4 py-2 rounded-md text-sm font-bold shadow-sm flex items-center gap-2 hover:bg-blue-700 transition-all"><UserPlus size={18}/> Invite New User</button>
             </div>
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                 <div className="bg-slate-50 px-6 py-3 border-b border-slate-200 grid grid-cols-12 gap-4 text-xs font-bold text-slate-500 uppercase"><div className="col-span-5">Email</div><div className="col-span-3">Role</div><div className="col-span-3">Created</div><div className="col-span-1 text-right">Action</div></div>
@@ -96,23 +106,25 @@ export default function UserManagement() {
          {showCreateModal && (
             <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
                 <div className="bg-white rounded-lg shadow-2xl max-w-md w-full p-6 animate-in fade-in zoom-in duration-200">
-                    <div className="flex justify-between items-center mb-6"><h3 className="font-bold text-lg text-slate-800">Create New User</h3><button onClick={() => setShowCreateModal(false)} className="text-slate-400 hover:text-slate-700"><X size={20}/></button></div>
-                    <form onSubmit={handleCreateUser} className="space-y-4">
+                    <div className="flex justify-between items-center mb-6"><h3 className="font-bold text-lg text-slate-800">Invite User</h3><button onClick={() => setShowCreateModal(false)} className="text-slate-400 hover:text-slate-700"><X size={20}/></button></div>
+                    <form onSubmit={handleInviteUser} className="space-y-4">
+                        <div className="bg-blue-50 p-3 rounded text-xs text-blue-700 mb-4">User will receive an email to set their own password.</div>
                         <div><label className="block text-xs font-bold text-slate-500 uppercase mb-1">Email Address</label><input type="email" required className="w-full border border-slate-200 rounded px-3 py-2 text-sm focus:border-[#0176D3] outline-none" value={newUserEmail} onChange={e => setNewUserEmail(e.target.value)} /></div>
-                        <div><label className="block text-xs font-bold text-slate-500 uppercase mb-1">Temporary Password</label><input type="password" required className="w-full border border-slate-200 rounded px-3 py-2 text-sm focus:border-[#0176D3] outline-none" value={newUserPassword} onChange={e => setNewUserPassword(e.target.value)} /></div>
+                        {/* PASSWORD INPUT REMOVED */}
                         <div>
                             <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Role</label>
                             <select className="w-full border border-slate-200 rounded px-3 py-2 text-sm bg-white focus:border-[#0176D3] outline-none" value={newUserRole} onChange={e => setNewUserRole(e.target.value)}>
-                                <option value="vendor">Vendor (Basic)</option>
-                                <option value="operation">Operation (Can Ship)</option>
-                                <option value="admin">Admin (Full Control)</option>
+                                <option value="vendor">Vendor</option>
+                                <option value="operation">Operation</option>
+                                <option value="admin">Admin</option>
                             </select>
                         </div>
-                        <div className="pt-4 flex gap-3"><button type="button" onClick={() => setShowCreateModal(false)} className="flex-1 py-2 border border-slate-300 rounded text-sm font-bold text-slate-600 hover:bg-slate-50">Cancel</button><button type="submit" disabled={processing} className="flex-1 py-2 bg-[#0176D3] text-white rounded text-sm font-bold hover:bg-blue-700 shadow-sm">{processing ? 'Creating...' : 'Create Account'}</button></div>
+                        <div className="pt-4 flex gap-3"><button type="button" onClick={() => setShowCreateModal(false)} className="flex-1 py-2 border border-slate-300 rounded text-sm font-bold text-slate-600 hover:bg-slate-50">Cancel</button><button type="submit" disabled={processing} className="flex-1 py-2 bg-[#0176D3] text-white rounded text-sm font-bold hover:bg-blue-700 shadow-sm flex justify-center items-center gap-2"><Mail size={16}/> {processing ? 'Sending...' : 'Send Invitation'}</button></div>
                     </form>
                 </div>
             </div>
          )}
+         {/* Delete Modal is same as before */}
          {showDeleteModal && (
             <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
                 <div className="bg-white rounded-xl shadow-2xl max-w-sm w-full p-6 animate-in fade-in zoom-in duration-200 border border-slate-200">
