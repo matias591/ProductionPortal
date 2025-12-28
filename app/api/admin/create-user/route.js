@@ -14,14 +14,20 @@ export async function POST(request) {
   try {
     const { email, role } = await request.json();
 
-    // 1. INVITE USER (Sends email automatically)
-    // We set a dummy redirect URL, but the user clicks the link in email to set password
-    const { data: user, error: createError } = await supabaseAdmin.auth.admin.inviteUserByEmail(email);
+    // 1. Determine the Base URL dynamically (e.g., https://your-app.vercel.app)
+    const requestUrl = new URL(request.url);
+    const origin = requestUrl.origin;
+
+    // 2. INVITE USER with Redirect
+    // This tells Supabase: "When they click the link, send them to /auth/callback, 
+    // which will then forward them to /auth/update-password"
+    const { data: user, error: createError } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
+      redirectTo: `${origin}/auth/callback?next=/auth/update-password`
+    });
 
     if (createError) throw createError;
 
-    // 2. Update Role in Profiles Table
-    // The profile is created automatically by the DB trigger, we just need to set the role
+    // 3. Update Role
     if (user && user.user) {
         const { error: profileError } = await supabaseAdmin
             .from('profiles')
