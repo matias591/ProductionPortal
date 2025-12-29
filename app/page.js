@@ -2,11 +2,14 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { useRouter } from 'next/navigation';
-import { LayoutDashboard, TrendingUp, Package, Truck, CheckCircle, Clock } from 'lucide-react';
+import { LayoutDashboard, TrendingUp, Package, Truck, CheckCircle, Clock, AlertCircle } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import Sidebar from './components/Sidebar';
+import { useSidebar } from './context/SidebarContext'; // <--- Import Context
 
 export default function Home() {
+  const { isCollapsed } = useSidebar(); // <--- Get State
+  
   const [stats, setStats] = useState({
     completedSeapods: 0,
     inProgressSeapods: 0,
@@ -17,7 +20,7 @@ export default function Home() {
   });
   
   const [chartData, setChartData] = useState([]);
-  const [timeFilter, setTimeFilter] = useState('year'); // year, quarter, month, week
+  const [timeFilter, setTimeFilter] = useState('year'); 
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
@@ -37,29 +40,25 @@ export default function Home() {
     
     const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).single();
     
-    // --- CHANGE: Allow Admin OR Operation to see Dashboard ---
     const allowedRoles = ['admin', 'operation'];
     if (!allowedRoles.includes(profile?.role)) {
-        router.push('/orders'); // Vendors still go here
+        router.push('/orders'); 
     }
   }
 
   async function fetchMetrics() {
     setLoading(true);
     
-    // 1. Fetch Raw Data
     const { data: seapods } = await supabase.from('seapod_production').select('status, completed_at, created_at');
     const { data: orders } = await supabase.from('orders').select('status, shipped_at, created_at');
 
     if (!seapods || !orders) return;
 
-    // 2. Calculate Live Counters
     const completedSeapods = seapods.filter(s => s.status === 'Completed').length; 
     const inProgressSeapods = seapods.filter(s => s.status === 'In Progress').length;
     const inProgressOrders = orders.filter(o => o.status !== 'Shipped').length;
     const readyOrders = orders.filter(o => o.status === 'Ready for Pickup').length;
 
-    // 3. Calculate Historical Data based on Filter
     const now = new Date();
     let startDate = new Date();
 
@@ -80,7 +79,6 @@ export default function Home() {
         builtSeapodsCount: relevantSeapods.length 
     });
 
-    // 4. Build Chart Data
     const chart = processChartData(relevantSeapods, relevantOrders, timeFilter);
     setChartData(chart);
     setLoading(false);
@@ -111,9 +109,10 @@ export default function Home() {
   return (
     <div className="flex min-h-screen bg-[#F3F4F6] font-sans">
       <Sidebar />
-      <main className="flex-1 ml-64 p-8">
+      
+      {/* --- DYNAMIC MARGIN APPLIED HERE --- */}
+      <main className={`flex-1 p-8 transition-all duration-300 ease-in-out ${isCollapsed ? 'ml-20' : 'ml-64'}`}>
         
-        {/* Header */}
         <div className="flex justify-between items-end mb-8">
             <div>
                 <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Overview</h1>
@@ -133,7 +132,6 @@ export default function Home() {
             </div>
         </div>
 
-        {/* --- KPI CARDS --- */}
         <div className="grid grid-cols-4 gap-6 mb-8">
             <MetricCard title="Seapods Available" value={stats.completedSeapods} icon={<CheckCircle/>} color="text-green-600" bg="bg-green-50" />
             <MetricCard title="Seapods In Progress" value={stats.inProgressSeapods} icon={<Clock/>} color="text-orange-600" bg="bg-orange-50" />
@@ -141,7 +139,6 @@ export default function Home() {
             <MetricCard title="Ready for Pickup" value={stats.readyOrders} icon={<Package/>} color="text-purple-600" bg="bg-purple-50" />
         </div>
 
-        {/* --- CHARTS --- */}
         <div className="grid grid-cols-3 gap-6 mb-8">
             <div className="col-span-2 bg-white p-6 rounded-xl shadow-sm border border-slate-200">
                 <h3 className="font-bold text-slate-800 mb-6 flex items-center gap-2">
@@ -167,7 +164,6 @@ export default function Home() {
                 </div>
             </div>
             
-            {/* Summary Box */}
             <div className="col-span-1 space-y-6">
                  <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 h-full flex flex-col justify-center">
                     <h4 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-2">Total Output (This {timeFilter})</h4>
