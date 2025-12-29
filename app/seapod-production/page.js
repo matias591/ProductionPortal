@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { useRouter } from 'next/navigation';
-import { Plus, Search, Cpu, ChevronRight, Download, Trash2 } from 'lucide-react';
+import { Plus, Search, Cpu, ChevronRight, Download, Trash2, Box } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import Sidebar from '../components/Sidebar';
 
@@ -140,15 +140,23 @@ export default function SeapodList() {
                             <td className="px-6 py-4 text-sm">{s.template_name}</td>
                             <td className="px-6 py-4 text-xs text-slate-500">
                                 <div>Ver: {s.seapod_version || '-'}</div>
-                                <div className="text-[10px]">HW: {s.hw_version}</div>
+                                <div className="text-[10px]">HW: {s.hw_version} | SW: {s.sw_version}</div>
                             </td>
                             <td className="px-6 py-4">
-                                <span className={`px-2 py-1 rounded text-xs font-bold border 
-                                    ${s.status === 'Completed' ? 'bg-green-100 text-green-700 border-green-200' : 
-                                      s.status === 'Assigned to Order' ? 'bg-purple-100 text-purple-700 border-purple-200' :
-                                      'bg-slate-100 text-slate-600'}`}>
-                                    {s.status}
-                                </span>
+                                <div className="flex flex-col items-start gap-1.5">
+                                    <span className={`px-2 py-1 rounded text-xs font-bold border 
+                                        ${s.status === 'Completed' ? 'bg-green-100 text-green-700 border-green-200' : 
+                                        s.status === 'Assigned to Order' ? 'bg-purple-100 text-purple-700 border-purple-200' :
+                                        'bg-slate-100 text-slate-600'}`}>
+                                        {s.status}
+                                    </span>
+                                    {/* --- SHOW ORDER # IF ASSIGNED --- */}
+                                    {s.order_number && (
+                                        <span className="text-[10px] font-bold text-slate-500 flex items-center gap-1">
+                                            <Box size={10} /> Order #{s.order_number}
+                                        </span>
+                                    )}
+                                </div>
                             </td>
                             <td className="px-6 py-4 text-right flex items-center justify-end gap-3">
                                 <ChevronRight className="text-slate-400" size={18}/>

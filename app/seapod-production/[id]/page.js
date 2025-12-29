@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Plus, Trash2, Cpu, CheckCircle2, Circle, Upload, Paperclip, FileText, Download, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Cpu, CheckCircle2, Circle, Upload, Paperclip, FileText, Download, AlertTriangle, Box } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import Sidebar from '../../components/Sidebar';
 
@@ -16,6 +16,7 @@ export default function SeapodBuildDetails({ params }) {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   
+  // Ack Modal State for Completion
   const [showAck, setShowAck] = useState(false);
 
   const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
@@ -45,16 +46,10 @@ export default function SeapodBuildDetails({ params }) {
     }
   }
 
-  // --- UPDATED COMPLETION LOGIC ---
   async function confirmCompletion() {
     setShowAck(false);
-    const now = new Date().toISOString();
     setSeapod(prev => ({ ...prev, status: 'Completed' }));
-    
-    await supabase.from('seapod_production').update({ 
-        status: 'Completed',
-        completed_at: now // <--- SAVE DATE
-    }).eq('id', seapodId);
+    await supabase.from('seapod_production').update({ status: 'Completed' }).eq('id', seapodId);
   }
 
   async function updateItem(itemId, field, value) {
@@ -108,6 +103,7 @@ export default function SeapodBuildDetails({ params }) {
       <Sidebar />
       <main className="flex-1 ml-64">
         
+        {/* Header */}
         <div className="bg-white border-b border-slate-200 sticky top-0 z-10 shadow-sm">
             <div className="px-8 py-4 max-w-5xl mx-auto">
                 <button onClick={() => router.push('/seapod-production')} className="text-xs font-bold text-[#0176D3] hover:underline mb-2 flex items-center gap-1">
@@ -123,10 +119,17 @@ export default function SeapodBuildDetails({ params }) {
                             <div className="text-sm text-slate-500 mt-1">
                                 Template: <span className="font-medium text-slate-800">{seapod.template_name}</span>
                             </div>
-                            <div className="flex gap-2 mt-2">
+                            <div className="flex gap-2 mt-2 items-center">
                                 <span className="bg-[#0176D3]/10 text-[#0176D3] border border-[#0176D3]/20 px-2 py-0.5 rounded text-xs font-bold">{seapod.seapod_version || 'No Gen Ver'}</span>
                                 <span className="bg-slate-100 text-slate-600 border border-slate-200 px-2 py-0.5 rounded text-xs font-medium">HW: {seapod.hw_version}</span>
                                 <span className="bg-slate-100 text-slate-600 border border-slate-200 px-2 py-0.5 rounded text-xs font-medium">SW: {seapod.sw_version}</span>
+                                
+                                {/* --- NEW: SHOW ORDER ASSIGNMENT --- */}
+                                {seapod.order_number && (
+                                    <span className="bg-purple-100 text-purple-700 border border-purple-200 px-2 py-0.5 rounded text-xs font-bold flex items-center gap-1">
+                                        <Box size={10} /> Assigned to Order #{seapod.order_number}
+                                    </span>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -147,6 +150,7 @@ export default function SeapodBuildDetails({ params }) {
             </div>
         </div>
 
+        {/* Content */}
         <div className="p-8 max-w-5xl mx-auto grid grid-cols-3 gap-8">
             <div className="col-span-1">
                 <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
