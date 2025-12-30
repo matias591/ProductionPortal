@@ -15,8 +15,7 @@ export default function SeapodBuildDetails({ params }) {
   const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
-  
-  // Ack Modal State for Completion
+  const [isDragging, setIsDragging] = useState(false);
   const [showAck, setShowAck] = useState(false);
 
   const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
@@ -35,6 +34,22 @@ export default function SeapodBuildDetails({ params }) {
     setLoading(false);
   }
 
+  // --- DRAG & DROP LOGIC ---
+  async function performUpload(file) {
+    setUploading(true);
+    const fileName = `${Date.now()}_${file.name}`;
+    const filePath = `${seapodId}/${fileName}`;
+    const { error: uploadError } = await supabase.storage.from('seapod-attachments').upload(filePath, file);
+    if (uploadError) { alert(uploadError.message); setUploading(false); return; }
+    const { data: fileRecord } = await supabase.from('seapod_files').insert([{ seapod_id: seapodId, file_name: file.name, file_path: filePath, uploaded_by: 'User' }]).select().single();
+    if (fileRecord) setFiles([fileRecord, ...files]);
+    setUploading(false);
+  }
+  const onFileSelect = (e) => { if (e.target.files && e.target.files.length > 0) performUpload(e.target.files[0]); };
+  const onDrop = (e) => { e.preventDefault(); setIsDragging(false); if (e.dataTransfer.files && e.dataTransfer.files.length > 0) performUpload(e.dataTransfer.files[0]); };
+  const onDragOver = (e) => { e.preventDefault(); setIsDragging(true); };
+  const onDragLeave = (e) => { e.preventDefault(); setIsDragging(false); };
+
   async function handleStatusChange(newStatus) {
     if (newStatus === 'Completed') {
         const missing = items.some(i => !i.serial || i.serial.trim() === '');
@@ -49,7 +64,7 @@ export default function SeapodBuildDetails({ params }) {
   async function confirmCompletion() {
     setShowAck(false);
     setSeapod(prev => ({ ...prev, status: 'Completed' }));
-    await supabase.from('seapod_production').update({ status: 'Completed' }).eq('id', seapodId);
+    await supabase.from('seapod_production').update({ status: 'Completed', completed_at: new Date().toISOString() }).eq('id', seapodId);
   }
 
   async function updateItem(itemId, field, value) {
@@ -68,19 +83,6 @@ export default function SeapodBuildDetails({ params }) {
     const newItem = { seapod_id: seapodId, piece: 'New Component', quantity: 1, serial: '', is_done: false };
     const { data } = await supabase.from('seapod_items').insert([newItem]).select().single();
     if(data) setItems([...items, data]);
-  }
-
-  async function handleFileUpload(e) {
-    if (!e.target.files || e.target.files.length === 0) return;
-    setUploading(true);
-    const file = e.target.files[0];
-    const fileName = `${Date.now()}_${file.name}`;
-    const filePath = `${seapodId}/${fileName}`;
-    const { error: uploadError } = await supabase.storage.from('seapod-attachments').upload(filePath, file);
-    if (uploadError) { alert(uploadError.message); setUploading(false); return; }
-    const { data: fileRecord } = await supabase.from('seapod_files').insert([{ seapod_id: seapodId, file_name: file.name, file_path: filePath, uploaded_by: 'User' }]).select().single();
-    if (fileRecord) setFiles([fileRecord, ...files]);
-    setUploading(false);
   }
 
   function openFile(path) {
@@ -103,7 +105,6 @@ export default function SeapodBuildDetails({ params }) {
       <Sidebar />
       <main className="flex-1 ml-64">
         
-        {/* Header */}
         <div className="bg-white border-b border-slate-200 sticky top-0 z-10 shadow-sm">
             <div className="px-8 py-4 max-w-5xl mx-auto">
                 <button onClick={() => router.push('/seapod-production')} className="text-xs font-bold text-[#0176D3] hover:underline mb-2 flex items-center gap-1">
@@ -123,8 +124,6 @@ export default function SeapodBuildDetails({ params }) {
                                 <span className="bg-[#0176D3]/10 text-[#0176D3] border border-[#0176D3]/20 px-2 py-0.5 rounded text-xs font-bold">{seapod.seapod_version || 'No Gen Ver'}</span>
                                 <span className="bg-slate-100 text-slate-600 border border-slate-200 px-2 py-0.5 rounded text-xs font-medium">HW: {seapod.hw_version}</span>
                                 <span className="bg-slate-100 text-slate-600 border border-slate-200 px-2 py-0.5 rounded text-xs font-medium">SW: {seapod.sw_version}</span>
-                                
-                                {/* --- NEW: SHOW ORDER ASSIGNMENT --- */}
                                 {seapod.order_number && (
                                     <span className="bg-purple-100 text-purple-700 border border-purple-200 px-2 py-0.5 rounded text-xs font-bold flex items-center gap-1">
                                         <Box size={10} /> Assigned to Order #{seapod.order_number}
@@ -150,14 +149,20 @@ export default function SeapodBuildDetails({ params }) {
             </div>
         </div>
 
-        {/* Content */}
         <div className="p-8 max-w-5xl mx-auto grid grid-cols-3 gap-8">
             <div className="col-span-1">
-                <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+                {/* --- DRAG AND DROP FILE CARD --- */}
+                <div 
+                    className={`bg-white border rounded-xl shadow-sm overflow-hidden transition-colors ${isDragging ? 'border-[#0176D3] bg-blue-50/50' : 'border-slate-200'}`}
+                    onDragOver={onDragOver}
+                    onDragLeave={onDragLeave}
+                    onDrop={onDrop}
+                >
                     <div className="px-5 py-3 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
                         <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wide flex items-center gap-2"><Paperclip size={14}/> Files ({files.length})</h3>
-                        <label className="cursor-pointer text-xs font-bold text-[#0176D3] hover:underline flex items-center gap-1">{uploading ? '...' : '+ Upload'}<input type="file" className="hidden" onChange={handleFileUpload} disabled={uploading} /></label>
+                        <label className="cursor-pointer text-xs font-bold text-[#0176D3] hover:underline flex items-center gap-1">{uploading ? '...' : '+ Upload'}<input type="file" className="hidden" onChange={onFileSelect} disabled={uploading} /></label>
                     </div>
+                    {isDragging && <div className="p-4 text-center text-[#0176D3] font-bold text-sm bg-blue-50">Drop files here</div>}
                     <div className="divide-y divide-slate-50">
                         {files.map(file => (
                             <div key={file.id} onClick={() => openFile(file.file_path)} className="px-5 py-3 flex items-center gap-3 hover:bg-blue-50 cursor-pointer transition-colors group">
