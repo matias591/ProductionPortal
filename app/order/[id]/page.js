@@ -18,19 +18,19 @@ export default function OrderDetails({ params }) {
   const [loading, setLoading] = useState(true);
 
   // --- PERMISSIONS STATE ---
-  const [isAdmin, setIsAdmin] = useState(false); // Can do everything + Admin Tools
-  const [canShip, setCanShip] = useState(false); // Admin OR Operation (Can edit vessel, ship, create items)
-  
+  const [isAdmin, setIsAdmin] = useState(false); 
+  const [canShip, setCanShip] = useState(false); // Admin OR Operation
+
   // --- UI STATE ---
   const [uploading, setUploading] = useState(false);
-  const [isDragging, setIsDragging] = useState(false); // Drag & Drop State
+  const [isDragging, setIsDragging] = useState(false);
   const [shipping, setShipping] = useState(false); 
   const [showShipModal, setShowShipModal] = useState(false);
   const [checkingVessel, setCheckingVessel] = useState(false);
 
   // --- SEAPOD WIZARD STATE ---
   const [showSeapodModal, setShowSeapodModal] = useState(false);
-  const [seapodStep, setSeapodStep] = useState(1); // 1=Select, 2=Edit Items, 3=Ack
+  const [seapodStep, setSeapodStep] = useState(1);
   const [missingSeapodSerial, setMissingSeapodSerial] = useState('');
   const [seapodTemplates, setSeapodTemplates] = useState([]);
   const [selectedSeapodTemplate, setSelectedSeapodTemplate] = useState('');
@@ -126,16 +126,20 @@ export default function OrderDetails({ params }) {
   async function updateOrder(field, value) {
     if (isLocked) return;
 
-    // 1. Intercept "In Box" -> Check Seapod
-    if (field === 'status' && value === 'In Box') {
+    // 1. SEAPOD VALIDATION GATE (Runs for In Box, Ready, and Shipped)
+    // Updated Logic: Check for ANY advanced status
+    const statusesRequiringSeapod = ['In Box', 'Ready for Pickup', 'Shipped'];
+
+    if (field === 'status' && statusesRequiringSeapod.includes(value)) {
         const seapodItem = items.find(i => i.piece && i.piece.toLowerCase().includes('seapod'));
         
         if (seapodItem) {
+            // Check for Serial Presence
             if (!seapodItem.serial || seapodItem.serial.trim() === '' || seapodItem.serial === '-') {
                 alert("⚠️ Seapod Item exists but has no Serial Number. Fill it first."); return;
             }
 
-            // Check DB
+            // Check DB for Existence
             const { data: existingSeapod } = await supabase
                 .from('seapod_production')
                 .select('id, status, order_number')
@@ -143,18 +147,20 @@ export default function OrderDetails({ params }) {
                 .single();
 
             if (!existingSeapod) {
+                // Not Found -> Trigger Wizard
                 setMissingSeapodSerial(seapodItem.serial);
                 setPendingStatus(value);
                 setSeapodStep(1); 
                 setShowSeapodModal(true);
-                return; 
+                return; // STOP
             } else {
+                // Found -> Validate Status
                 if (existingSeapod.status !== 'Completed') {
                     alert(`⚠️ Seapod ${seapodItem.serial} status is '${existingSeapod.status}'. It must be 'Completed' first.`);
-                    return;
+                    return; // STOP
                 }
                 
-                // Conflict Check
+                // Found -> Validate Ownership (Conflict)
                 if (existingSeapod.order_number && existingSeapod.order_number !== order.order_number) {
                     setConflictDetails({
                         serial: seapodItem.serial,
@@ -162,10 +168,10 @@ export default function OrderDetails({ params }) {
                         itemId: seapodItem.id
                     });
                     setShowAssignedModal(true);
-                    return; 
+                    return; // STOP
                 }
                 
-                // Valid -> Link
+                // Valid -> Link it
                 await supabase.from('seapod_production').update({ 
                     order_number: order.order_number, 
                     status: 'Assigned to Order' 
@@ -174,7 +180,7 @@ export default function OrderDetails({ params }) {
         }
     }
 
-    // 2. Intercept "Shipped"
+    // 2. SHIPPING SPECIFIC LOGIC (Vessel Check + Confirmation)
     if (field === 'status' && value === 'Shipped') {
         if (!order.vessel || order.vessel === 'Unknown Vessel') {
             alert("⚠️ Cannot Ship: Vessel Name is required.");
@@ -184,7 +190,7 @@ export default function OrderDetails({ params }) {
         return; 
     }
 
-    // Normal Save
+    // Normal Save (For other statuses or field updates)
     setOrder({ ...order, [field]: value });
     await supabase.from('orders').update({ [field]: value }).eq('id', orderId);
   }
@@ -210,9 +216,10 @@ export default function OrderDetails({ params }) {
         supabase.from('seapod_template_items').select('*').eq('template_id', selectedSeapodTemplate).then(({data: tItems}) => {
             const itemsToInsert = tItems.map(i => ({ seapod_id: data.id, piece: i.piece, item_id: i.item_id, quantity: i.quantity, sort_order: i.sort_order }));
             supabase.from('seapod_items').insert(itemsToInsert).then(() => {
+                // Fetch for editing
                 supabase.from('seapod_items').select('*').eq('seapod_id', data.id).order('sort_order').then(({data: i}) => {
                     setNewSeapodItems(i);
-                    setSeapodStep(2); 
+                    setSeapodStep(2); // Go to Step 2
                 });
             });
         });
@@ -240,6 +247,7 @@ export default function OrderDetails({ params }) {
 
     setShowSeapodModal(false);
     
+    // Update Order Status
     if (pendingStatus) {
         setOrder(prev => ({ ...prev, status: pendingStatus }));
         await supabase.from('orders').update({ status: pendingStatus }).eq('id', orderId);
@@ -336,15 +344,13 @@ export default function OrderDetails({ params }) {
   async function deleteItem(itemId) {
     if (isLocked) return;
     
-    // --- UPDATED PERMISSIONS CHECK ---
-    // If not Admin, we need to check if Operations are allowed to delete (Based on status)
+    // --- PERMISSIONS CHECK ---
     if (!isAdmin) {
         if (!canShip) { 
             alert("Permission Denied: Only Admins or Operations can delete items."); 
             return; 
         }
-
-        // Status check for Operations
+        // Ops Restriction
         const restrictedStatuses = ['In Box', 'Ready for Pickup', 'Shipped'];
         if (restrictedStatuses.includes(order.status)) {
             alert(`Operations cannot delete items when status is '${order.status}'. Please contact an Admin.`);
@@ -427,8 +433,9 @@ export default function OrderDetails({ params }) {
                             <td className="px-6 py-3"><input className="w-full bg-transparent border-none outline-none text-slate-600 placeholder-slate-300" value={item.orca_id || ''} disabled={isLockedOrder} onChange={(e) => updateItem(item.id, 'orca_id', e.target.value)} placeholder="---" /></td>
                             {isAdmin && (<td className="px-6 py-3 text-right text-xs font-mono text-slate-600">${(item.price * item.quantity).toFixed(2)}</td>)}
                             <td className="px-4 py-3 text-right">
-                                {/* UPDATED DELETE LOGIC: Admin always, Ops if not locked/shipped/in-box */}
-                                {canShip && !isLockedOrder && (
+                                {isAdmin && !isLockedOrder ? (
+                                   <button onClick={() => deleteItem(item.id)} className="text-slate-300 hover:text-red-600 opacity-0 group-hover:opacity-100"><Trash2 size={16}/></button>
+                                ) : canShip && !isLockedOrder && !['In Box', 'Ready for Pickup', 'Shipped'].includes(order.status) && (
                                    <button onClick={() => deleteItem(item.id)} className="text-slate-300 hover:text-red-600 opacity-0 group-hover:opacity-100"><Trash2 size={16}/></button>
                                 )}
                             </td>
@@ -459,7 +466,7 @@ export default function OrderDetails({ params }) {
             </div>
           )}
 
-          {/* SEAPOD WIZARD */}
+          {/* SEAPOD WIZARD MODAL */}
           {showSeapodModal && (
             <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
                 <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-2xl border border-blue-100 h-[80vh] flex flex-col">
