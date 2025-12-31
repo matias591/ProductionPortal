@@ -41,14 +41,17 @@ export default function OrderList() {
     fetchKitsFromDB(); 
   }, []);
 
-  // Auto-select kit based on type
+  // --- UPDATED DEFAULT LOGIC ---
   useEffect(() => {
     if (kitOptions.length === 0) return;
+    
+    // CHANGED: Full system now defaults to MSC002
     const defaults = {
-        'Full system': 'MSC003',
+        'Full system': 'MSC002', 
         'Upgrade': 'UPGRD',
         'Replacement': 'REP001'
     };
+    
     const targetKitName = defaults[selectedType];
     const targetKit = kitOptions.find(k => k.name === targetKitName);
     
@@ -192,7 +195,7 @@ export default function OrderList() {
 
   const getItemValue = (items, keyword, field) => {
     if (!items || !Array.isArray(items)) return '-';
-    const found = items.find(i => i.piece?.toLowerCase().includes(keyword.toLowerCase()));
+    const found = items.find(i => i.piece && i.piece.toLowerCase().includes(keyword.toLowerCase()));
     return found ? (found[field] || '-') : '-';
   };
 
@@ -240,7 +243,7 @@ export default function OrderList() {
               <tr>
                 <th className="px-6 py-4 w-24">Order #</th>
                 <th className="px-6 py-4 w-48">Vessel</th>
-                <th className="px-6 py-4">Type</th> {/* ADDED TYPE */}
+                <th className="px-6 py-4">Type</th>
                 <th className="px-6 py-4">Seapod S/N</th>
                 <th className="px-6 py-4">Modem ID</th>
                 <th className="px-6 py-4">PU ID</th>
@@ -263,7 +266,6 @@ export default function OrderList() {
                     </div>
                   </td>
                   
-                  {/* TYPE COLUMN */}
                   <td className="px-6 py-4 text-sm text-slate-600">{order.type}</td>
 
                   <td className="px-6 py-4 text-xs font-mono text-slate-600">{getItemValue(order.order_items, 'Seapod', 'serial')}</td>

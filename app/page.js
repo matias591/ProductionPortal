@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { useRouter } from 'next/navigation';
-import { LayoutDashboard, TrendingUp, Package, CheckCircle, Clock, RefreshCw } from 'lucide-react';
+import { LayoutDashboard, TrendingUp, Package, CheckCircle, Clock, RefreshCw, Plus, Search, Filter, LayoutGrid, Download } from 'lucide-react'; // Added icons for create modal if needed
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import Sidebar from './components/Sidebar';
 import { useSidebar } from './context/SidebarContext';
@@ -17,7 +17,6 @@ export default function Home() {
     readyOrders: 0,
     shippedOrdersCount: 0,
     builtSeapodsCount: 0,
-    // --- NEW DRILL DOWNS ---
     breakdownInProgress: {},
     breakdownReady: {}
   });
@@ -38,7 +37,6 @@ export default function Home() {
     fetchMetrics();
   }, [timeFilter]);
 
-  // Auto Refresh
   useEffect(() => {
     const i = setInterval(fetchMetrics, 300000); 
     return () => clearInterval(i);
@@ -54,21 +52,16 @@ export default function Home() {
   }
 
   async function fetchMetrics() {
-    // 1. Fetch Raw Data
     const { data: seapods } = await supabase.from('seapod_production').select('status, completed_at, created_at');
-    const { data: orders } = await supabase.from('orders').select('status, shipped_at, type'); // Fetch Type too
+    const { data: orders } = await supabase.from('orders').select('status, shipped_at, type');
 
     if (!seapods || !orders) return;
 
-    // 2. Filter Lists
     const completedSeapods = seapods.filter(s => s.status === 'Completed').length; 
     const inProgressSeapods = seapods.filter(s => s.status === 'In Progress').length;
-    
-    // Define Categories
     const inProgressList = orders.filter(o => o.status !== 'Shipped' && o.status !== 'Ready for Pickup');
     const readyList = orders.filter(o => o.status === 'Ready for Pickup');
 
-    // 3. Helper to Count Types
     const calcBreakdown = (list) => {
         const counts = {};
         list.forEach(o => {
@@ -78,7 +71,6 @@ export default function Home() {
         return counts;
     };
 
-    // 4. Time Filter Logic
     const now = new Date();
     let startDate = new Date();
     if (timeFilter === 'year') startDate.setFullYear(now.getFullYear(), 0, 1);
@@ -96,13 +88,11 @@ export default function Home() {
         readyOrders: readyList.length,
         shippedOrdersCount: relevantOrders.length, 
         builtSeapodsCount: relevantSeapods.length,
-        // Save breakdowns
         breakdownInProgress: calcBreakdown(inProgressList),
         breakdownReady: calcBreakdown(readyList)
     });
 
-    const chart = processChartData(relevantSeapods, relevantOrders, timeFilter);
-    setChartData(chart);
+    setChartData(processChartData(relevantSeapods, relevantOrders, timeFilter));
     setLastUpdated(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
     setLoading(false);
   }
@@ -145,23 +135,10 @@ export default function Home() {
 
         {/* --- KPI CARDS --- */}
         <div className="grid grid-cols-4 gap-6 mb-8">
-            {/* Simple Cards */}
             <MetricCard title="Seapods Available" value={stats.completedSeapods} icon={<CheckCircle/>} color="text-green-600" bg="bg-green-50" />
             <MetricCard title="Seapods In Progress" value={stats.inProgressSeapods} icon={<Clock/>} color="text-orange-600" bg="bg-orange-50" />
-            
-            {/* Drill Down Cards */}
-            <DrillDownCard 
-                title="Orders In Progress" 
-                value={stats.inProgressOrders} 
-                breakdown={stats.breakdownInProgress}
-                icon={<TrendingUp/>} color="text-blue-600" bg="bg-blue-50" 
-            />
-            <DrillDownCard 
-                title="Ready for Pickup" 
-                value={stats.readyOrders} 
-                breakdown={stats.breakdownReady}
-                icon={<Package/>} color="text-purple-600" bg="bg-purple-50" 
-            />
+            <DrillDownCard title="Orders In Progress" value={stats.inProgressOrders} breakdown={stats.breakdownInProgress} icon={<TrendingUp/>} color="text-blue-600" bg="bg-blue-50" />
+            <DrillDownCard title="Ready for Pickup" value={stats.readyOrders} breakdown={stats.breakdownReady} icon={<Package/>} color="text-purple-600" bg="bg-purple-50" />
         </div>
 
         {/* --- CHARTS --- */}
@@ -180,7 +157,6 @@ export default function Home() {
   );
 }
 
-// Simple Card
 function MetricCard({ title, value, icon, color, bg }) {
     return (
         <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex items-start gap-4">
@@ -193,7 +169,6 @@ function MetricCard({ title, value, icon, color, bg }) {
     );
 }
 
-// Drill Down Card
 function DrillDownCard({ title, value, icon, color, bg, breakdown }) {
     return (
         <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex flex-col justify-between h-full">
@@ -206,10 +181,7 @@ function DrillDownCard({ title, value, icon, color, bg, breakdown }) {
             </div>
             <div className="border-t border-slate-100 pt-3 space-y-1">
                 {Object.entries(breakdown).length > 0 ? Object.entries(breakdown).map(([key, count]) => (
-                    <div key={key} className="flex justify-between text-[10px] font-medium text-slate-500">
-                        <span>{key}</span>
-                        <span className="text-slate-700 font-bold">{count}</span>
-                    </div>
+                    <div key={key} className="flex justify-between text-[10px] font-medium text-slate-500"><span>{key}</span><span className="text-slate-700 font-bold">{count}</span></div>
                 )) : <div className="text-[10px] text-slate-300 italic">No orders</div>}
             </div>
         </div>

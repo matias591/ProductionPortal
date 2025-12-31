@@ -17,13 +17,13 @@ export default function OrderDetails({ params }) {
   const [masterItems, setMasterItems] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // --- PERMISSIONS ---
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [canShip, setCanShip] = useState(false); // Admin OR Operation
-
+  // --- PERMISSIONS STATE ---
+  const [isAdmin, setIsAdmin] = useState(false); // Can do everything + Admin Tools
+  const [canShip, setCanShip] = useState(false); // Admin OR Operation (Can edit vessel, ship, create items)
+  
   // --- UI STATE ---
   const [uploading, setUploading] = useState(false);
-  const [isDragging, setIsDragging] = useState(false);
+  const [isDragging, setIsDragging] = useState(false); // Drag & Drop State
   const [shipping, setShipping] = useState(false); 
   const [showShipModal, setShowShipModal] = useState(false);
   const [checkingVessel, setCheckingVessel] = useState(false);
@@ -143,14 +143,12 @@ export default function OrderDetails({ params }) {
                 .single();
 
             if (!existingSeapod) {
-                // Not Found -> Wizard
                 setMissingSeapodSerial(seapodItem.serial);
                 setPendingStatus(value);
                 setSeapodStep(1); 
                 setShowSeapodModal(true);
                 return; 
             } else {
-                // Found -> Validate
                 if (existingSeapod.status !== 'Completed') {
                     alert(`⚠️ Seapod ${seapodItem.serial} status is '${existingSeapod.status}'. It must be 'Completed' first.`);
                     return;
@@ -196,7 +194,7 @@ export default function OrderDetails({ params }) {
     const tpl = seapodTemplates.find(t => t.id === selectedSeapodTemplate);
     setTplDetails(tpl);
     
-    // Create Header
+    // Create Header (In Progress)
     supabase.from('seapod_production').insert([{
         serial_number: missingSeapodSerial,
         template_name: tpl.name,
@@ -212,10 +210,9 @@ export default function OrderDetails({ params }) {
         supabase.from('seapod_template_items').select('*').eq('template_id', selectedSeapodTemplate).then(({data: tItems}) => {
             const itemsToInsert = tItems.map(i => ({ seapod_id: data.id, piece: i.piece, item_id: i.item_id, quantity: i.quantity, sort_order: i.sort_order }));
             supabase.from('seapod_items').insert(itemsToInsert).then(() => {
-                // Fetch for editing
                 supabase.from('seapod_items').select('*').eq('seapod_id', data.id).order('sort_order').then(({data: i}) => {
                     setNewSeapodItems(i);
-                    setSeapodStep(2); // Go to Step 2
+                    setSeapodStep(2); 
                 });
             });
         });
@@ -243,7 +240,6 @@ export default function OrderDetails({ params }) {
 
     setShowSeapodModal(false);
     
-    // Update Order Status
     if (pendingStatus) {
         setOrder(prev => ({ ...prev, status: pendingStatus }));
         await supabase.from('orders').update({ status: pendingStatus }).eq('id', orderId);
@@ -302,7 +298,20 @@ export default function OrderDetails({ params }) {
     if (data?.publicUrl) window.open(data.publicUrl, '_blank');
   }
 
-  // --- STANDARD ITEM ACTIONS ---
+  // --- ITEM ACTIONS (Update / Add / Delete) ---
+  function exportToExcel() {
+    const dataToExport = items.map(item => ({
+        "Order #": order.order_number, "Vessel": order.vessel, "Account": order.account_name || '-', "Warehouse": order.warehouse || '-',
+        "Item Name": item.piece, "SKU": masterItems.find(m => m.name === item.piece)?.sku || '-', 
+        "Serial Number": item.serial || '-', "Quantity": item.quantity,
+        ...(isAdmin ? { "Unit Price": item.price, "Total Price": item.price * item.quantity } : {})
+    }));
+    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Order Details");
+    XLSX.writeFile(workbook, `Order_${order.order_number}.xlsx`);
+  }
+
   async function updateItem(itemId, field, value) {
     if (isLocked) return;
     let updateData = { [field]: value };
@@ -326,23 +335,26 @@ export default function OrderDetails({ params }) {
 
   async function deleteItem(itemId) {
     if (isLocked) return;
-    if (!isAdmin) { alert("Only Admins can delete items."); return; }
+    
+    // --- UPDATED PERMISSIONS CHECK ---
+    // If not Admin, we need to check if Operations are allowed to delete (Based on status)
+    if (!isAdmin) {
+        if (!canShip) { 
+            alert("Permission Denied: Only Admins or Operations can delete items."); 
+            return; 
+        }
+
+        // Status check for Operations
+        const restrictedStatuses = ['In Box', 'Ready for Pickup', 'Shipped'];
+        if (restrictedStatuses.includes(order.status)) {
+            alert(`Operations cannot delete items when status is '${order.status}'. Please contact an Admin.`);
+            return;
+        }
+    }
+    
     if(!confirm('Remove this item?')) return;
     setItems(items.filter(i => i.id !== itemId));
     await supabase.from('order_items').delete().eq('id', itemId);
-  }
-
-  function exportToExcel() {
-    const dataToExport = items.map(item => ({
-        "Order #": order.order_number, "Vessel": order.vessel, "Account": order.account_name || '-', "Warehouse": order.warehouse || '-',
-        "Item Name": item.piece, "SKU": masterItems.find(m => m.name === item.piece)?.sku || '-', 
-        "Serial Number": item.serial || '-', "Quantity": item.quantity,
-        ...(isAdmin ? { "Unit Price": item.price, "Total Price": item.price * item.quantity } : {})
-    }));
-    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Order Details");
-    XLSX.writeFile(workbook, `Order_${order.order_number}.xlsx`);
   }
 
   // --- RENDER ---
@@ -355,7 +367,6 @@ export default function OrderDetails({ params }) {
     <div className="flex min-h-screen bg-[#F3F4F6] font-sans">
       <Sidebar />
       <div className="flex-1 ml-64">
-          
           <div className="bg-white border-b border-slate-200 shadow-sm sticky top-0 z-10">
             <div className="max-w-[1600px] mx-auto px-6 py-4">
               <div className="flex flex-col md:flex-row justify-between items-start gap-4">
@@ -404,20 +415,23 @@ export default function OrderDetails({ params }) {
                    <table className="w-full text-left border-collapse">
                      <thead className="bg-white border-b border-slate-200 text-xs uppercase text-slate-400 font-bold">
                         <tr>
-                            {/* --- NO DONE HEADER --- */}
                             <th className="px-6 py-3">Item</th><th className="px-6 py-3 w-20">Qty</th><th className="px-6 py-3 w-32">Serial #</th><th className="px-6 py-3 w-32">Orca ID</th>{isAdmin && <th className="px-6 py-3 w-24 text-right">Price</th>}<th className="w-10"></th>
                         </tr>
                      </thead>
                      <tbody className="divide-y divide-slate-50">
                        {items.map((item) => (
                          <tr key={item.id} className="group hover:bg-slate-50 transition-colors">
-                            {/* --- NO DONE CHECKBOX CELL --- */}
                             <td className="px-6 py-3"><select className="w-full bg-transparent border-none outline-none focus:ring-0 text-sm font-medium text-slate-900" value={item.piece || ''} disabled={isLockedOrder} onChange={(e) => updateItem(item.id, 'piece', e.target.value)}><option value="">Select Item...</option>{masterItems.map(m => <option key={m.id} value={m.name}>{m.sku} - {m.name}</option>)}</select></td>
                             <td className="px-6 py-3"><input type="number" className="w-full bg-transparent border-none outline-none" value={item.quantity || 1} disabled={isLockedOrder} onChange={(e) => updateItem(item.id, 'quantity', e.target.value)} /></td>
                             <td className="px-6 py-3"><input className="w-full bg-transparent border-none outline-none text-[#0176D3] font-medium placeholder-slate-300" value={item.serial || ''} disabled={isLockedOrder} onChange={(e) => updateItem(item.id, 'serial', e.target.value)} placeholder="---" /></td>
                             <td className="px-6 py-3"><input className="w-full bg-transparent border-none outline-none text-slate-600 placeholder-slate-300" value={item.orca_id || ''} disabled={isLockedOrder} onChange={(e) => updateItem(item.id, 'orca_id', e.target.value)} placeholder="---" /></td>
                             {isAdmin && (<td className="px-6 py-3 text-right text-xs font-mono text-slate-600">${(item.price * item.quantity).toFixed(2)}</td>)}
-                            <td className="px-4 py-3 text-right">{!isLockedOrder && isAdmin && (<button onClick={() => deleteItem(item.id)} className="text-slate-300 hover:text-red-600 opacity-0 group-hover:opacity-100"><Trash2 size={16}/></button>)}</td>
+                            <td className="px-4 py-3 text-right">
+                                {/* UPDATED DELETE LOGIC: Admin always, Ops if not locked/shipped/in-box */}
+                                {canShip && !isLockedOrder && (
+                                   <button onClick={() => deleteItem(item.id)} className="text-slate-300 hover:text-red-600 opacity-0 group-hover:opacity-100"><Trash2 size={16}/></button>
+                                )}
+                            </td>
                          </tr>
                        ))}
                      </tbody>
@@ -427,8 +441,7 @@ export default function OrderDetails({ params }) {
             </div>
           </main>
 
-          {/* --- ALL MODALS --- */}
-          {/* Ship Modal */}
+          {/* SHIP MODAL */}
           {showShipModal && (
             <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
               <div className="bg-white rounded-xl shadow-2xl max-w-sm w-full p-6 animate-in fade-in zoom-in duration-200 border border-slate-200">
@@ -437,7 +450,7 @@ export default function OrderDetails({ params }) {
             </div>
           )}
 
-          {/* Conflict Modal */}
+          {/* CONFLICT MODAL */}
           {showAssignedModal && conflictDetails && (
             <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
               <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 animate-in fade-in zoom-in duration-200 border border-red-200">
@@ -446,7 +459,7 @@ export default function OrderDetails({ params }) {
             </div>
           )}
 
-          {/* Wizard Modal */}
+          {/* SEAPOD WIZARD */}
           {showSeapodModal && (
             <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
                 <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-2xl border border-blue-100 h-[80vh] flex flex-col">
