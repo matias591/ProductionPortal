@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { useRouter } from 'next/navigation';
-import { Plus, Search, Ship, ChevronRight, Filter, LayoutGrid, Trash2, Download } from 'lucide-react';
+import { Plus, Search, Ship, ChevronRight, Filter, LayoutGrid, Trash2, Download, User } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import Sidebar from '../components/Sidebar';
 
@@ -45,7 +45,7 @@ export default function OrderList() {
   useEffect(() => {
     if (kitOptions.length === 0) return;
     const defaults = {
-        'Full system': 'MSC002', // Updated Default
+        'Full system': 'MSC002',
         'Upgrade': 'UPGRD',
         'Replacement': 'REP001'
     };
@@ -93,7 +93,8 @@ export default function OrderList() {
         "Type": o.type, 
         "Status": o.status, 
         "Warehouse": o.warehouse,
-        "Created": new Date(o.created_at).toLocaleDateString(),
+        "Created By": o.created_by || '-',
+        "Created At": new Date(o.created_at).toLocaleString(),
         "Seapod S/N": getItemValue(o.order_items, 'Seapod', 'serial'),
         "Modem ID": getItemValue(o.order_items, 'Modem', 'orca_id'),
         "PU ID": getItemValue(o.order_items, 'Asus', 'orca_id')
@@ -115,7 +116,8 @@ export default function OrderList() {
       type: selectedType,
       kit: selectedKitId ? selectedKitName : 'Custom', 
       warehouse: isAdmin ? formData.get('warehouse') : 'Baz', 
-      status: 'New'
+      status: 'New',
+      created_by: userEmail // <--- VITAL: Saves the current user's email
     };
 
     const { data: orderData, error } = await supabase.from('orders').insert([newOrder]).select().single();
@@ -240,7 +242,6 @@ export default function OrderList() {
               <tr>
                 <th className="px-6 py-4 w-24">Order #</th>
                 <th className="px-6 py-4 w-48">Vessel</th>
-                {/* --- ADDED TYPE COLUMN HERE --- */}
                 <th className="px-6 py-4">Type</th>
                 <th className="px-6 py-4">Seapod S/N</th>
                 <th className="px-6 py-4">Modem ID</th>
@@ -256,7 +257,13 @@ export default function OrderList() {
                   onClick={() => router.push(`/order/${order.id}`)}
                   className="hover:bg-blue-50/50 cursor-pointer transition-colors group"
                 >
-                  <td className="px-6 py-4 font-semibold text-[#0176D3] hover:underline">{order.order_number}</td>
+                  <td className="px-6 py-4">
+                      <div className="font-semibold text-[#0176D3] hover:underline">{order.order_number}</div>
+                      {/* --- AUDIT IN LIST VIEW --- */}
+                      <div className="text-[10px] text-slate-400 mt-1 flex items-center gap-1">
+                          <User size={10}/> {order.created_by || 'Unknown'}
+                      </div>
+                  </td>
                   <td className="px-6 py-4 text-sm text-slate-700 font-medium">
                     <div className="flex items-center gap-2">
                        {order.vessel ? <Ship size={14} className="text-slate-400"/> : null}
@@ -264,7 +271,6 @@ export default function OrderList() {
                     </div>
                   </td>
                   
-                  {/* --- ADDED TYPE COLUMN DATA --- */}
                   <td className="px-6 py-4 text-sm text-slate-600">{order.type}</td>
 
                   <td className="px-6 py-4 text-xs font-mono text-slate-600">{getItemValue(order.order_items, 'Seapod', 'serial')}</td>

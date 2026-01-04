@@ -31,56 +31,13 @@ export default function SeapodBuildDetails({ params }) {
   }
 
   // --- LOGIC ---
-  async function performUpload(file) {
-    setUploading(true);
-    const fileName = `${Date.now()}_${file.name}`;
-    const filePath = `${seapodId}/${fileName}`;
-    const { error: uploadError } = await supabase.storage.from('seapod-attachments').upload(filePath, file);
-    if (uploadError) { alert(uploadError.message); setUploading(false); return; }
-    const { data: fileRecord } = await supabase.from('seapod_files').insert([{ seapod_id: seapodId, file_name: file.name, file_path: filePath, uploaded_by: 'User' }]).select().single();
-    if (fileRecord) setFiles([fileRecord, ...files]);
-    setUploading(false);
-  }
-  const onFileSelect = (e) => { if (e.target.files && e.target.files.length > 0) performUpload(e.target.files[0]); };
-  const onDrop = (e) => { e.preventDefault(); setIsDragging(false); if (e.dataTransfer.files && e.dataTransfer.files.length > 0) performUpload(e.dataTransfer.files[0]); };
-  const onDragOver = (e) => { e.preventDefault(); setIsDragging(true); };
-  const onDragLeave = (e) => { e.preventDefault(); setIsDragging(false); };
-
-  async function handleStatusChange(newStatus) {
-    if (newStatus === 'Completed') {
-        const missing = items.some(i => !i.serial || i.serial.trim() === '');
-        if (missing) { alert("⚠️ Cannot complete: All Item Serial Numbers must be filled."); return; }
-        setShowAck(true);
-    } else {
-        setSeapod(prev => ({ ...prev, status: newStatus }));
-        await supabase.from('seapod_production').update({ status: newStatus }).eq('id', seapodId);
-    }
-  }
-
-  async function confirmCompletion() {
-    setShowAck(false);
-    setSeapod(prev => ({ ...prev, status: 'Completed' }));
-    await supabase.from('seapod_production').update({ status: 'Completed', completed_at: new Date().toISOString() }).eq('id', seapodId);
-  }
-
-  async function updateItem(itemId, field, value) {
-    const newItems = items.map(i => i.id === itemId ? { ...i, [field]: value } : i);
-    setItems(newItems);
-    await supabase.from('seapod_items').update({ [field]: value }).eq('id', itemId);
-  }
-
-  async function deleteItem(itemId) {
-    if(!confirm("Remove item?")) return;
-    setItems(items.filter(i => i.id !== itemId));
-    await supabase.from('seapod_items').delete().eq('id', itemId);
-  }
-
-  async function addItem() {
-    const newItem = { seapod_id: seapodId, piece: 'New Component', quantity: 1, serial: '', is_done: false };
-    const { data } = await supabase.from('seapod_items').insert([newItem]).select().single();
-    if(data) setItems([...items, data]);
-  }
-
+  async function performUpload(file) { setUploading(true); const fileName = `${Date.now()}_${file.name}`; const filePath = `${seapodId}/${fileName}`; const { error: uploadError } = await supabase.storage.from('seapod-attachments').upload(filePath, file); if (uploadError) { alert(uploadError.message); setUploading(false); return; } const { data: fileRecord } = await supabase.from('seapod_files').insert([{ seapod_id: seapodId, file_name: file.name, file_path: filePath, uploaded_by: 'User' }]).select().single(); if (fileRecord) setFiles([fileRecord, ...files]); setUploading(false); }
+  const onFileSelect = (e) => { if (e.target.files && e.target.files.length > 0) performUpload(e.target.files[0]); }; const onDrop = (e) => { e.preventDefault(); setIsDragging(false); if (e.dataTransfer.files && e.dataTransfer.files.length > 0) performUpload(e.dataTransfer.files[0]); }; const onDragOver = (e) => { e.preventDefault(); setIsDragging(true); }; const onDragLeave = (e) => { e.preventDefault(); setIsDragging(false); };
+  async function handleStatusChange(newStatus) { if (newStatus === 'Completed') { const missing = items.some(i => !i.serial || i.serial.trim() === ''); if (missing) { alert("⚠️ Cannot complete: All Item Serial Numbers must be filled."); return; } setShowAck(true); } else { setSeapod(prev => ({ ...prev, status: newStatus })); await supabase.from('seapod_production').update({ status: newStatus }).eq('id', seapodId); } }
+  async function confirmCompletion() { setShowAck(false); setSeapod(prev => ({ ...prev, status: 'Completed' })); await supabase.from('seapod_production').update({ status: 'Completed', completed_at: new Date().toISOString() }).eq('id', seapodId); }
+  async function updateItem(itemId, field, value) { const newItems = items.map(i => i.id === itemId ? { ...i, [field]: value } : i); setItems(newItems); await supabase.from('seapod_items').update({ [field]: value }).eq('id', itemId); }
+  async function deleteItem(itemId) { if(!confirm("Remove item?")) return; setItems(items.filter(i => i.id !== itemId)); await supabase.from('seapod_items').delete().eq('id', itemId); }
+  async function addItem() { const newItem = { seapod_id: seapodId, piece: 'New Component', quantity: 1, serial: '', is_done: false }; const { data } = await supabase.from('seapod_items').insert([newItem]).select().single(); if(data) setItems([...items, data]); }
   function openFile(path) { const { data } = supabase.storage.from('seapod-attachments').getPublicUrl(path); window.open(data.publicUrl, '_blank'); }
   function exportExcel() { const data = items.map(i => ({ "Component": i.piece, "Qty": i.quantity, "Serial": i.serial })); const ws = XLSX.utils.json_to_sheet(data); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Checklist"); XLSX.writeFile(wb, `Seapod_${seapod.serial_number}.xlsx`); }
 
@@ -112,6 +69,8 @@ export default function SeapodBuildDetails({ params }) {
                                 <span className="bg-slate-100 text-slate-600 border border-slate-200 px-2 py-0.5 rounded text-xs font-medium">SW: {seapod.sw_version}</span>
                                 {seapod.order_number && (<span className="bg-purple-100 text-purple-700 border border-purple-200 px-2 py-0.5 rounded text-xs font-bold flex items-center gap-1"><Box size={10} /> Assigned to Order #{seapod.order_number}</span>)}
                             </div>
+                            
+                            {/* CREATED BY */}
                             {seapod.created_by && <div className="text-xs text-slate-400 flex items-center gap-1 mt-1"><User size={10}/> By {seapod.created_by}</div>}
                         </div>
                     </div>
@@ -141,14 +100,14 @@ export default function SeapodBuildDetails({ params }) {
                     <table className="w-full text-left">
                         <thead className="text-xs font-bold text-slate-400 uppercase border-b border-slate-200">
                             <tr>
-                                {/* --- NO CHECKBOX HEADER --- */}
+                                {/* NO CHECKBOX HEADER */}
                                 <th className="px-6 py-3">Component</th><th className="px-6 py-3 w-24">Qty</th><th className="px-6 py-3 w-48">Serial Number</th><th className="w-12"></th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
                             {items.map(item => (
                                 <tr key={item.id} className="group hover:bg-slate-50">
-                                    {/* --- NO CHECKBOX CELL --- */}
+                                    {/* NO CHECKBOX CELL */}
                                     <td className="px-6 py-3 text-sm font-medium text-slate-700">{item.piece}</td>
                                     <td className="px-6 py-3 text-sm">{item.quantity}</td>
                                     <td className="px-6 py-3"><input className="w-full border border-slate-200 rounded px-2 py-1.5 text-sm focus:border-[#0176D3] outline-none text-[#0176D3] font-medium placeholder-slate-300" placeholder="Scan Serial" value={item.serial || ''} onChange={(e) => updateItem(item.id, 'serial', e.target.value)} /></td>
@@ -162,23 +121,8 @@ export default function SeapodBuildDetails({ params }) {
             </div>
         </div>
 
-        {/* ACKNOWLEDGEMENT MODAL */}
-        {showAck && (
-            <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                <div className="bg-white rounded-xl shadow-2xl p-8 w-full max-w-md text-center border-t-4 border-[#0176D3]">
-                    <div className="w-16 h-16 bg-blue-50 text-[#0176D3] rounded-full flex items-center justify-center mx-auto mb-4"><AlertTriangle size={32}/></div>
-                    <h2 className="text-xl font-bold text-slate-900 mb-2">Build Verification</h2>
-                    <p className="text-slate-500 text-sm mb-6">You are marking Seapod <strong>{seapod.serial_number}</strong> as Completed.</p>
-                    <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 mb-6 text-left">
-                        <div className="mb-4 pb-4 border-b border-slate-200"><span className="text-[10px] font-bold text-slate-400 uppercase block">Seapod Version</span><span className="text-lg font-bold text-[#0176D3]">{seapod.seapod_version || 'N/A'}</span></div>
-                        <div className="grid grid-cols-2 gap-4"><div><span className="text-[10px] font-bold text-slate-400 uppercase block">Hardware Ver.</span><span className="text-lg font-bold text-slate-800">{seapod.hw_version || 'N/A'}</span></div><div><span className="text-[10px] font-bold text-slate-400 uppercase block">Software Ver.</span><span className="text-lg font-bold text-slate-800">{seapod.sw_version || 'N/A'}</span></div></div>
-                    </div>
-                    <div className="flex gap-3"><button onClick={() => setShowAck(false)} className="flex-1 py-3 border border-slate-300 rounded-lg font-bold text-slate-600 hover:bg-slate-50">Cancel</button><button onClick={confirmCompletion} className="flex-1 py-3 bg-[#0176D3] text-white rounded-lg font-bold hover:bg-blue-700 shadow-lg">Confirm & Complete</button></div>
-                    <p className="text-xs text-slate-400 mt-4">By confirming, you acknowledge the Seapod contains these versions.</p>
-                </div>
-            </div>
-        )}
-
+        {/* ACKNOWLEDGEMENT MODAL (Unchanged) */}
+        {showAck && (<div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"><div className="bg-white rounded-xl shadow-2xl p-8 w-full max-w-md text-center border-t-4 border-[#0176D3]"><div className="w-16 h-16 bg-blue-50 text-[#0176D3] rounded-full flex items-center justify-center mx-auto mb-4"><AlertTriangle size={32}/></div><h2 className="text-xl font-bold text-slate-900 mb-2">Build Verification</h2><p className="text-slate-500 text-sm mb-6">You are marking Seapod <strong>{seapod.serial_number}</strong> as Completed.</p><div className="bg-slate-50 border border-slate-200 rounded-lg p-4 mb-6 text-left"><div className="mb-4 pb-4 border-b border-slate-200"><span className="text-[10px] font-bold text-slate-400 uppercase block">Seapod Version</span><span className="text-lg font-bold text-[#0176D3]">{seapod.seapod_version || 'N/A'}</span></div><div className="grid grid-cols-2 gap-4"><div><span className="text-[10px] font-bold text-slate-400 uppercase block">Hardware Ver.</span><span className="text-lg font-bold text-slate-800">{seapod.hw_version || 'N/A'}</span></div><div><span className="text-[10px] font-bold text-slate-400 uppercase block">Software Ver.</span><span className="text-lg font-bold text-slate-800">{seapod.sw_version || 'N/A'}</span></div></div></div><div className="flex gap-3"><button onClick={() => setShowAck(false)} className="flex-1 py-3 border border-slate-300 rounded-lg font-bold text-slate-600 hover:bg-slate-50">Cancel</button><button onClick={confirmCompletion} className="flex-1 py-3 bg-[#0176D3] text-white rounded-lg font-bold hover:bg-blue-700 shadow-lg">Confirm & Complete</button></div><p className="text-xs text-slate-400 mt-4">By confirming, you acknowledge the Seapod contains these versions.</p></div></div>)}
       </main>
     </div>
   );
