@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Plus, Trash2, Cpu, CheckCircle2, Circle, Upload, Paperclip, FileText, Download, AlertTriangle, Box } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Cpu, CheckCircle2, Circle, Upload, Paperclip, FileText, Download, AlertTriangle, Box, User } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import Sidebar from '../../components/Sidebar';
 
@@ -112,6 +112,7 @@ export default function SeapodBuildDetails({ params }) {
                                 <span className="bg-slate-100 text-slate-600 border border-slate-200 px-2 py-0.5 rounded text-xs font-medium">SW: {seapod.sw_version}</span>
                                 {seapod.order_number && (<span className="bg-purple-100 text-purple-700 border border-purple-200 px-2 py-0.5 rounded text-xs font-bold flex items-center gap-1"><Box size={10} /> Assigned to Order #{seapod.order_number}</span>)}
                             </div>
+                            {seapod.created_by && <div className="text-xs text-slate-400 flex items-center gap-1 mt-1"><User size={10}/> By {seapod.created_by}</div>}
                         </div>
                     </div>
                     <div className="flex items-end flex-col gap-2">
@@ -140,14 +141,14 @@ export default function SeapodBuildDetails({ params }) {
                     <table className="w-full text-left">
                         <thead className="text-xs font-bold text-slate-400 uppercase border-b border-slate-200">
                             <tr>
-                                {/* --- NO DONE HEADER --- */}
+                                {/* --- NO CHECKBOX HEADER --- */}
                                 <th className="px-6 py-3">Component</th><th className="px-6 py-3 w-24">Qty</th><th className="px-6 py-3 w-48">Serial Number</th><th className="w-12"></th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
                             {items.map(item => (
                                 <tr key={item.id} className="group hover:bg-slate-50">
-                                    {/* --- NO DONE CELL --- */}
+                                    {/* --- NO CHECKBOX CELL --- */}
                                     <td className="px-6 py-3 text-sm font-medium text-slate-700">{item.piece}</td>
                                     <td className="px-6 py-3 text-sm">{item.quantity}</td>
                                     <td className="px-6 py-3"><input className="w-full border border-slate-200 rounded px-2 py-1.5 text-sm focus:border-[#0176D3] outline-none text-[#0176D3] font-medium placeholder-slate-300" placeholder="Scan Serial" value={item.serial || ''} onChange={(e) => updateItem(item.id, 'serial', e.target.value)} /></td>
@@ -161,6 +162,7 @@ export default function SeapodBuildDetails({ params }) {
             </div>
         </div>
 
+        {/* ACKNOWLEDGEMENT MODAL */}
         {showAck && (
             <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
                 <div className="bg-white rounded-xl shadow-2xl p-8 w-full max-w-md text-center border-t-4 border-[#0176D3]">

@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Plus, Trash2, Box, Calendar, Ship, Upload, FileText, Paperclip, Lock, Download, Building2, Loader2, Warehouse, Cpu, Check, AlertTriangle, XCircle } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Box, Calendar, Ship, Upload, FileText, Paperclip, Lock, Download, Building2, Loader2, Warehouse, Cpu, Check, AlertTriangle, XCircle, User } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import Sidebar from '../../components/Sidebar';
 
@@ -20,6 +20,7 @@ export default function OrderDetails({ params }) {
   // --- PERMISSIONS STATE ---
   const [isAdmin, setIsAdmin] = useState(false); 
   const [canShip, setCanShip] = useState(false); // Admin OR Operation
+  const [userEmail, setUserEmail] = useState(''); 
 
   // --- UI STATE ---
   const [uploading, setUploading] = useState(false);
@@ -30,7 +31,7 @@ export default function OrderDetails({ params }) {
 
   // --- SEAPOD WIZARD STATE ---
   const [showSeapodModal, setShowSeapodModal] = useState(false);
-  const [seapodStep, setSeapodStep] = useState(1);
+  const [seapodStep, setSeapodStep] = useState(1); 
   const [missingSeapodSerial, setMissingSeapodSerial] = useState('');
   const [seapodTemplates, setSeapodTemplates] = useState([]);
   const [selectedSeapodTemplate, setSelectedSeapodTemplate] = useState('');
@@ -63,6 +64,7 @@ export default function OrderDetails({ params }) {
   async function fetchData() {
     const { data: { session } } = await supabase.auth.getSession();
     if (session) {
+       setUserEmail(session.user.email);
        const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).single();
        if (profile?.role === 'admin') setIsAdmin(true);
        if (['admin', 'operation'].includes(profile?.role)) setCanShip(true);
@@ -126,20 +128,18 @@ export default function OrderDetails({ params }) {
   async function updateOrder(field, value) {
     if (isLocked) return;
 
-    // 1. SEAPOD VALIDATION GATE (Runs for In Box, Ready, and Shipped)
-    // Updated Logic: Check for ANY advanced status
+    // 1. Intercept "In Box", "Ready", "Shipped" -> Check Seapod
     const statusesRequiringSeapod = ['In Box', 'Ready for Pickup', 'Shipped'];
-
+    
     if (field === 'status' && statusesRequiringSeapod.includes(value)) {
         const seapodItem = items.find(i => i.piece && i.piece.toLowerCase().includes('seapod'));
         
         if (seapodItem) {
-            // Check for Serial Presence
             if (!seapodItem.serial || seapodItem.serial.trim() === '' || seapodItem.serial === '-') {
                 alert("⚠️ Seapod Item exists but has no Serial Number. Fill it first."); return;
             }
 
-            // Check DB for Existence
+            // Check DB
             const { data: existingSeapod } = await supabase
                 .from('seapod_production')
                 .select('id, status, order_number')
@@ -147,20 +147,20 @@ export default function OrderDetails({ params }) {
                 .single();
 
             if (!existingSeapod) {
-                // Not Found -> Trigger Wizard
+                // Not Found -> Wizard
                 setMissingSeapodSerial(seapodItem.serial);
                 setPendingStatus(value);
                 setSeapodStep(1); 
                 setShowSeapodModal(true);
-                return; // STOP
+                return; 
             } else {
-                // Found -> Validate Status
+                // Found -> Validate
                 if (existingSeapod.status !== 'Completed') {
                     alert(`⚠️ Seapod ${seapodItem.serial} status is '${existingSeapod.status}'. It must be 'Completed' first.`);
-                    return; // STOP
+                    return;
                 }
                 
-                // Found -> Validate Ownership (Conflict)
+                // Conflict Check
                 if (existingSeapod.order_number && existingSeapod.order_number !== order.order_number) {
                     setConflictDetails({
                         serial: seapodItem.serial,
@@ -168,10 +168,10 @@ export default function OrderDetails({ params }) {
                         itemId: seapodItem.id
                     });
                     setShowAssignedModal(true);
-                    return; // STOP
+                    return; 
                 }
                 
-                // Valid -> Link it
+                // Valid -> Link
                 await supabase.from('seapod_production').update({ 
                     order_number: order.order_number, 
                     status: 'Assigned to Order' 
@@ -180,7 +180,7 @@ export default function OrderDetails({ params }) {
         }
     }
 
-    // 2. SHIPPING SPECIFIC LOGIC (Vessel Check + Confirmation)
+    // 2. Intercept "Shipped"
     if (field === 'status' && value === 'Shipped') {
         if (!order.vessel || order.vessel === 'Unknown Vessel') {
             alert("⚠️ Cannot Ship: Vessel Name is required.");
@@ -190,7 +190,7 @@ export default function OrderDetails({ params }) {
         return; 
     }
 
-    // Normal Save (For other statuses or field updates)
+    // Normal Save
     setOrder({ ...order, [field]: value });
     await supabase.from('orders').update({ [field]: value }).eq('id', orderId);
   }
@@ -207,7 +207,8 @@ export default function OrderDetails({ params }) {
         seapod_version: tpl.seapod_version,
         hw_version: tpl.hw_version,
         sw_version: tpl.sw_version,
-        status: 'In Progress'
+        status: 'In Progress',
+        created_by: userEmail
     }]).select().single().then(({data, error}) => {
         if(error) { alert(error.message); return; }
         setNewSeapodId(data.id);
@@ -380,7 +381,12 @@ export default function OrderDetails({ params }) {
                    <div className="w-12 h-12 bg-[#0176D3]/10 text-[#0176D3] border border-[#0176D3]/20 rounded-lg flex items-center justify-center"><Box size={24} /></div>
                    <div>
                      <div className="flex items-center gap-2"><h1 className="text-2xl font-bold text-slate-900">{order.vessel || 'No Vessel Name'}</h1>{isLockedOrder && <Lock size={18} className="text-red-500" title="Order Locked" />}</div>
-                     <div className="flex items-center gap-3 text-sm text-slate-500 mt-1"><span className="font-mono bg-slate-100 px-2 py-0.5 rounded text-xs border border-slate-200 text-slate-600">#{order.order_number}</span><span className="flex items-center gap-1 text-slate-600 font-medium"><Building2 size={12} /> {order.account_name || 'No Account'}</span></div>
+                     <div className="flex items-center gap-3 text-sm text-slate-500 mt-1">
+                        <span className="font-mono bg-slate-100 px-2 py-0.5 rounded text-xs border border-slate-200 text-slate-600">#{order.order_number}</span>
+                        <span className="flex items-center gap-1 text-slate-600 font-medium"><Building2 size={12} /> {order.account_name || 'No Account'}</span>
+                        {/* SHOW CREATOR */}
+                        {order.created_by && <span className="flex items-center gap-1 text-xs text-slate-400"><User size={10}/> By {order.created_by}</span>}
+                     </div>
                    </div>
                 </div>
                 <div className="flex items-end gap-3">
@@ -421,12 +427,14 @@ export default function OrderDetails({ params }) {
                    <table className="w-full text-left border-collapse">
                      <thead className="bg-white border-b border-slate-200 text-xs uppercase text-slate-400 font-bold">
                         <tr>
+                            {/* --- CHECKBOX HEADER REMOVED HERE --- */}
                             <th className="px-6 py-3">Item</th><th className="px-6 py-3 w-20">Qty</th><th className="px-6 py-3 w-32">Serial #</th><th className="px-6 py-3 w-32">Orca ID</th>{isAdmin && <th className="px-6 py-3 w-24 text-right">Price</th>}<th className="w-10"></th>
                         </tr>
                      </thead>
                      <tbody className="divide-y divide-slate-50">
                        {items.map((item) => (
                          <tr key={item.id} className="group hover:bg-slate-50 transition-colors">
+                            {/* --- CHECKBOX CELL REMOVED HERE --- */}
                             <td className="px-6 py-3"><select className="w-full bg-transparent border-none outline-none focus:ring-0 text-sm font-medium text-slate-900" value={item.piece || ''} disabled={isLockedOrder} onChange={(e) => updateItem(item.id, 'piece', e.target.value)}><option value="">Select Item...</option>{masterItems.map(m => <option key={m.id} value={m.name}>{m.sku} - {m.name}</option>)}</select></td>
                             <td className="px-6 py-3"><input type="number" className="w-full bg-transparent border-none outline-none" value={item.quantity || 1} disabled={isLockedOrder} onChange={(e) => updateItem(item.id, 'quantity', e.target.value)} /></td>
                             <td className="px-6 py-3"><input className="w-full bg-transparent border-none outline-none text-[#0176D3] font-medium placeholder-slate-300" value={item.serial || ''} disabled={isLockedOrder} onChange={(e) => updateItem(item.id, 'serial', e.target.value)} placeholder="---" /></td>

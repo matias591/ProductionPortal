@@ -37,7 +37,7 @@ export default function Home() {
     fetchMetrics();
   }, [timeFilter]);
 
-  // Auto Refresh every 5 mins
+  // Auto Refresh
   useEffect(() => {
     const i = setInterval(fetchMetrics, 300000); 
     return () => clearInterval(i);
@@ -66,7 +66,7 @@ export default function Home() {
     const inProgressList = orders.filter(o => o.status !== 'Shipped' && o.status !== 'Ready for Pickup');
     const readyList = orders.filter(o => o.status === 'Ready for Pickup');
 
-    // Helper to Count Types for Drill Down
+    // Helper to Count Types
     const calcBreakdown = (list) => {
         const counts = {};
         list.forEach(o => {
@@ -76,7 +76,7 @@ export default function Home() {
         return counts;
     };
 
-    // Time Filter Logic
+    // Filter Logic for Chart
     const now = new Date();
     let startDate = new Date();
     if (timeFilter === 'year') startDate.setFullYear(now.getFullYear(), 0, 1);
@@ -143,8 +143,22 @@ export default function Home() {
         <div className="grid grid-cols-4 gap-6 mb-8">
             <MetricCard title="Seapods Available" value={stats.completedSeapods} icon={<CheckCircle/>} color="text-green-600" bg="bg-green-50" />
             <MetricCard title="Seapods In Progress" value={stats.inProgressSeapods} icon={<Clock/>} color="text-orange-600" bg="bg-orange-50" />
-            <DrillDownCard title="Orders In Progress" value={stats.inProgressOrders} breakdown={stats.breakdownInProgress} icon={<TrendingUp/>} color="text-blue-600" bg="bg-blue-50" />
-            <DrillDownCard title="Ready for Pickup" value={stats.readyOrders} breakdown={stats.breakdownReady} icon={<Package/>} color="text-purple-600" bg="bg-purple-50" />
+            
+            {/* DRILL DOWN CARD: Orders In Progress */}
+            <DrillDownCard 
+                title="Orders In Progress" 
+                value={stats.inProgressOrders} 
+                breakdown={stats.breakdownInProgress}
+                icon={<TrendingUp/>} color="text-blue-600" bg="bg-blue-50" 
+            />
+            
+            {/* DRILL DOWN CARD: Ready for Pickup */}
+            <DrillDownCard 
+                title="Ready for Pickup" 
+                value={stats.readyOrders} 
+                breakdown={stats.breakdownReady}
+                icon={<Package/>} color="text-purple-600" bg="bg-purple-50" 
+            />
         </div>
 
         {/* --- CHARTS --- */}
@@ -156,7 +170,6 @@ export default function Home() {
                         <BarChart data={chartData}>
                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0"/>
                             <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#64748B', fontSize: 12}} dy={10}/>
-                            {/* --- FIXED: Added allowDecimals={false} --- */}
                             <YAxis allowDecimals={false} axisLine={false} tickLine={false} tick={{fill: '#64748B', fontSize: 12}}/>
                             <Tooltip cursor={{fill: '#F1F5F9'}} contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}}/>
                             <Legend />
@@ -177,7 +190,7 @@ export default function Home() {
   );
 }
 
-// Simple Card
+// Simple Metric Card (No breakdown)
 function MetricCard({ title, value, icon, color, bg }) {
     return (
         <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex items-start gap-4">
@@ -201,9 +214,13 @@ function DrillDownCard({ title, value, icon, color, bg, breakdown }) {
                     <p className="text-2xl font-bold text-slate-900">{value}</p>
                 </div>
             </div>
+            {/* Breakdown List */}
             <div className="border-t border-slate-100 pt-3 space-y-1">
                 {Object.entries(breakdown).length > 0 ? Object.entries(breakdown).map(([key, count]) => (
-                    <div key={key} className="flex justify-between text-[10px] font-medium text-slate-500"><span>{key}</span><span className="text-slate-700 font-bold">{count}</span></div>
+                    <div key={key} className="flex justify-between text-[10px] font-medium text-slate-500">
+                        <span>{key}</span>
+                        <span className="text-slate-700 font-bold">{count}</span>
+                    </div>
                 )) : <div className="text-[10px] text-slate-300 italic">No orders</div>}
             </div>
         </div>
