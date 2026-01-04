@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { useRouter } from 'next/navigation';
-import { LayoutDashboard, TrendingUp, Package, CheckCircle, Clock, RefreshCw, Plus, Search, Filter, LayoutGrid, Download } from 'lucide-react'; // Added icons for create modal if needed
+import { LayoutDashboard, TrendingUp, Package, CheckCircle, Clock, RefreshCw } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import Sidebar from './components/Sidebar';
 import { useSidebar } from './context/SidebarContext';
@@ -37,6 +37,7 @@ export default function Home() {
     fetchMetrics();
   }, [timeFilter]);
 
+  // Auto Refresh every 5 mins
   useEffect(() => {
     const i = setInterval(fetchMetrics, 300000); 
     return () => clearInterval(i);
@@ -57,11 +58,15 @@ export default function Home() {
 
     if (!seapods || !orders) return;
 
+    // Counters
     const completedSeapods = seapods.filter(s => s.status === 'Completed').length; 
     const inProgressSeapods = seapods.filter(s => s.status === 'In Progress').length;
+    
+    // Define Categories
     const inProgressList = orders.filter(o => o.status !== 'Shipped' && o.status !== 'Ready for Pickup');
     const readyList = orders.filter(o => o.status === 'Ready for Pickup');
 
+    // Helper to Count Types for Drill Down
     const calcBreakdown = (list) => {
         const counts = {};
         list.forEach(o => {
@@ -71,6 +76,7 @@ export default function Home() {
         return counts;
     };
 
+    // Time Filter Logic
     const now = new Date();
     let startDate = new Date();
     if (timeFilter === 'year') startDate.setFullYear(now.getFullYear(), 0, 1);
@@ -145,8 +151,22 @@ export default function Home() {
         <div className="grid grid-cols-3 gap-6 mb-8">
             <div className="col-span-2 bg-white p-6 rounded-xl shadow-sm border border-slate-200">
                 <h3 className="font-bold text-slate-800 mb-6 flex items-center gap-2"><LayoutDashboard size={18} className="text-slate-400"/>Production vs Shipping (This {timeFilter})</h3>
-                <div className="h-64 w-full"><ResponsiveContainer width="100%" height="100%"><BarChart data={chartData}><CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0"/><XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#64748B', fontSize: 12}} dy={10}/><YAxis axisLine={false} tickLine={false} tick={{fill: '#64748B', fontSize: 12}}/><Tooltip cursor={{fill: '#F1F5F9'}} contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}}/><Legend /><Bar dataKey="Built" fill="#0176D3" radius={[4, 4, 0, 0]} name="Seapods Built" barSize={30}/><Bar dataKey="Shipped" fill="#10B981" radius={[4, 4, 0, 0]} name="Orders Shipped" barSize={30}/></BarChart></ResponsiveContainer></div>
+                <div className="h-64 w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={chartData}>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0"/>
+                            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#64748B', fontSize: 12}} dy={10}/>
+                            {/* --- FIXED: Added allowDecimals={false} --- */}
+                            <YAxis allowDecimals={false} axisLine={false} tickLine={false} tick={{fill: '#64748B', fontSize: 12}}/>
+                            <Tooltip cursor={{fill: '#F1F5F9'}} contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}}/>
+                            <Legend />
+                            <Bar dataKey="Built" fill="#0176D3" radius={[4, 4, 0, 0]} name="Seapods Built" barSize={30}/>
+                            <Bar dataKey="Shipped" fill="#10B981" radius={[4, 4, 0, 0]} name="Orders Shipped" barSize={30}/>
+                        </BarChart>
+                    </ResponsiveContainer>
+                </div>
             </div>
+            
             <div className="col-span-1 space-y-6">
                  <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 h-full flex flex-col justify-center"><h4 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-2">Total Output (This {timeFilter})</h4><div className="flex items-end gap-2 mb-1"><span className="text-4xl font-bold text-slate-900">{stats.builtSeapodsCount}</span><span className="text-sm font-bold text-slate-500 mb-1.5">Units Built</span></div><div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden"><div className="bg-[#0176D3] h-full rounded-full" style={{width: '100%'}}></div></div></div>
                  <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 h-full flex flex-col justify-center"><h4 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-2">Total Shipments (This {timeFilter})</h4><div className="flex items-end gap-2 mb-1"><span className="text-4xl font-bold text-slate-900">{stats.shippedOrdersCount}</span><span className="text-sm font-bold text-slate-500 mb-1.5">Orders Shipped</span></div><div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden"><div className="bg-green-500 h-full rounded-full" style={{width: '100%'}}></div></div></div>
@@ -157,6 +177,7 @@ export default function Home() {
   );
 }
 
+// Simple Card
 function MetricCard({ title, value, icon, color, bg }) {
     return (
         <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex items-start gap-4">
@@ -169,6 +190,7 @@ function MetricCard({ title, value, icon, color, bg }) {
     );
 }
 
+// Drill Down Card
 function DrillDownCard({ title, value, icon, color, bg, breakdown }) {
     return (
         <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex flex-col justify-between h-full">
