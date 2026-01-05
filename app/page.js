@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { useRouter } from 'next/navigation';
-import { LayoutDashboard, TrendingUp, Package, CheckCircle, Clock, RefreshCw } from 'lucide-react';
+import { LayoutDashboard, TrendingUp, Package, CheckCircle, Clock, RefreshCw, Plus, Search, Filter, LayoutGrid, Download, Ship } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import Sidebar from './components/Sidebar';
 import { useSidebar } from './context/SidebarContext';
@@ -12,13 +12,14 @@ export default function Home() {
   
   const [stats, setStats] = useState({
     completedSeapods: 0,
-    inProgressSeapods: 0,
     inProgressOrders: 0,
     readyOrders: 0,
     shippedOrdersCount: 0,
     builtSeapodsCount: 0,
+    // Breakdowns
     breakdownInProgress: {},
-    breakdownReady: {}
+    breakdownReady: {},
+    breakdownShipped: {} // <--- NEW
   });
   
   const [chartData, setChartData] = useState([]);
@@ -37,7 +38,6 @@ export default function Home() {
     fetchMetrics();
   }, [timeFilter]);
 
-  // Auto Refresh
   useEffect(() => {
     const i = setInterval(fetchMetrics, 300000); 
     return () => clearInterval(i);
@@ -60,13 +60,14 @@ export default function Home() {
 
     // Counters
     const completedSeapods = seapods.filter(s => s.status === 'Completed').length; 
-    const inProgressSeapods = seapods.filter(s => s.status === 'In Progress').length;
+    // Removed inProgressSeapods from UI, but data is there if needed
     
-    // Define Categories
+    // Lists
     const inProgressList = orders.filter(o => o.status !== 'Shipped' && o.status !== 'Ready for Pickup');
     const readyList = orders.filter(o => o.status === 'Ready for Pickup');
+    const shippedList = orders.filter(o => o.status === 'Shipped'); // <--- NEW LIST
 
-    // Helper to Count Types
+    // Helper
     const calcBreakdown = (list) => {
         const counts = {};
         list.forEach(o => {
@@ -89,13 +90,14 @@ export default function Home() {
 
     setStats({
         completedSeapods, 
-        inProgressSeapods,
         inProgressOrders: inProgressList.length,
         readyOrders: readyList.length,
-        shippedOrdersCount: relevantOrders.length, 
-        builtSeapodsCount: relevantSeapods.length,
+        shippedOrdersCount: relevantOrders.length, // For Chart summary
+        builtSeapodsCount: relevantSeapods.length, // For Chart summary
+        // Save breakdowns
         breakdownInProgress: calcBreakdown(inProgressList),
-        breakdownReady: calcBreakdown(readyList)
+        breakdownReady: calcBreakdown(readyList),
+        breakdownShipped: calcBreakdown(shippedList) // <--- NEW BREAKDOWN
     });
 
     setChartData(processChartData(relevantSeapods, relevantOrders, timeFilter));
@@ -139,12 +141,12 @@ export default function Home() {
             </div>
         </div>
 
-        {/* --- KPI CARDS --- */}
+        {/* --- KPI CARDS (UPDATED LAYOUT) --- */}
         <div className="grid grid-cols-4 gap-6 mb-8">
+            {/* 1. Seapods Available */}
             <MetricCard title="Seapods Available" value={stats.completedSeapods} icon={<CheckCircle/>} color="text-green-600" bg="bg-green-50" />
-            <MetricCard title="Seapods In Progress" value={stats.inProgressSeapods} icon={<Clock/>} color="text-orange-600" bg="bg-orange-50" />
             
-            {/* DRILL DOWN CARD: Orders In Progress */}
+            {/* 2. Orders In Progress */}
             <DrillDownCard 
                 title="Orders In Progress" 
                 value={stats.inProgressOrders} 
@@ -152,12 +154,21 @@ export default function Home() {
                 icon={<TrendingUp/>} color="text-blue-600" bg="bg-blue-50" 
             />
             
-            {/* DRILL DOWN CARD: Ready for Pickup */}
+            {/* 3. Ready for Pickup */}
             <DrillDownCard 
                 title="Ready for Pickup" 
                 value={stats.readyOrders} 
                 breakdown={stats.breakdownReady}
                 icon={<Package/>} color="text-purple-600" bg="bg-purple-50" 
+            />
+
+            {/* 4. Orders Shipped (NEW WIDGET) */}
+            <DrillDownCard 
+                title="Total Shipped" 
+                // We show total historical count or filtered count, let's show filtered count matching other cards context
+                value={Object.values(stats.breakdownShipped).reduce((a,b)=>a+b, 0)} 
+                breakdown={stats.breakdownShipped}
+                icon={<Ship/>} color="text-teal-600" bg="bg-teal-50" 
             />
         </div>
 
@@ -190,7 +201,7 @@ export default function Home() {
   );
 }
 
-// Simple Metric Card (No breakdown)
+// Simple Card
 function MetricCard({ title, value, icon, color, bg }) {
     return (
         <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex items-start gap-4">
@@ -214,13 +225,9 @@ function DrillDownCard({ title, value, icon, color, bg, breakdown }) {
                     <p className="text-2xl font-bold text-slate-900">{value}</p>
                 </div>
             </div>
-            {/* Breakdown List */}
             <div className="border-t border-slate-100 pt-3 space-y-1">
                 {Object.entries(breakdown).length > 0 ? Object.entries(breakdown).map(([key, count]) => (
-                    <div key={key} className="flex justify-between text-[10px] font-medium text-slate-500">
-                        <span>{key}</span>
-                        <span className="text-slate-700 font-bold">{count}</span>
-                    </div>
+                    <div key={key} className="flex justify-between text-[10px] font-medium text-slate-500"><span>{key}</span><span className="text-slate-700 font-bold">{count}</span></div>
                 )) : <div className="text-[10px] text-slate-300 italic">No orders</div>}
             </div>
         </div>

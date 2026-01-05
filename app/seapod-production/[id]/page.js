@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Plus, Trash2, Cpu, CheckCircle2, Circle, Upload, Paperclip, FileText, Download, AlertTriangle, Box, User } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Cpu, CheckCircle2, Circle, Upload, Paperclip, FileText, Download, AlertTriangle, Box, User, Calendar } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import Sidebar from '../../components/Sidebar';
 
@@ -30,14 +30,58 @@ export default function SeapodBuildDetails({ params }) {
     setSeapod(s); setItems(i || []); setFiles(f || []); setLoading(false);
   }
 
-  // --- LOGIC ---
-  async function performUpload(file) { setUploading(true); const fileName = `${Date.now()}_${file.name}`; const filePath = `${seapodId}/${fileName}`; const { error: uploadError } = await supabase.storage.from('seapod-attachments').upload(filePath, file); if (uploadError) { alert(uploadError.message); setUploading(false); return; } const { data: fileRecord } = await supabase.from('seapod_files').insert([{ seapod_id: seapodId, file_name: file.name, file_path: filePath, uploaded_by: 'User' }]).select().single(); if (fileRecord) setFiles([fileRecord, ...files]); setUploading(false); }
-  const onFileSelect = (e) => { if (e.target.files && e.target.files.length > 0) performUpload(e.target.files[0]); }; const onDrop = (e) => { e.preventDefault(); setIsDragging(false); if (e.dataTransfer.files && e.dataTransfer.files.length > 0) performUpload(e.dataTransfer.files[0]); }; const onDragOver = (e) => { e.preventDefault(); setIsDragging(true); }; const onDragLeave = (e) => { e.preventDefault(); setIsDragging(false); };
-  async function handleStatusChange(newStatus) { if (newStatus === 'Completed') { const missing = items.some(i => !i.serial || i.serial.trim() === ''); if (missing) { alert("⚠️ Cannot complete: All Item Serial Numbers must be filled."); return; } setShowAck(true); } else { setSeapod(prev => ({ ...prev, status: newStatus })); await supabase.from('seapod_production').update({ status: newStatus }).eq('id', seapodId); } }
-  async function confirmCompletion() { setShowAck(false); setSeapod(prev => ({ ...prev, status: 'Completed' })); await supabase.from('seapod_production').update({ status: 'Completed', completed_at: new Date().toISOString() }).eq('id', seapodId); }
-  async function updateItem(itemId, field, value) { const newItems = items.map(i => i.id === itemId ? { ...i, [field]: value } : i); setItems(newItems); await supabase.from('seapod_items').update({ [field]: value }).eq('id', itemId); }
-  async function deleteItem(itemId) { if(!confirm("Remove item?")) return; setItems(items.filter(i => i.id !== itemId)); await supabase.from('seapod_items').delete().eq('id', itemId); }
-  async function addItem() { const newItem = { seapod_id: seapodId, piece: 'New Component', quantity: 1, serial: '', is_done: false }; const { data } = await supabase.from('seapod_items').insert([newItem]).select().single(); if(data) setItems([...items, data]); }
+  // --- DRAG & DROP LOGIC ---
+  async function performUpload(file) {
+    setUploading(true);
+    const fileName = `${Date.now()}_${file.name}`;
+    const filePath = `${seapodId}/${fileName}`;
+    const { error: uploadError } = await supabase.storage.from('seapod-attachments').upload(filePath, file);
+    if (uploadError) { alert(uploadError.message); setUploading(false); return; }
+    const { data: fileRecord } = await supabase.from('seapod_files').insert([{ seapod_id: seapodId, file_name: file.name, file_path: filePath, uploaded_by: 'User' }]).select().single();
+    if (fileRecord) setFiles([fileRecord, ...files]);
+    setUploading(false);
+  }
+  const onFileSelect = (e) => { if (e.target.files && e.target.files.length > 0) performUpload(e.target.files[0]); };
+  const onDrop = (e) => { e.preventDefault(); setIsDragging(false); if (e.dataTransfer.files && e.dataTransfer.files.length > 0) performUpload(e.dataTransfer.files[0]); };
+  const onDragOver = (e) => { e.preventDefault(); setIsDragging(true); };
+  const onDragLeave = (e) => { e.preventDefault(); setIsDragging(false); };
+
+  async function handleStatusChange(newStatus) {
+    if (newStatus === 'Completed') {
+        const missing = items.some(i => !i.serial || i.serial.trim() === '');
+        if (missing) { alert("⚠️ Cannot complete: All Item Serial Numbers must be filled."); return; }
+        setShowAck(true);
+    } else {
+        setSeapod(prev => ({ ...prev, status: newStatus }));
+        await supabase.from('seapod_production').update({ status: newStatus }).eq('id', seapodId);
+    }
+  }
+
+  async function confirmCompletion() {
+    setShowAck(false);
+    const now = new Date().toISOString();
+    setSeapod(prev => ({ ...prev, status: 'Completed', completed_at: now }));
+    await supabase.from('seapod_production').update({ status: 'Completed', completed_at: now }).eq('id', seapodId);
+  }
+
+  async function updateItem(itemId, field, value) {
+    const newItems = items.map(i => i.id === itemId ? { ...i, [field]: value } : i);
+    setItems(newItems);
+    await supabase.from('seapod_items').update({ [field]: value }).eq('id', itemId);
+  }
+
+  async function deleteItem(itemId) {
+    if(!confirm("Remove item?")) return;
+    setItems(items.filter(i => i.id !== itemId));
+    await supabase.from('seapod_items').delete().eq('id', itemId);
+  }
+
+  async function addItem() {
+    const newItem = { seapod_id: seapodId, piece: 'New Component', quantity: 1, serial: '', is_done: false };
+    const { data } = await supabase.from('seapod_items').insert([newItem]).select().single();
+    if(data) setItems([...items, data]);
+  }
+
   function openFile(path) { const { data } = supabase.storage.from('seapod-attachments').getPublicUrl(path); window.open(data.publicUrl, '_blank'); }
   function exportExcel() { const data = items.map(i => ({ "Component": i.piece, "Qty": i.quantity, "Serial": i.serial })); const ws = XLSX.utils.json_to_sheet(data); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Checklist"); XLSX.writeFile(wb, `Seapod_${seapod.serial_number}.xlsx`); }
 
@@ -70,8 +114,13 @@ export default function SeapodBuildDetails({ params }) {
                                 {seapod.order_number && (<span className="bg-purple-100 text-purple-700 border border-purple-200 px-2 py-0.5 rounded text-xs font-bold flex items-center gap-1"><Box size={10} /> Assigned to Order #{seapod.order_number}</span>)}
                             </div>
                             
-                            {/* CREATED BY */}
-                            {seapod.created_by && <div className="text-xs text-slate-400 flex items-center gap-1 mt-1"><User size={10}/> By {seapod.created_by}</div>}
+                            {/* --- ADDED CREATION DATES --- */}
+                            <div className="flex gap-4 mt-2 text-[10px] text-slate-400">
+                                {seapod.created_by && <span className="flex items-center gap-1"><User size={10}/> By {seapod.created_by}</span>}
+                                <span>Created: {new Date(seapod.created_at).toLocaleDateString()}</span>
+                                {seapod.completed_at && <span className="text-green-600 font-bold flex items-center gap-1"><Calendar size={10}/> Completed: {new Date(seapod.completed_at).toLocaleDateString()}</span>}
+                            </div>
+
                         </div>
                     </div>
                     <div className="flex items-end flex-col gap-2">
@@ -98,12 +147,7 @@ export default function SeapodBuildDetails({ params }) {
                 <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
                     <div className="bg-slate-50 px-6 py-3 border-b border-slate-200 flex justify-between items-center"><h3 className="font-bold text-sm text-slate-700 uppercase">Components Checklist</h3><span className="text-xs font-bold bg-white border border-slate-200 px-2 py-1 rounded text-slate-500">{items.length} Items</span></div>
                     <table className="w-full text-left">
-                        <thead className="text-xs font-bold text-slate-400 uppercase border-b border-slate-200">
-                            <tr>
-                                {/* NO CHECKBOX HEADER */}
-                                <th className="px-6 py-3">Component</th><th className="px-6 py-3 w-24">Qty</th><th className="px-6 py-3 w-48">Serial Number</th><th className="w-12"></th>
-                            </tr>
-                        </thead>
+                        <thead className="text-xs font-bold text-slate-400 uppercase border-b border-slate-200"><tr>{/* NO CHECKBOX HEADER */}<th className="px-6 py-3">Component</th><th className="px-6 py-3 w-24">Qty</th><th className="px-6 py-3 w-48">Serial Number</th><th className="w-12"></th></tr></thead>
                         <tbody className="divide-y divide-slate-100">
                             {items.map(item => (
                                 <tr key={item.id} className="group hover:bg-slate-50">
