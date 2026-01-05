@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Plus, Trash2, Box, Calendar, Ship, Upload, FileText, Paperclip, Lock, Download, Building2, Loader2, Warehouse, Cpu, Check, AlertTriangle, XCircle, User } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Box, Calendar, Ship, Upload, FileText, Paperclip, Lock, Download, Building2, Loader2, Warehouse, Cpu, Check, AlertTriangle, XCircle, User, RefreshCcw } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import Sidebar from '../../components/Sidebar';
 
@@ -124,12 +124,64 @@ export default function OrderDetails({ params }) {
     setCheckingVessel(false);
   }
 
+  // --- MANUAL WEBHOOK TRIGGER (Admin Only) ---
+  async function handleManualWebhook() {
+    if (!confirm("Are you sure you want to re-trigger the shipping webhook manually?")) return;
+    setShipping(true);
+    try {
+        const res = await fetch('/api/trigger-shipping', { method: 'POST', body: JSON.stringify({ orderId: orderId }) });
+        const json = await res.json();
+        if (json.error) alert("Error: " + json.error);
+        else alert("Webhook triggered successfully!");
+    } catch(e) { alert("Error: " + e.message); }
+    setShipping(false);
+  }
+
   // --- UPDATE ORDER LOGIC (Status Change Interceptor) ---
   async function updateOrder(field, value) {
     if (isLocked) return;
 
-    // 1. Intercept "In Box" -> Check Seapod
-    if (field === 'status' && value === 'In Box') {
+    // =========================================================
+    // 1. UNLINK LOGIC (Moving BACK to New/In Prep)
+    // =========================================================
+    const downgradeStatuses = ['New', 'In preparation'];
+    if (field === 'status' && downgradeStatuses.includes(value)) {
+        // Find Seapod Serial currently in items
+        const seapodItem = items.find(i => i.piece && i.piece.toLowerCase().includes('seapod'));
+        if (seapodItem && seapodItem.serial) {
+             // Find Seapod assigned to THIS order
+             const { data: assignedSeapod } = await supabase
+                 .from('seapod_production')
+                 .select('id')
+                 .eq('serial_number', seapodItem.serial)
+                 .eq('order_number', order.order_number) // Make sure we only unlink if it was assigned to THIS order
+                 .single();
+
+             if (assignedSeapod) {
+                 // Release it: Clear order number, set status to Completed (Available)
+                 await supabase.from('seapod_production')
+                    .update({ order_number: null, status: 'Completed' })
+                    .eq('id', assignedSeapod.id);
+             }
+        }
+    }
+
+    // =========================================================
+    // 2. PICKUP DATE VALIDATION (Ready or Shipped)
+    // =========================================================
+    if (field === 'status' && (value === 'Ready for Pickup' || value === 'Shipped')) {
+        if (!order.pickup_date) {
+            alert("⚠️ Cannot move status: 'Pick up date' is required.");
+            return;
+        }
+    }
+
+    // =========================================================
+    // 3. SEAPOD VALIDATION (In Box, Ready, Shipped)
+    // =========================================================
+    const statusesRequiringSeapod = ['In Box', 'Ready for Pickup', 'Shipped'];
+
+    if (field === 'status' && statusesRequiringSeapod.includes(value)) {
         const seapodItem = items.find(i => i.piece && i.piece.toLowerCase().includes('seapod'));
         
         if (seapodItem) {
@@ -178,7 +230,9 @@ export default function OrderDetails({ params }) {
         }
     }
 
-    // 2. Intercept "Shipped"
+    // =========================================================
+    // 4. SHIPPING MODAL INTERCEPT
+    // =========================================================
     if (field === 'status' && value === 'Shipped') {
         if (!order.vessel || order.vessel === 'Unknown Vessel') {
             alert("⚠️ Cannot Ship: Vessel Name is required.");
@@ -206,7 +260,7 @@ export default function OrderDetails({ params }) {
         hw_version: tpl.hw_version,
         sw_version: tpl.sw_version,
         status: 'In Progress',
-        created_by: userEmail // <--- SAVE CREATOR
+        created_by: userEmail
     }]).select().single().then(({data, error}) => {
         if(error) { alert(error.message); return; }
         setNewSeapodId(data.id);
@@ -343,7 +397,7 @@ export default function OrderDetails({ params }) {
   async function deleteItem(itemId) {
     if (isLocked) return;
     
-    // --- PERMISSIONS CHECK (Operations Allowed for New/In Prep) ---
+    // --- PERMISSIONS CHECK ---
     if (!isAdmin) {
         if (!canShip) { 
             alert("Permission Denied: Only Admins or Operations can delete items."); 
@@ -392,6 +446,17 @@ export default function OrderDetails({ params }) {
                    </div>
                 </div>
                 <div className="flex items-end gap-3">
+                    {/* --- MANUAL WEBHOOK BUTTON (Admin Only) --- */}
+                    {isAdmin && (
+                        <button 
+                            onClick={handleManualWebhook} 
+                            className="bg-white border border-orange-200 text-orange-600 font-bold px-3 py-2 rounded-md text-sm shadow-sm hover:bg-orange-50 flex items-center gap-2"
+                            title="Force Resend Webhook"
+                        >
+                            <RefreshCcw size={16}/> Resend Data
+                        </button>
+                    )}
+
                     <button onClick={exportToExcel} className="bg-white border border-slate-300 text-slate-700 font-bold px-3 py-2 rounded-md text-sm shadow-sm hover:bg-slate-50 flex items-center gap-2"><Download size={16}/> Export Excel</button>
                     <div className="flex flex-col items-end">
                         <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Status</label>
@@ -416,14 +481,7 @@ export default function OrderDetails({ params }) {
                         <div><label className="block text-xs font-bold text-slate-400 uppercase mb-1.5">Kit Type</label><select className="w-full text-sm font-medium border border-slate-200 rounded px-3 py-2 focus:border-[#0176D3] outline-none bg-white" value={order.type || ''} disabled={isLockedOrder} onChange={(e) => updateOrder('type', e.target.value)} ><option>Full system</option><option>Upgrade</option><option>Replacement</option><option>Spare Parts</option></select></div>
                     </div>
                 </div>
-                
-                {/* --- FILE UPLOAD CARD (With Drag & Drop) --- */}
-                <div 
-                    className={`bg-white border rounded-lg shadow-sm overflow-hidden transition-colors ${isDragging && !isLockedOrder ? 'border-[#0176D3] bg-blue-50/50' : 'border-slate-200'}`}
-                    onDragOver={onDragOver}
-                    onDragLeave={onDragLeave}
-                    onDrop={onDrop}
-                >
+                <div className={`bg-white border rounded-lg shadow-sm overflow-hidden transition-colors ${isDragging && !isLockedOrder ? 'border-[#0176D3] bg-blue-50/50' : 'border-slate-200'}`} onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop}>
                     <div className="px-5 py-3 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center"><h3 className="text-xs font-bold text-slate-500 uppercase tracking-wide flex items-center gap-2"><Paperclip size={14}/> Attachments ({files.length})</h3>{canShip && !isLockedOrder && (<label className="cursor-pointer text-xs font-bold text-[#0176D3] hover:underline flex items-center gap-1">{uploading ? 'Uploading...' : '+ Upload'}<input type="file" className="hidden" onChange={onFileSelect} disabled={uploading || isLockedOrder} /></label>)}</div>
                     {isDragging && !isLockedOrder && <div className="p-4 text-center text-[#0176D3] font-bold text-sm bg-blue-50">Drop files here to upload</div>}
                     <div className="divide-y divide-slate-50">{files.map(file => (<div key={file.id} onClick={() => openFile(file.file_path)} className="px-5 py-3 flex items-center gap-3 hover:bg-blue-50 cursor-pointer transition-colors group"><div className="bg-blue-100 p-1.5 rounded text-blue-600"><FileText size={16}/></div><div className="overflow-hidden"><p className="text-sm font-medium text-slate-700 truncate group-hover:text-[#0176D3] group-hover:underline">{file.file_name}</p><p className="text-[10px] text-slate-400">Uploaded by {file.uploaded_by}</p></div></div>))}{files.length === 0 && !isDragging && <div className="p-6 text-center text-slate-400 text-xs italic">No files attached. Drag & drop here.</div>}</div>
@@ -436,22 +494,21 @@ export default function OrderDetails({ params }) {
                    <table className="w-full text-left border-collapse">
                      <thead className="bg-white border-b border-slate-200 text-xs uppercase text-slate-400 font-bold">
                         <tr>
-                            {/* --- CHECKBOX HEADER REMOVED --- */}
                             <th className="px-6 py-3">Item</th><th className="px-6 py-3 w-20">Qty</th><th className="px-6 py-3 w-32">Serial #</th><th className="px-6 py-3 w-32">Orca ID</th>{isAdmin && <th className="px-6 py-3 w-24 text-right">Price</th>}<th className="w-10"></th>
                         </tr>
                      </thead>
                      <tbody className="divide-y divide-slate-50">
                        {items.map((item) => (
                          <tr key={item.id} className="group hover:bg-slate-50 transition-colors">
-                            {/* --- CHECKBOX CELL REMOVED --- */}
                             <td className="px-6 py-3"><select className="w-full bg-transparent border-none outline-none focus:ring-0 text-sm font-medium text-slate-900" value={item.piece || ''} disabled={isLockedOrder} onChange={(e) => updateItem(item.id, 'piece', e.target.value)}><option value="">Select Item...</option>{masterItems.map(m => <option key={m.id} value={m.name}>{m.sku} - {m.name}</option>)}</select></td>
                             <td className="px-6 py-3"><input type="number" className="w-full bg-transparent border-none outline-none" value={item.quantity || 1} disabled={isLockedOrder} onChange={(e) => updateItem(item.id, 'quantity', e.target.value)} /></td>
                             <td className="px-6 py-3"><input className="w-full bg-transparent border-none outline-none text-[#0176D3] font-medium placeholder-slate-300" value={item.serial || ''} disabled={isLockedOrder} onChange={(e) => updateItem(item.id, 'serial', e.target.value)} placeholder="---" /></td>
                             <td className="px-6 py-3"><input className="w-full bg-transparent border-none outline-none text-slate-600 placeholder-slate-300" value={item.orca_id || ''} disabled={isLockedOrder} onChange={(e) => updateItem(item.id, 'orca_id', e.target.value)} placeholder="---" /></td>
                             {isAdmin && (<td className="px-6 py-3 text-right text-xs font-mono text-slate-600">${(item.price * item.quantity).toFixed(2)}</td>)}
                             <td className="px-4 py-3 text-right">
-                                {/* DELETE LOGIC */}
-                                {(!isLockedOrder) && (isAdmin || (canShip && !['In Box', 'Ready for Pickup', 'Shipped'].includes(order.status))) && (
+                                {isAdmin && !isLockedOrder ? (
+                                   <button onClick={() => deleteItem(item.id)} className="text-slate-300 hover:text-red-600 opacity-0 group-hover:opacity-100"><Trash2 size={16}/></button>
+                                ) : canShip && !isLockedOrder && !['In Box', 'Ready for Pickup', 'Shipped'].includes(order.status) && (
                                    <button onClick={() => deleteItem(item.id)} className="text-slate-300 hover:text-red-600 opacity-0 group-hover:opacity-100"><Trash2 size={16}/></button>
                                 )}
                             </td>
@@ -464,35 +521,13 @@ export default function OrderDetails({ params }) {
             </div>
           </main>
 
-          {/* SHIP MODAL */}
-          {showShipModal && (
-            <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-              <div className="bg-white rounded-xl shadow-2xl max-w-sm w-full p-6 animate-in fade-in zoom-in duration-200 border border-slate-200">
-                <div className="flex flex-col items-center text-center"><div className="w-12 h-12 bg-blue-100 text-[#0176D3] rounded-full flex items-center justify-center mb-4"><Ship size={24} /></div><h3 className="text-lg font-bold text-slate-900">Confirm Shipment?</h3><p className="text-sm text-slate-500 mt-2 mb-6">This will <strong>lock the order</strong> and send data. Cannot be undone.</p><div className="flex gap-3 w-full"><button onClick={() => setShowShipModal(false)} disabled={shipping} className="flex-1 px-4 py-2.5 border border-slate-300 rounded-lg text-sm font-bold text-slate-700 hover:bg-slate-50">Cancel</button><button onClick={confirmShipping} disabled={shipping} className="flex-1 px-4 py-2.5 bg-[#0176D3] text-white rounded-lg text-sm font-bold hover:bg-blue-700 shadow-sm">{shipping ? 'Processing...' : 'Confirm & Ship'}</button></div></div>
-              </div>
-            </div>
-          )}
-
-          {/* CONFLICT MODAL */}
-          {showAssignedModal && conflictDetails && (
-            <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-              <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 animate-in fade-in zoom-in duration-200 border border-red-200">
-                <div className="flex flex-col items-center text-center"><div className="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center mb-4"><XCircle size={24} /></div><h3 className="text-lg font-bold text-slate-900">Seapod Already Assigned</h3><p className="text-sm text-slate-500 mt-2 mb-6">Seapod <strong>{conflictDetails.serial}</strong> is already assigned to <strong>Order #{conflictDetails.assignedTo}</strong>.<br/>Please use a different Seapod or check the number.</p><div className="flex gap-3 w-full"><button onClick={handleClearConflict} className="flex-1 px-4 py-2.5 bg-[#0176D3] text-white rounded-lg text-sm font-bold hover:bg-blue-700 shadow-sm">OK, Clear Serial</button></div></div>
-              </div>
-            </div>
-          )}
-
-          {/* SEAPOD WIZARD MODAL */}
-          {showSeapodModal && (
-            <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-2xl border border-blue-100 h-[80vh] flex flex-col">
-                    <div className="flex flex-col items-center text-center mb-6"><div className="w-12 h-12 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center mb-2"><Cpu size={24} /></div><h3 className="text-xl font-bold text-slate-900">{seapodStep === 1 ? "Seapod Not Found" : seapodStep === 3 ? "Verify Versions" : `Build: ${missingSeapodSerial}`}</h3>{seapodStep === 1 && <p className="text-sm text-slate-500">Seapod <strong>{missingSeapodSerial}</strong> does not exist. Create it now to proceed.</p>}</div>
-                    {seapodStep === 1 && (<div className="flex-1 flex flex-col justify-center"><label className="block text-xs font-bold text-slate-500 uppercase mb-2 text-center">Select Template</label><select className="w-full max-w-sm mx-auto border border-slate-300 rounded px-3 py-2 text-sm font-medium" value={selectedSeapodTemplate} onChange={(e) => setSelectedSeapodTemplate(e.target.value)}>{seapodTemplates.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}</select><div className="mt-8 flex gap-3 max-w-sm mx-auto w-full"><button onClick={() => setShowSeapodModal(false)} className="flex-1 px-4 py-2 border rounded font-bold text-slate-700">Cancel</button><button onClick={goToAckStep} className="flex-1 px-4 py-2 bg-[#0176D3] text-white rounded font-bold shadow">Start Build</button></div></div>)}
-                    {seapodStep === 2 && (<div className="flex-1 flex flex-col overflow-hidden"><div className="overflow-y-auto flex-1 border border-slate-200 rounded-lg mb-6"><table className="w-full text-left"><thead className="bg-slate-50 text-xs font-bold text-slate-500 uppercase border-b sticky top-0"><tr><th className="px-4 py-2">Item</th><th className="px-4 py-2 w-20">Qty</th><th className="px-4 py-2">Serial Number</th></tr></thead><tbody className="divide-y divide-slate-100">{newSeapodItems.map(item => (<tr key={item.id} className="hover:bg-slate-50"><td className="px-4 py-2 text-sm">{item.piece}</td><td className="px-4 py-2 text-sm">{item.quantity}</td><td className="px-4 py-2"><input className="w-full border rounded px-2 py-1 text-sm focus:border-[#0176D3] outline-none font-medium text-[#0176D3]" value={item.serial || ''} onChange={(e) => updateSeapodItemSerial(item.id, e.target.value)} placeholder="Enter Serial..." /></td></tr>))}</tbody></table></div><button onClick={handleWizardComplete} className="w-full py-3 bg-green-600 text-white rounded-lg font-bold hover:bg-green-700 shadow-md flex items-center justify-center gap-2"><Check size={20}/> Complete Build</button></div>)}
-                    {seapodStep === 3 && tplDetails && (<div className="flex-1 flex flex-col justify-center text-center px-8"><div className="bg-slate-50 border border-slate-200 rounded-lg p-6 mb-8 text-left"><div className="mb-4 pb-4 border-b border-slate-200"><span className="text-[10px] font-bold text-slate-400 uppercase block">Seapod Version</span><span className="text-lg font-bold text-[#0176D3]">{tplDetails.seapod_version || 'N/A'}</span></div><div className="grid grid-cols-2 gap-4"><div><span className="text-[10px] font-bold text-slate-400 uppercase block">HW Ver</span><span className="text-xl font-bold text-slate-900">{tplDetails.hw_version}</span></div><div><span className="text-[10px] font-bold text-slate-400 uppercase block">SW Ver</span><span className="text-xl font-bold text-slate-900">{tplDetails.sw_version}</span></div></div></div><div className="flex gap-3 max-w-sm mx-auto w-full"><button onClick={() => setSeapodStep(2)} className="flex-1 px-4 py-2 border rounded font-bold text-slate-700">Back</button><button onClick={finalWizardSubmit} className="flex-1 px-4 py-2 bg-[#0176D3] text-white rounded font-bold shadow">I Acknowledge</button></div></div>)}
-                </div>
-            </div>
-          )}
+          {/* ... ALL MODALS ... */}
+          {showShipModal && (<div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4"><div className="bg-white rounded-xl shadow-2xl max-w-sm w-full p-6 animate-in fade-in zoom-in duration-200 border border-slate-200"><div className="flex flex-col items-center text-center"><div className="w-12 h-12 bg-blue-100 text-[#0176D3] rounded-full flex items-center justify-center mb-4"><Ship size={24} /></div><h3 className="text-lg font-bold text-slate-900">Confirm Shipment?</h3><p className="text-sm text-slate-500 mt-2 mb-6">This will <strong>lock the order</strong> and send data. Cannot be undone.</p><div className="flex gap-3 w-full"><button onClick={() => setShowShipModal(false)} disabled={shipping} className="flex-1 px-4 py-2.5 border border-slate-300 rounded-lg text-sm font-bold text-slate-700 hover:bg-slate-50">Cancel</button><button onClick={confirmShipping} disabled={shipping} className="flex-1 px-4 py-2.5 bg-[#0176D3] text-white rounded-lg text-sm font-bold hover:bg-blue-700 shadow-sm">{shipping ? 'Processing...' : 'Confirm & Ship'}</button></div></div></div></div>)}
+          {showAssignedModal && conflictDetails && (<div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4"><div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 animate-in fade-in zoom-in duration-200 border border-red-200"><div className="flex flex-col items-center text-center"><div className="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center mb-4"><XCircle size={24} /></div><h3 className="text-lg font-bold text-slate-900">Seapod Already Assigned</h3><p className="text-sm text-slate-500 mt-2 mb-6">Seapod <strong>{conflictDetails.serial}</strong> is already assigned to <strong>Order #{conflictDetails.assignedTo}</strong>.<br/>Please use a different Seapod or check the number.</p><div className="flex gap-3 w-full"><button onClick={handleClearConflict} className="flex-1 px-4 py-2.5 bg-[#0176D3] text-white rounded-lg text-sm font-bold hover:bg-blue-700 shadow-sm">OK, Clear Serial</button></div></div></div></div>)}
+          {showSeapodModal && (<div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"><div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-2xl border border-blue-100 h-[80vh] flex flex-col"><div className="flex flex-col items-center text-center mb-6"><div className="w-12 h-12 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center mb-2"><Cpu size={24} /></div><h3 className="text-xl font-bold text-slate-900">{seapodStep === 1 ? "Seapod Not Found" : seapodStep === 3 ? "Verify Versions" : `Build: ${missingSeapodSerial}`}</h3>{seapodStep === 1 && <p className="text-sm text-slate-500">Seapod <strong>{missingSeapodSerial}</strong> does not exist. Create it now to proceed.</p>}</div>
+          {seapodStep === 1 && (<div className="flex-1 flex flex-col justify-center"><label className="block text-xs font-bold text-slate-500 uppercase mb-2 text-center">Select Template</label><select className="w-full max-w-sm mx-auto border border-slate-300 rounded px-3 py-2 text-sm font-medium" value={selectedSeapodTemplate} onChange={(e) => setSelectedSeapodTemplate(e.target.value)}>{seapodTemplates.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}</select><div className="mt-8 flex gap-3 max-w-sm mx-auto w-full"><button onClick={() => setShowSeapodModal(false)} className="flex-1 px-4 py-2 border rounded font-bold text-slate-700">Cancel</button><button onClick={goToAckStep} className="flex-1 px-4 py-2 bg-[#0176D3] text-white rounded font-bold shadow">Start Build</button></div></div>)}
+          {seapodStep === 2 && (<div className="flex-1 flex flex-col overflow-hidden"><div className="overflow-y-auto flex-1 border border-slate-200 rounded-lg mb-6"><table className="w-full text-left"><thead className="bg-slate-50 text-xs font-bold text-slate-500 uppercase border-b sticky top-0"><tr><th className="px-4 py-2">Item</th><th className="px-4 py-2 w-20">Qty</th><th className="px-4 py-2">Serial Number</th></tr></thead><tbody className="divide-y divide-slate-100">{newSeapodItems.map(item => (<tr key={item.id} className="hover:bg-slate-50"><td className="px-4 py-2 text-sm">{item.piece}</td><td className="px-4 py-2 text-sm">{item.quantity}</td><td className="px-4 py-2"><input className="w-full border rounded px-2 py-1 text-sm focus:border-[#0176D3] outline-none font-medium text-[#0176D3]" value={item.serial || ''} onChange={(e) => updateSeapodItemSerial(item.id, e.target.value)} placeholder="Enter Serial..." /></td></tr>))}</tbody></table></div><button onClick={handleWizardComplete} className="w-full py-3 bg-green-600 text-white rounded-lg font-bold hover:bg-green-700 shadow-md flex items-center justify-center gap-2"><Check size={20}/> Complete Build</button></div>)}
+          {seapodStep === 3 && tplDetails && (<div className="flex-1 flex flex-col justify-center text-center px-8"><div className="bg-slate-50 border border-slate-200 rounded-lg p-6 mb-8 text-left"><div className="mb-4 pb-4 border-b border-slate-200"><span className="text-[10px] font-bold text-slate-400 uppercase block">Seapod Version</span><span className="text-lg font-bold text-[#0176D3]">{tplDetails.seapod_version || 'N/A'}</span></div><div className="grid grid-cols-2 gap-4"><div><span className="text-[10px] font-bold text-slate-400 uppercase block">HW Ver</span><span className="text-xl font-bold text-slate-900">{tplDetails.hw_version}</span></div><div><span className="text-[10px] font-bold text-slate-400 uppercase block">SW Ver</span><span className="text-xl font-bold text-slate-900">{tplDetails.sw_version}</span></div></div></div><div className="flex gap-3 max-w-sm mx-auto w-full"><button onClick={() => setSeapodStep(2)} className="flex-1 px-4 py-2 border rounded font-bold text-slate-700">Back</button><button onClick={finalWizardSubmit} className="flex-1 px-4 py-2 bg-[#0176D3] text-white rounded font-bold shadow">I Acknowledge</button></div></div>)}</div></div>)}
       </div>
     </div>
   );
