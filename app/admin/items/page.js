@@ -31,12 +31,22 @@ export default function ItemManagement() {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return router.push('/login');
     const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).single();
-    if (profile?.role !== 'admin') { alert("Access Denied"); router.push('/'); } 
-    else setIsAdmin(true);
+    if (profile?.role !== 'admin') { 
+        alert("Access Denied"); 
+        router.push('/'); 
+    } 
+    else {
+        setIsAdmin(true);
+    }
   }
 
   async function fetchItems() {
-    const { data } = await supabase.from('items').select('*').order('sku');
+    // --- UPDATED SORTING: SKU Ascending (A-Z) ---
+    const { data } = await supabase
+        .from('items')
+        .select('*')
+        .order('sku', { ascending: true });
+        
     setItems(data || []);
     setLoading(false);
   }
@@ -89,7 +99,7 @@ export default function ItemManagement() {
     }
   }
 
-  // --- DELETE LOGIC (Fixed) ---
+  // --- DELETE LOGIC ---
   async function deleteItem(id) {
     if(!confirm("Are you sure you want to delete this item?")) return;
     

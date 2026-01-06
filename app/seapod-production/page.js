@@ -29,7 +29,11 @@ export default function SeapodList() {
   }
 
   async function fetchSeapods() {
-    const { data } = await supabase.from('seapod_production').select('*').order('created_at', { ascending: false });
+    // --- UPDATED SORTING: Serial Number Descending (Bigger on top) ---
+    const { data } = await supabase
+        .from('seapod_production')
+        .select('*')
+        .order('serial_number', { ascending: false }); 
     setSeapods(data || []);
   }
   
@@ -60,7 +64,7 @@ export default function SeapodList() {
 
     const { data: newSeapod, error } = await supabase.from('seapod_production').insert([{
         serial_number: serialNumber, template_name: tpl.name, seapod_version: tpl.seapod_version, hw_version: tpl.hw_version, sw_version: tpl.sw_version, status: 'In Progress', 
-        created_by: userEmail // <--- VITAL
+        created_by: userEmail
     }]).select().single();
 
     if (error) { alert("Error: " + error.message); return; }
@@ -97,11 +101,7 @@ export default function SeapodList() {
                 <tbody className="divide-y divide-slate-100">
                     {filtered.map(s => (
                         <tr key={s.id} onClick={() => router.push(`/seapod-production/${s.id}`)} className="hover:bg-blue-50 cursor-pointer group">
-                            <td className="px-6 py-4 font-bold text-[#0176D3]">
-                                {s.serial_number}
-                                {/* --- SHOW CREATOR HERE --- */}
-                                {s.created_by && <div className="text-[10px] text-slate-400 flex items-center gap-1 font-normal mt-1"><User size={10}/> {s.created_by}</div>}
-                            </td>
+                            <td className="px-6 py-4 font-bold text-[#0176D3]">{s.serial_number}</td>
                             <td className="px-6 py-4 text-sm">{s.template_name}</td>
                             <td className="px-6 py-4 text-xs text-slate-500"><div>Ver: {s.seapod_version || '-'}</div><div className="text-[10px]">HW: {s.hw_version} | SW: {s.sw_version}</div></td>
                             <td className="px-6 py-4"><div className="flex flex-col items-start gap-1.5"><span className={`px-2 py-1 rounded text-xs font-bold border ${s.status === 'Completed' ? 'bg-green-100 text-green-700 border-green-200' : s.status === 'Assigned to Order' ? 'bg-purple-100 text-purple-700 border-purple-200' : 'bg-slate-100 text-slate-600'}`}>{s.status}</span>{s.order_number && (<span className="text-[10px] font-bold text-slate-500 flex items-center gap-1"><Box size={10} /> Order #{s.order_number}</span>)}</div></td>
@@ -112,8 +112,6 @@ export default function SeapodList() {
             </table>
         </div>
       </main>
-
-      {/* Modal - Same as before */}
       {showModal && (<div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4"><div className="bg-white rounded-lg shadow-2xl p-6 w-full max-w-md"><h3 className="font-bold text-lg mb-4 text-slate-800">Start Seapod Build</h3><form onSubmit={handleCreate} className="space-y-4"><div><label className="block text-xs font-bold text-slate-500 uppercase mb-1">Seapod Serial #</label><input name="serial" className="w-full border rounded p-2 outline-none focus:border-[#0176D3]" required placeholder="e.g. SP-29291" /></div><div><label className="block text-xs font-bold text-slate-500 uppercase mb-1">Select Template</label><select name="template" className="w-full border rounded p-2 bg-white" required>{templates.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}</select></div><div className="flex justify-end gap-2 pt-4"><button type="button" onClick={() => setShowModal(false)} className="px-4 py-2 border rounded font-bold text-slate-600">Cancel</button><button type="submit" className="px-4 py-2 bg-[#0176D3] text-white rounded font-bold">Create</button></div></form></div></div>)}
     </div>
   );
