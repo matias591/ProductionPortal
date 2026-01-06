@@ -96,7 +96,7 @@ export default function OrderDetails({ params }) {
   }
 
   // --- LOCKED LOGIC ---
-  const isLocked = order?.status === 'Shipped' && !canShip; // Only Admin/Ops can edit shipped
+  const isLocked = order?.status === 'Shipped' && !canShip; // Admin/Ops can edit shipped
 
   // --- VESSEL CHECK ---
   async function handleVesselBlur() {
@@ -146,19 +146,22 @@ export default function OrderDetails({ params }) {
     // =========================================================
     const downgradeStatuses = ['New', 'In preparation'];
     if (field === 'status' && downgradeStatuses.includes(value)) {
-        
-        // Find Seapod assigned to THIS order specifically
-        const { data: assignedSeapod } = await supabase
-             .from('seapod_production')
-             .select('id')
-             .eq('order_number', order.order_number) // Strict check: Must belong to this order
-             .single();
+        // Only unlink if coming from an advanced status
+        if (['In Box', 'Ready for Pickup', 'Shipped'].includes(order.status)) {
+             // Find Seapod assigned to THIS order specifically
+             // Note: We use String() to be safe with types here too
+             const { data: assignedSeapod } = await supabase
+                 .from('seapod_production')
+                 .select('id')
+                 .eq('order_number', String(order.order_number)) 
+                 .single();
 
-        if (assignedSeapod) {
-             // Release it: Clear order number, set status to Completed (Available)
-             await supabase.from('seapod_production')
-                .update({ order_number: null, status: 'Completed' })
-                .eq('id', assignedSeapod.id);
+             if (assignedSeapod) {
+                 // Release it: Clear order number, set status to Completed
+                 await supabase.from('seapod_production')
+                    .update({ order_number: null, status: 'Completed' })
+                    .eq('id', assignedSeapod.id);
+             }
         }
     }
 
@@ -200,21 +203,23 @@ export default function OrderDetails({ params }) {
                 setShowSeapodModal(true);
                 return; 
             } else {
-                // --- FIX: CHECK OWNERSHIP FIRST ---
-                // If this seapod is already ours, we skip validation and just update status
-                if (existingSeapod.order_number === order.order_number) {
-                    // Do nothing, proceed to save status
+                // --- FIXED: TYPE-SAFE CHECK FOR OWNERSHIP ---
+                const isMySeapod = String(existingSeapod.order_number) === String(order.order_number);
+                
+                if (isMySeapod) {
+                    // It is already assigned to this order (exact match).
+                    // We allow it to proceed without checking status/conflict.
                 } else {
-                    // It's not ours (yet), check if we can take it
+                    // It is NOT currently assigned to this order (or is null)
                     
-                    // 1. Status Check: Allow 'Completed' OR 'Assigned to Order' (conflict check handles actual assignment)
+                    // 1. Status Check: Must be Completed OR Assigned (we check assignment ownership next)
                     if (existingSeapod.status !== 'Completed' && existingSeapod.status !== 'Assigned to Order') {
-                        alert(`⚠️ Seapod ${seapodItem.serial} status is '${existingSeapod.status}'. It must be 'Completed' or 'Assigned to Order' first.`);
+                        alert(`⚠️ Seapod ${seapodItem.serial} status is '${existingSeapod.status}'. It must be 'Completed' first.`);
                         return;
                     }
                     
                     // 2. Conflict Check: Is it assigned to SOMEONE ELSE?
-                    if (existingSeapod.order_number && existingSeapod.order_number !== order.order_number) {
+                    if (existingSeapod.order_number && String(existingSeapod.order_number) !== String(order.order_number)) {
                         setConflictDetails({
                             serial: seapodItem.serial,
                             assignedTo: existingSeapod.order_number,
@@ -226,7 +231,7 @@ export default function OrderDetails({ params }) {
                     
                     // 3. Valid -> Link It
                     await supabase.from('seapod_production').update({ 
-                        order_number: order.order_number, 
+                        order_number: String(order.order_number), 
                         status: 'Assigned to Order' 
                     }).eq('id', existingSeapod.id);
                 }
@@ -298,7 +303,7 @@ export default function OrderDetails({ params }) {
     // Complete & Assign
     await supabase.from('seapod_production').update({ 
         status: 'Assigned to Order', 
-        order_number: order.order_number,
+        order_number: String(order.order_number), // Ensure String
         completed_at: new Date().toISOString()
     }).eq('id', newSeapodId);
 
@@ -390,7 +395,7 @@ export default function OrderDetails({ params }) {
   }
 
   async function addItem() {
-    if (isLocked && !canShip) return; // Vendor Locked
+    if (isLocked) return;
     const firstMaster = masterItems[0];
     const nextOrder = items.length > 0 ? Math.max(...items.map(i => i.sort_order || 0)) + 1 : 1;
     const newItem = { order_id: orderId, piece: firstMaster ? firstMaster.name : 'New Item', quantity: 1, serial: '', price: firstMaster ? firstMaster.price : 0, is_done: false, sort_order: nextOrder };
@@ -399,7 +404,7 @@ export default function OrderDetails({ params }) {
   }
 
   async function deleteItem(itemId) {
-    if (isLocked && !canShip) return; // Vendor Locked
+    if (isLocked) return;
     
     // --- PERMISSIONS CHECK ---
     if (!isAdmin) {
@@ -498,14 +503,12 @@ export default function OrderDetails({ params }) {
                    <table className="w-full text-left border-collapse">
                      <thead className="bg-white border-b border-slate-200 text-xs uppercase text-slate-400 font-bold">
                         <tr>
-                            {/* --- CHECKBOX HEADER REMOVED --- */}
                             <th className="px-6 py-3">Item</th><th className="px-6 py-3 w-20">Qty</th><th className="px-6 py-3 w-32">Serial #</th><th className="px-6 py-3 w-32">Orca ID</th>{isAdmin && <th className="px-6 py-3 w-24 text-right">Price</th>}<th className="w-10"></th>
                         </tr>
                      </thead>
-                     <tbody className="divide-y divide-slate-100">
+                     <tbody className="divide-y divide-slate-50">
                        {items.map((item) => (
                          <tr key={item.id} className="group hover:bg-slate-50 transition-colors">
-                            {/* --- CHECKBOX CELL REMOVED --- */}
                             <td className="px-6 py-3"><select className="w-full bg-transparent border-none outline-none focus:ring-0 text-sm font-medium text-slate-900" value={item.piece || ''} disabled={isLockedOrder} onChange={(e) => updateItem(item.id, 'piece', e.target.value)}><option value="">Select Item...</option>{masterItems.map(m => <option key={m.id} value={m.name}>{m.sku} - {m.name}</option>)}</select></td>
                             <td className="px-6 py-3"><input type="number" className="w-full bg-transparent border-none outline-none" value={item.quantity || 1} disabled={isLockedOrder} onChange={(e) => updateItem(item.id, 'quantity', e.target.value)} /></td>
                             <td className="px-6 py-3"><input className="w-full bg-transparent border-none outline-none text-[#0176D3] font-medium placeholder-slate-300" value={item.serial || ''} disabled={isLockedOrder} onChange={(e) => updateItem(item.id, 'serial', e.target.value)} placeholder="---" /></td>
@@ -526,7 +529,7 @@ export default function OrderDetails({ params }) {
             </div>
           </main>
 
-          {/* ... MODALS ... */}
+          {/* ... ALL MODALS ... */}
           {showShipModal && (<div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4"><div className="bg-white rounded-xl shadow-2xl max-w-sm w-full p-6 animate-in fade-in zoom-in duration-200 border border-slate-200"><div className="flex flex-col items-center text-center"><div className="w-12 h-12 bg-blue-100 text-[#0176D3] rounded-full flex items-center justify-center mb-4"><Ship size={24} /></div><h3 className="text-lg font-bold text-slate-900">Confirm Shipment?</h3><p className="text-sm text-slate-500 mt-2 mb-6">This will <strong>lock the order</strong> and send data. Cannot be undone.</p><div className="flex gap-3 w-full"><button onClick={() => setShowShipModal(false)} disabled={shipping} className="flex-1 px-4 py-2.5 border border-slate-300 rounded-lg text-sm font-bold text-slate-700 hover:bg-slate-50">Cancel</button><button onClick={confirmShipping} disabled={shipping} className="flex-1 px-4 py-2.5 bg-[#0176D3] text-white rounded-lg text-sm font-bold hover:bg-blue-700 shadow-sm">{shipping ? 'Processing...' : 'Confirm & Ship'}</button></div></div></div></div>)}
           {showAssignedModal && conflictDetails && (<div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4"><div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 animate-in fade-in zoom-in duration-200 border border-red-200"><div className="flex flex-col items-center text-center"><div className="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center mb-4"><XCircle size={24} /></div><h3 className="text-lg font-bold text-slate-900">Seapod Already Assigned</h3><p className="text-sm text-slate-500 mt-2 mb-6">Seapod <strong>{conflictDetails.serial}</strong> is already assigned to <strong>Order #{conflictDetails.assignedTo}</strong>.<br/>Please use a different Seapod or check the number.</p><div className="flex gap-3 w-full"><button onClick={handleClearConflict} className="flex-1 px-4 py-2.5 bg-[#0176D3] text-white rounded-lg text-sm font-bold hover:bg-blue-700 shadow-sm">OK, Clear Serial</button></div></div></div></div>)}
           {showSeapodModal && (<div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"><div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-2xl border border-blue-100 h-[80vh] flex flex-col"><div className="flex flex-col items-center text-center mb-6"><div className="w-12 h-12 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center mb-2"><Cpu size={24} /></div><h3 className="text-xl font-bold text-slate-900">{seapodStep === 1 ? "Seapod Not Found" : seapodStep === 3 ? "Verify Versions" : `Build: ${missingSeapodSerial}`}</h3>{seapodStep === 1 && <p className="text-sm text-slate-500">Seapod <strong>{missingSeapodSerial}</strong> does not exist. Create it now to proceed.</p>}</div>
