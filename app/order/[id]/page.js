@@ -96,7 +96,9 @@ export default function OrderDetails({ params }) {
   }
 
   // --- LOCKED LOGIC ---
-  const isLocked = order?.status === 'Shipped' && !canShip; // Only Admin/Ops can edit shipped
+  // Locked only for Vendors if Shipped. 
+  // Admins/Ops (canShip) remain UNLOCKED to add items or change status back.
+  const isLocked = order?.status === 'Shipped' && !canShip;
 
   // --- VESSEL CHECK ---
   async function handleVesselBlur() {
@@ -147,18 +149,16 @@ export default function OrderDetails({ params }) {
     const downgradeStatuses = ['New', 'In preparation'];
     if (field === 'status' && downgradeStatuses.includes(value)) {
         
-        // Find Seapod assigned to THIS order specifically
-        const { data: assignedSeapod } = await supabase
-             .from('seapod_production')
-             .select('id')
-             .eq('order_number', order.order_number) // Strict check: Must belong to this order
-             .single();
-
-        if (assignedSeapod) {
-             // Release it: Clear order number, set status to Completed (Available)
-             await supabase.from('seapod_production')
-                .update({ order_number: null, status: 'Completed' })
-                .eq('id', assignedSeapod.id);
+        // Only attempt to free seapod if we are moving FROM a locked-in state
+        if (['In Box', 'Ready for Pickup', 'Shipped'].includes(order.status)) {
+             // Find Seapod assigned to THIS order specifically
+             // We query by order_number to ensure we find the one linked to this record
+             const { error: unlinkError } = await supabase
+                 .from('seapod_production')
+                 .update({ order_number: null, status: 'Completed' })
+                 .eq('order_number', order.order_number);
+             
+             if (unlinkError) console.error("Unlink Error:", unlinkError);
         }
     }
 
@@ -200,31 +200,32 @@ export default function OrderDetails({ params }) {
                 setShowSeapodModal(true);
                 return; 
             } else {
-                // Found -> Validate Status
-                if (existingSeapod.status !== 'Completed' && existingSeapod.status !== 'Assigned to Order') {
-                    // Note: 'Assigned to Order' is okay IF it is assigned to US (see below)
-                    alert(`⚠️ Seapod ${seapodItem.serial} status is '${existingSeapod.status}'. It must be 'Completed' first.`);
-                    return;
+                // --- CRITICAL FIX: IF ALREADY ASSIGNED TO THIS ORDER, SKIP CHECKS ---
+                if (existingSeapod.order_number === order.order_number) {
+                    // It's already ours, proceed with update
+                } else {
+                    // Check Status
+                    if (existingSeapod.status !== 'Completed') {
+                        alert(`⚠️ Seapod ${seapodItem.serial} status is '${existingSeapod.status}'. It must be 'Completed' first.`);
+                        return;
+                    }
+                    // Check Conflict
+                    if (existingSeapod.order_number) {
+                        setConflictDetails({
+                            serial: seapodItem.serial,
+                            assignedTo: existingSeapod.order_number,
+                            itemId: seapodItem.id
+                        });
+                        setShowAssignedModal(true);
+                        return; 
+                    }
+                    
+                    // Link It
+                    await supabase.from('seapod_production').update({ 
+                        order_number: order.order_number, 
+                        status: 'Assigned to Order' 
+                    }).eq('id', existingSeapod.id);
                 }
-                
-                // --- FIXED CONFLICT LOGIC ---
-                // If it's assigned to someone else -> Conflict
-                // If it's assigned to THIS order -> OK (Proceed)
-                if (existingSeapod.order_number && existingSeapod.order_number !== order.order_number) {
-                    setConflictDetails({
-                        serial: seapodItem.serial,
-                        assignedTo: existingSeapod.order_number,
-                        itemId: seapodItem.id
-                    });
-                    setShowAssignedModal(true);
-                    return; 
-                }
-                
-                // Valid -> Link it (Idempotent: safe to run even if already linked)
-                await supabase.from('seapod_production').update({ 
-                    order_number: order.order_number, 
-                    status: 'Assigned to Order' 
-                }).eq('id', existingSeapod.id);
             }
         }
     }
@@ -251,7 +252,6 @@ export default function OrderDetails({ params }) {
     const tpl = seapodTemplates.find(t => t.id === selectedSeapodTemplate);
     setTplDetails(tpl);
     
-    // Create Header (In Progress)
     supabase.from('seapod_production').insert([{
         serial_number: missingSeapodSerial,
         template_name: tpl.name,
@@ -264,14 +264,12 @@ export default function OrderDetails({ params }) {
         if(error) { alert(error.message); return; }
         setNewSeapodId(data.id);
         
-        // Copy Items
         supabase.from('seapod_template_items').select('*').eq('template_id', selectedSeapodTemplate).then(({data: tItems}) => {
             const itemsToInsert = tItems.map(i => ({ seapod_id: data.id, piece: i.piece, item_id: i.item_id, quantity: i.quantity, sort_order: i.sort_order }));
             supabase.from('seapod_items').insert(itemsToInsert).then(() => {
-                // Fetch for editing
                 supabase.from('seapod_items').select('*').eq('seapod_id', data.id).order('sort_order').then(({data: i}) => {
                     setNewSeapodItems(i);
-                    setSeapodStep(2); // Go to Step 2
+                    setSeapodStep(2); 
                 });
             });
         });
@@ -286,11 +284,10 @@ export default function OrderDetails({ params }) {
   async function handleWizardComplete() {
     const missing = newSeapodItems.some(i => !i.serial || i.serial.trim() === '');
     if (missing) { alert("Please fill ALL serial numbers."); return; }
-    setSeapodStep(3); // Go to Ack
+    setSeapodStep(3); 
   }
 
   async function finalWizardSubmit() {
-    // Complete & Assign
     await supabase.from('seapod_production').update({ 
         status: 'Assigned to Order', 
         order_number: order.order_number,
@@ -299,7 +296,6 @@ export default function OrderDetails({ params }) {
 
     setShowSeapodModal(false);
     
-    // Update Order Status
     if (pendingStatus) {
         setOrder(prev => ({ ...prev, status: pendingStatus }));
         await supabase.from('orders').update({ status: pendingStatus }).eq('id', orderId);
@@ -385,7 +381,7 @@ export default function OrderDetails({ params }) {
   }
 
   async function addItem() {
-    if (isLocked) return;
+    if (isLocked && !canShip) return; // Vendor Locked
     const firstMaster = masterItems[0];
     const nextOrder = items.length > 0 ? Math.max(...items.map(i => i.sort_order || 0)) + 1 : 1;
     const newItem = { order_id: orderId, piece: firstMaster ? firstMaster.name : 'New Item', quantity: 1, serial: '', price: firstMaster ? firstMaster.price : 0, is_done: false, sort_order: nextOrder };
@@ -394,11 +390,9 @@ export default function OrderDetails({ params }) {
   }
 
   async function deleteItem(itemId) {
-    if (isLocked) return;
+    if (isLocked && !canShip) return; // Vendor Locked
     
-    // --- PERMISSIONS CHECK (FIXED) ---
-    // Admins can delete always (unless shipped/locked)
-    // Operations can delete ONLY if status is New or In Prep
+    // --- PERMISSIONS CHECK ---
     if (!isAdmin) {
         if (!canShip) { 
             alert("Permission Denied: Only Admins or Operations can delete items."); 
@@ -421,7 +415,7 @@ export default function OrderDetails({ params }) {
   if (loading) return <div className="flex min-h-screen bg-[#F3F4F6]"><Sidebar /><div className="ml-64 p-10 text-slate-500">Loading Order...</div></div>;
   if (!order) return <div className="flex min-h-screen bg-[#F3F4F6]"><Sidebar /><div className="ml-64 p-10 text-red-500">Order not found.</div></div>;
   const totalCost = items.reduce((sum, item) => sum + ((item.quantity || 0) * (item.price || 0)), 0);
-  const isLockedOrder = order.status === 'Shipped' && !canShip; // Only Vendor is locked out, Ops/Admin can edit Shipped
+  const isLockedOrder = order.status === 'Shipped' && !isAdmin && !canShip;
 
   return (
     <div className="flex min-h-screen bg-[#F3F4F6] font-sans">
@@ -495,21 +489,19 @@ export default function OrderDetails({ params }) {
                    <table className="w-full text-left border-collapse">
                      <thead className="bg-white border-b border-slate-200 text-xs uppercase text-slate-400 font-bold">
                         <tr>
-                            {/* --- CHECKBOX HEADER REMOVED --- */}
                             <th className="px-6 py-3">Item</th><th className="px-6 py-3 w-20">Qty</th><th className="px-6 py-3 w-32">Serial #</th><th className="px-6 py-3 w-32">Orca ID</th>{isAdmin && <th className="px-6 py-3 w-24 text-right">Price</th>}<th className="w-10"></th>
                         </tr>
                      </thead>
-                     <tbody className="divide-y divide-slate-100">
+                     <tbody className="divide-y divide-slate-50">
                        {items.map((item) => (
                          <tr key={item.id} className="group hover:bg-slate-50 transition-colors">
-                            {/* --- CHECKBOX CELL REMOVED --- */}
                             <td className="px-6 py-3"><select className="w-full bg-transparent border-none outline-none focus:ring-0 text-sm font-medium text-slate-900" value={item.piece || ''} disabled={isLockedOrder} onChange={(e) => updateItem(item.id, 'piece', e.target.value)}><option value="">Select Item...</option>{masterItems.map(m => <option key={m.id} value={m.name}>{m.sku} - {m.name}</option>)}</select></td>
                             <td className="px-6 py-3"><input type="number" className="w-full bg-transparent border-none outline-none" value={item.quantity || 1} disabled={isLockedOrder} onChange={(e) => updateItem(item.id, 'quantity', e.target.value)} /></td>
                             <td className="px-6 py-3"><input className="w-full bg-transparent border-none outline-none text-[#0176D3] font-medium placeholder-slate-300" value={item.serial || ''} disabled={isLockedOrder} onChange={(e) => updateItem(item.id, 'serial', e.target.value)} placeholder="---" /></td>
                             <td className="px-6 py-3"><input className="w-full bg-transparent border-none outline-none text-slate-600 placeholder-slate-300" value={item.orca_id || ''} disabled={isLockedOrder} onChange={(e) => updateItem(item.id, 'orca_id', e.target.value)} placeholder="---" /></td>
                             {isAdmin && (<td className="px-6 py-3 text-right text-xs font-mono text-slate-600">${(item.price * item.quantity).toFixed(2)}</td>)}
                             <td className="px-4 py-3 text-right">
-                                {/* DELETE BUTTON: Shows for Admin OR Ops (if status allows) */}
+                                {/* DELETE LOGIC */}
                                 {(!isLockedOrder) && (isAdmin || (canShip && !['In Box', 'Ready for Pickup', 'Shipped'].includes(order.status))) && (
                                    <button onClick={() => deleteItem(item.id)} className="text-slate-300 hover:text-red-600 opacity-0 group-hover:opacity-100"><Trash2 size={16}/></button>
                                 )}
@@ -518,7 +510,10 @@ export default function OrderDetails({ params }) {
                        ))}
                      </tbody>
                    </table>
-                   {!isLockedOrder && (<button onClick={addItem} className="w-full py-4 text-sm font-bold text-slate-500 hover:bg-slate-50 hover:text-[#0176D3] transition-colors flex items-center justify-center gap-2 border-t border-slate-200"><Plus size={16} /> Add New Line Item</button>)}
+                   {/* ADD ITEM BUTTON - Visible to Admins/Ops if not Shipped */}
+                   {(!isLockedOrder) && (isAdmin || canShip) && (
+                       <button onClick={addItem} className="w-full py-4 text-sm font-bold text-slate-500 hover:bg-slate-50 hover:text-[#0176D3] transition-colors flex items-center justify-center gap-2 border-t border-slate-200"><Plus size={16} /> Add New Line Item</button>
+                   )}
                 </div>
             </div>
           </main>
