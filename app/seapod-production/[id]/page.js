@@ -70,6 +70,17 @@ export default function SeapodBuildDetails({ params }) {
     await supabase.from('seapod_items').update({ [field]: value }).eq('id', itemId);
   }
 
+  // --- NEW: HANDLE ENTER KEY NAVIGATION ---
+  const handleKeyDown = (e, index) => {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        const inputs = document.querySelectorAll('.serial-input');
+        if (index < inputs.length - 1) {
+            inputs[index + 1].focus();
+        }
+    }
+  };
+
   async function deleteItem(itemId) {
     if(!confirm("Remove item?")) return;
     setItems(items.filter(i => i.id !== itemId));
@@ -114,7 +125,7 @@ export default function SeapodBuildDetails({ params }) {
                                 {seapod.order_number && (<span className="bg-purple-100 text-purple-700 border border-purple-200 px-2 py-0.5 rounded text-xs font-bold flex items-center gap-1"><Box size={10} /> Assigned to Order #{seapod.order_number}</span>)}
                             </div>
                             
-                            {/* --- ADDED CREATION DATES --- */}
+                            {/* --- CREATED BY --- */}
                             <div className="flex gap-4 mt-2 text-[10px] text-slate-400">
                                 {seapod.created_by && <span className="flex items-center gap-1"><User size={10}/> By {seapod.created_by}</span>}
                                 <span>Created: {new Date(seapod.created_at).toLocaleDateString()}</span>
@@ -149,12 +160,21 @@ export default function SeapodBuildDetails({ params }) {
                     <table className="w-full text-left">
                         <thead className="text-xs font-bold text-slate-400 uppercase border-b border-slate-200"><tr>{/* NO CHECKBOX HEADER */}<th className="px-6 py-3">Component</th><th className="px-6 py-3 w-24">Qty</th><th className="px-6 py-3 w-48">Serial Number</th><th className="w-12"></th></tr></thead>
                         <tbody className="divide-y divide-slate-100">
-                            {items.map(item => (
+                            {items.map((item, index) => (
                                 <tr key={item.id} className="group hover:bg-slate-50">
                                     {/* NO CHECKBOX CELL */}
                                     <td className="px-6 py-3 text-sm font-medium text-slate-700">{item.piece}</td>
                                     <td className="px-6 py-3 text-sm">{item.quantity}</td>
-                                    <td className="px-6 py-3"><input className="w-full border border-slate-200 rounded px-2 py-1.5 text-sm focus:border-[#0176D3] outline-none text-[#0176D3] font-medium placeholder-slate-300" placeholder="Scan Serial" value={item.serial || ''} onChange={(e) => updateItem(item.id, 'serial', e.target.value)} /></td>
+                                    <td className="px-6 py-3">
+                                        {/* --- UPDATED INPUT WITH CLASS AND ONKEYDOWN --- */}
+                                        <input 
+                                            className="serial-input w-full border border-slate-200 rounded px-2 py-1.5 text-sm focus:border-[#0176D3] outline-none text-[#0176D3] font-medium placeholder-slate-300"
+                                            placeholder="Scan Serial" 
+                                            value={item.serial || ''} 
+                                            onChange={(e) => updateItem(item.id, 'serial', e.target.value)}
+                                            onKeyDown={(e) => handleKeyDown(e, index)} // <--- Navigation
+                                        />
+                                    </td>
                                     <td className="px-4 py-3 text-right"><button onClick={() => deleteItem(item.id)} className="text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 size={16}/></button></td>
                                 </tr>
                             ))}
@@ -165,7 +185,7 @@ export default function SeapodBuildDetails({ params }) {
             </div>
         </div>
 
-        {/* ACKNOWLEDGEMENT MODAL (Unchanged) */}
+        {/* ACKNOWLEDGEMENT MODAL */}
         {showAck && (<div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"><div className="bg-white rounded-xl shadow-2xl p-8 w-full max-w-md text-center border-t-4 border-[#0176D3]"><div className="w-16 h-16 bg-blue-50 text-[#0176D3] rounded-full flex items-center justify-center mx-auto mb-4"><AlertTriangle size={32}/></div><h2 className="text-xl font-bold text-slate-900 mb-2">Build Verification</h2><p className="text-slate-500 text-sm mb-6">You are marking Seapod <strong>{seapod.serial_number}</strong> as Completed.</p><div className="bg-slate-50 border border-slate-200 rounded-lg p-4 mb-6 text-left"><div className="mb-4 pb-4 border-b border-slate-200"><span className="text-[10px] font-bold text-slate-400 uppercase block">Seapod Version</span><span className="text-lg font-bold text-[#0176D3]">{seapod.seapod_version || 'N/A'}</span></div><div className="grid grid-cols-2 gap-4"><div><span className="text-[10px] font-bold text-slate-400 uppercase block">Hardware Ver.</span><span className="text-lg font-bold text-slate-800">{seapod.hw_version || 'N/A'}</span></div><div><span className="text-[10px] font-bold text-slate-400 uppercase block">Software Ver.</span><span className="text-lg font-bold text-slate-800">{seapod.sw_version || 'N/A'}</span></div></div></div><div className="flex gap-3"><button onClick={() => setShowAck(false)} className="flex-1 py-3 border border-slate-300 rounded-lg font-bold text-slate-600 hover:bg-slate-50">Cancel</button><button onClick={confirmCompletion} className="flex-1 py-3 bg-[#0176D3] text-white rounded-lg font-bold hover:bg-blue-700 shadow-lg">Confirm & Complete</button></div><p className="text-xs text-slate-400 mt-4">By confirming, you acknowledge the Seapod contains these versions.</p></div></div>)}
       </main>
     </div>

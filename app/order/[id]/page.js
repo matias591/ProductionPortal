@@ -232,7 +232,7 @@ export default function OrderDetails({ params }) {
     await supabase.from('orders').update({ [field]: value }).eq('id', orderId);
   }
 
-  // --- SEAPOD WIZARD LOGIC ---
+  // --- UPDATED WIZARD LOGIC ---
   function goToAckStep() {
     const tpl = seapodTemplates.find(t => t.id === selectedSeapodTemplate);
     setTplDetails(tpl);
@@ -248,8 +248,17 @@ export default function OrderDetails({ params }) {
     }]).select().single().then(({data, error}) => {
         if(error) { alert(error.message); return; }
         setNewSeapodId(data.id);
+        
         supabase.from('seapod_template_items').select('*').eq('template_id', selectedSeapodTemplate).then(({data: tItems}) => {
-            const itemsToInsert = tItems.map(i => ({ seapod_id: data.id, piece: i.piece, item_id: i.item_id, quantity: i.quantity, sort_order: i.sort_order }));
+            const itemsToInsert = tItems.map(i => ({ 
+                seapod_id: data.id, 
+                piece: i.piece, 
+                item_id: i.item_id, 
+                quantity: i.quantity, 
+                sort_order: i.sort_order,
+                // --- AUTO FILL SERIAL IF SEAPOD ---
+                serial: i.piece.toLowerCase().includes('seapod') ? missingSeapodSerial : ''
+            }));
             supabase.from('seapod_items').insert(itemsToInsert).then(() => {
                 supabase.from('seapod_items').select('*').eq('seapod_id', data.id).order('sort_order').then(({data: i}) => {
                     setNewSeapodItems(i);
@@ -293,16 +302,8 @@ export default function OrderDetails({ params }) {
     try {
         const res = await fetch('/api/trigger-shipping', { method: 'POST', body: JSON.stringify({ orderId: orderId }) });
         const json = await res.json();
-        if (json.error) {
-             alert("Error: " + json.error);
-        } else {
-             setOrder({ ...order, status: 'Shipped' });
-             await supabase.from('orders').update({ 
-                 status: 'Shipped',
-                 shipped_at: new Date().toISOString()
-             }).eq('id', orderId);
-             setShowShipModal(false); 
-        }
+        if (json.error) alert("Error: " + json.error);
+        else { setOrder({ ...order, status: 'Shipped' }); await supabase.from('orders').update({ status: 'Shipped', shipped_at: new Date().toISOString() }).eq('id', orderId); setShowShipModal(false); }
     } catch (e) { alert(e.message); }
     setShipping(false);
   }
@@ -351,54 +352,31 @@ export default function OrderDetails({ params }) {
   async function updateItem(itemId, field, value) {
     if (isLocked) return;
     let updateData = { [field]: value };
-    
-    // Auto-populate price if item changes
     if (field === 'piece') {
         const selectedMaster = masterItems.find(m => m.name === value);
         if (selectedMaster) updateData.price = selectedMaster.price;
     }
-
     const newItems = items.map(i => i.id === itemId ? { ...i, ...updateData } : i);
     setItems(newItems);
     await supabase.from('order_items').update(updateData).eq('id', itemId);
   }
 
-  // --- UPDATED ADD ITEM (Initialize Empty) ---
+  // --- ADD ITEM (Empty Name) ---
   async function addItem() {
     if (isLocked) return;
-    
     const nextOrder = items.length > 0 ? Math.max(...items.map(i => i.sort_order || 0)) + 1 : 1;
-    
-    // Initialize blank item (no pre-selected piece)
-    const newItem = { 
-        order_id: orderId, 
-        piece: '', // Blank
-        quantity: 1, 
-        serial: '', 
-        price: 0, 
-        is_done: false, 
-        sort_order: nextOrder 
-    };
-    
+    const newItem = { order_id: orderId, piece: '', quantity: 1, serial: '', price: 0, is_done: false, sort_order: nextOrder };
     const { data } = await supabase.from('order_items').insert([newItem]).select().single();
     if(data) setItems([...items, data]);
   }
 
   async function deleteItem(itemId) {
     if (isLocked) return;
-    
     if (!isAdmin) {
-        if (!canShip) { 
-            alert("Permission Denied: Only Admins or Operations can delete items."); 
-            return; 
-        }
-        const restrictedStatuses = ['In Box', 'Ready for Pickup', 'Shipped'];
-        if (restrictedStatuses.includes(order.status)) {
-            alert(`Operations cannot delete items when status is '${order.status}'. Please contact an Admin.`);
-            return;
-        }
+        if (!canShip) { alert("Permission Denied."); return; }
+        const restricted = ['In Box', 'Ready for Pickup', 'Shipped'];
+        if (restricted.includes(order.status)) { alert(`Operations cannot delete items when status is '${order.status}'.`); return; }
     }
-    
     if(!confirm('Remove this item?')) return;
     setItems(items.filter(i => i.id !== itemId));
     await supabase.from('order_items').delete().eq('id', itemId);
@@ -424,20 +402,12 @@ export default function OrderDetails({ params }) {
                      <div className="flex items-center gap-3 text-sm text-slate-500 mt-1">
                         <span className="font-mono bg-slate-100 px-2 py-0.5 rounded text-xs border border-slate-200 text-slate-600">#{order.order_number}</span>
                         <span className="flex items-center gap-1 text-slate-600 font-medium"><Building2 size={12} /> {order.account_name || 'No Account'}</span>
-                        {order.created_by && (
-                            <span className="flex items-center gap-1 text-xs text-slate-400 border-l border-slate-200 pl-3">
-                                <User size={10}/> By {order.created_by} • {new Date(order.created_at).toLocaleDateString()}
-                            </span>
-                        )}
+                        {order.created_by && (<span className="flex items-center gap-1 text-xs text-slate-400 border-l border-slate-200 pl-3"><User size={10}/> By {order.created_by} • {new Date(order.created_at).toLocaleDateString()}</span>)}
                      </div>
                    </div>
                 </div>
                 <div className="flex items-end gap-3">
-                    {isAdmin && (
-                        <button onClick={handleManualWebhook} className="bg-white border border-orange-200 text-orange-600 font-bold px-3 py-2 rounded-md text-sm shadow-sm hover:bg-orange-50 flex items-center gap-2" title="Force Resend Webhook">
-                            <RefreshCcw size={16}/> Resend Data
-                        </button>
-                    )}
+                    {isAdmin && (<button onClick={handleManualWebhook} className="bg-white border border-orange-200 text-orange-600 font-bold px-3 py-2 rounded-md text-sm shadow-sm hover:bg-orange-50 flex items-center gap-2" title="Force Resend Webhook"><RefreshCcw size={16}/> Resend Data</button>)}
                     <button onClick={exportToExcel} className="bg-white border border-slate-300 text-slate-700 font-bold px-3 py-2 rounded-md text-sm shadow-sm hover:bg-slate-50 flex items-center gap-2"><Download size={16}/> Export Excel</button>
                     <div className="flex flex-col items-end">
                         <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Status</label>
@@ -478,10 +448,10 @@ export default function OrderDetails({ params }) {
                             <th className="px-6 py-3">Item</th><th className="px-6 py-3 w-20">Qty</th><th className="px-6 py-3 w-32">Serial #</th><th className="px-6 py-3 w-32">Orca ID</th>{isAdmin && <th className="px-6 py-3 w-24 text-right">Price</th>}<th className="w-10"></th>
                         </tr>
                      </thead>
-                     <tbody className="divide-y divide-slate-100">
+                     <tbody className="divide-y divide-slate-50">
                        {items.map((item) => (
                          <tr key={item.id} className="group hover:bg-slate-50 transition-colors">
-                            {/* --- NEW SEARCHABLE INPUT --- */}
+                            {/* --- NEW SEARCHABLE INPUT (DATALIST) --- */}
                             <td className="px-6 py-3 relative">
                                <input 
                                    list={`options-${item.id}`} // Unique ID for datalist
@@ -498,12 +468,12 @@ export default function OrderDetails({ params }) {
                                    ))}
                                </datalist>
                             </td>
-
                             <td className="px-6 py-3"><input type="number" className="w-full bg-transparent border-none outline-none" value={item.quantity || 1} disabled={isLockedOrder} onChange={(e) => updateItem(item.id, 'quantity', e.target.value)} /></td>
                             <td className="px-6 py-3"><input className="w-full bg-transparent border-none outline-none text-[#0176D3] font-medium placeholder-slate-300" value={item.serial || ''} disabled={isLockedOrder} onChange={(e) => updateItem(item.id, 'serial', e.target.value)} placeholder="---" /></td>
                             <td className="px-6 py-3"><input className="w-full bg-transparent border-none outline-none text-slate-600 placeholder-slate-300" value={item.orca_id || ''} disabled={isLockedOrder} onChange={(e) => updateItem(item.id, 'orca_id', e.target.value)} placeholder="---" /></td>
                             {isAdmin && (<td className="px-6 py-3 text-right text-xs font-mono text-slate-600">${(item.price * item.quantity).toFixed(2)}</td>)}
                             <td className="px-4 py-3 text-right">
+                                {/* DELETE BUTTON LOGIC */}
                                 {isAdmin && !isLockedOrder ? (
                                    <button onClick={() => deleteItem(item.id)} className="text-slate-300 hover:text-red-600 opacity-0 group-hover:opacity-100"><Trash2 size={16}/></button>
                                 ) : canShip && !isLockedOrder && !['In Box', 'Ready for Pickup', 'Shipped'].includes(order.status) && (
