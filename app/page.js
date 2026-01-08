@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { useRouter } from 'next/navigation';
-import { LayoutDashboard, TrendingUp, Package, CheckCircle, Clock, RefreshCw, Link, Ship } from 'lucide-react';
+import { LayoutDashboard, TrendingUp, Package, CheckCircle, Clock, RefreshCw, Link, Ship, Cpu, ArrowRight } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import Sidebar from './components/Sidebar';
 import { useSidebar } from './context/SidebarContext';
@@ -13,13 +13,14 @@ export default function Home() {
   const [stats, setStats] = useState({
     completedSeapods: 0,
     inProgressSeapods: 0,
-    assignedUnshippedSeapods: 0, // <--- NEW METRIC
+    assignedUnshippedSeapods: 0, 
     inProgressOrders: 0,
     readyOrders: 0,
     shippedOrdersCount: 0,
     builtSeapodsCount: 0,
     breakdownInProgress: {},
-    breakdownReady: {}
+    breakdownReady: {},
+    breakdownShipped: {}
   });
   
   const [chartData, setChartData] = useState([]);
@@ -69,12 +70,10 @@ export default function Home() {
     const shippedList = orders.filter(o => o.status === 'Shipped');
 
     // 3. NEW METRIC: Assigned but NOT Shipped
-    // Get list of active order numbers (Not shipped)
     const activeOrderNumbers = orders
         .filter(o => o.status !== 'Shipped')
         .map(o => String(o.order_number));
 
-    // Count Seapods that are assigned AND belong to an active order
     const assignedUnshippedCount = seapods.filter(s => 
         s.status === 'Assigned to Order' && 
         s.order_number && 
@@ -105,13 +104,14 @@ export default function Home() {
     setStats({
         completedSeapods, 
         inProgressSeapods,
-        assignedUnshippedSeapods: assignedUnshippedCount, // <--- SAVE NEW METRIC
+        assignedUnshippedSeapods: assignedUnshippedCount,
         inProgressOrders: inProgressList.length,
         readyOrders: readyList.length,
         shippedOrdersCount: shippedList.length, 
         builtSeapodsCount: relevantSeapods.length,
         breakdownInProgress: calcBreakdown(inProgressList),
-        breakdownReady: calcBreakdown(readyList)
+        breakdownReady: calcBreakdown(readyList),
+        breakdownShipped: calcBreakdown(shippedList)
     });
 
     setChartData(processChartData(relevantSeapods, relevantOrders, timeFilter));
@@ -142,6 +142,7 @@ export default function Home() {
       <Sidebar />
       <main className={`flex-1 p-8 transition-all duration-300 ease-in-out ${isCollapsed ? 'ml-20' : 'ml-64'}`}>
         
+        {/* Header */}
         <div className="flex justify-between items-end mb-8">
             <div>
                 <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Overview</h1>
@@ -155,32 +156,41 @@ export default function Home() {
             </div>
         </div>
 
-        {/* --- KPI CARDS (REORDERED) --- */}
-        <div className="grid grid-cols-4 gap-6 mb-8">
+        {/* --- KPI SPLIT SECTIONS --- */}
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 mb-8">
             
-            {/* 1. Seapods Available */}
-            <MetricCard title="Seapods Available" value={stats.completedSeapods} icon={<CheckCircle/>} color="text-green-600" bg="bg-green-50" />
-            
-            {/* 2. NEW: Assigned Seapods (Not Shipped) */}
-            <MetricCard title="Assigned (Pending Ship)" value={stats.assignedUnshippedSeapods} icon={<Link/>} color="text-indigo-600" bg="bg-indigo-50" />
-            
-            {/* 3. Orders In Progress */}
-            <DrillDownCard 
-                title="Orders In Progress" 
-                value={stats.inProgressOrders} 
-                breakdown={stats.breakdownInProgress}
-                icon={<TrendingUp/>} color="text-blue-600" bg="bg-blue-50" 
-            />
-            
-            {/* 4. Ready for Pickup */}
-            <DrillDownCard 
-                title="Ready for Pickup" 
-                value={stats.readyOrders} 
-                breakdown={stats.breakdownReady}
-                icon={<Package/>} color="text-purple-600" bg="bg-purple-50" 
-            />
+            {/* LEFT SECTION: SEAPOD INVENTORY */}
+            <div className="space-y-4">
+                <div className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">
+                    <Cpu size={14}/> Seapod Production
+                </div>
+                <div className="bg-white p-1 rounded-2xl shadow-sm border border-slate-200 grid grid-cols-2 gap-0.5 overflow-hidden">
+                    <MetricCard title="Seapods Available" value={stats.completedSeapods} icon={<CheckCircle/>} color="text-green-600" bg="bg-green-50" />
+                    <MetricCard title="Assigned (Pending)" value={stats.assignedUnshippedSeapods} icon={<Link/>} color="text-indigo-600" bg="bg-indigo-50" />
+                </div>
+            </div>
 
-            {/* REMOVED TOTAL SHIPPED CARD */}
+            {/* RIGHT SECTION: ORDER PIPELINE */}
+            <div className="space-y-4">
+                <div className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">
+                    <TrendingUp size={14}/> Order Pipeline
+                </div>
+                <div className="bg-white p-1 rounded-2xl shadow-sm border border-slate-200 grid grid-cols-2 gap-0.5 overflow-hidden">
+                    <DrillDownCard 
+                        title="Orders In Progress" 
+                        value={stats.inProgressOrders} 
+                        breakdown={stats.breakdownInProgress}
+                        icon={<Clock/>} color="text-blue-600" bg="bg-blue-50" 
+                    />
+                    <DrillDownCard 
+                        title="Ready for Pickup" 
+                        value={stats.readyOrders} 
+                        breakdown={stats.breakdownReady}
+                        icon={<Package/>} color="text-purple-600" bg="bg-purple-50" 
+                    />
+                </div>
+            </div>
+
         </div>
 
         {/* --- CHARTS (UNCHANGED) --- */}
@@ -212,10 +222,10 @@ export default function Home() {
   );
 }
 
-// Simple Metric Card
+// Simple Metric Card (Removed rounded corners when inside grid to look like one block)
 function MetricCard({ title, value, icon, color, bg }) {
     return (
-        <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex items-start gap-4">
+        <div className="bg-white p-5 flex items-start gap-4 hover:bg-slate-50 transition-colors">
             <div className={`w-12 h-12 ${bg} ${color} rounded-lg flex items-center justify-center shrink-0`}>{icon}</div>
             <div>
                 <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">{title}</p>
@@ -228,7 +238,7 @@ function MetricCard({ title, value, icon, color, bg }) {
 // Drill Down Card
 function DrillDownCard({ title, value, icon, color, bg, breakdown }) {
     return (
-        <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex flex-col justify-between h-full">
+        <div className="bg-white p-5 flex flex-col justify-between h-full hover:bg-slate-50 transition-colors">
             <div className="flex items-start gap-4 mb-3">
                 <div className={`w-12 h-12 ${bg} ${color} rounded-lg flex items-center justify-center shrink-0`}>{icon}</div>
                 <div>
