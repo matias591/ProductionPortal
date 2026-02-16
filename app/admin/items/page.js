@@ -41,7 +41,7 @@ export default function ItemManagement() {
   }
 
   async function fetchItems() {
-    // --- UPDATED SORTING: SKU Ascending (A-Z) ---
+    // Sorting by SKU A-Z as requested previously
     const { data } = await supabase
         .from('items')
         .select('*')
@@ -71,6 +71,7 @@ export default function ItemManagement() {
     const itemData = {
       sku: formData.get('sku'),
       name: formData.get('name'),
+      netsuite_id: formData.get('netsuite_id'), // <--- NEW FIELD ADDED HERE
       price: parseFloat(formData.get('price')) || 0
     };
 
@@ -135,7 +136,7 @@ export default function ItemManagement() {
     <div className="flex min-h-screen bg-slate-50 font-sans">
        <Sidebar />
        <main className="flex-1 ml-64 p-8">
-         <div className="max-w-5xl mx-auto">
+         <div className="max-w-6xl mx-auto">
             
             {/* Header */}
             <div className="flex justify-between items-center mb-8">
@@ -166,6 +167,7 @@ export default function ItemManagement() {
                     <thead className="bg-slate-50 border-b border-slate-200 text-xs uppercase text-slate-500 font-bold">
                         <tr>
                             <th className="px-6 py-4 w-40">SKU</th>
+                            <th className="px-6 py-4 w-32">NetSuite ID</th> {/* NEW COLUMN */}
                             <th className="px-6 py-4">Item Name / Description</th>
                             <th className="px-6 py-4 w-32">Price (Unit)</th>
                             <th className="px-6 py-4 w-32 text-right">Actions</th>
@@ -175,6 +177,7 @@ export default function ItemManagement() {
                         {filteredItems.map(item => (
                             <tr key={item.id} className="hover:bg-blue-50/50 group transition-colors">
                                 <td className="px-6 py-4 font-bold text-slate-700">{item.sku}</td>
+                                <td className="px-6 py-4 text-xs font-mono text-slate-500">{item.netsuite_id || '-'}</td> {/* NEW DATA */}
                                 <td className="px-6 py-4 text-sm text-slate-600 font-medium">{item.name}</td>
                                 <td className="px-6 py-4 text-sm font-mono text-slate-800">${item.price?.toFixed(2)}</td>
                                 <td className="px-6 py-4 text-right flex justify-end gap-2">
@@ -200,7 +203,7 @@ export default function ItemManagement() {
                             </tr>
                         ))}
                         {filteredItems.length === 0 && (
-                            <tr><td colSpan={4} className="p-8 text-center text-slate-400">No items found.</td></tr>
+                            <tr><td colSpan={5} className="p-8 text-center text-slate-400">No items found.</td></tr>
                         )}
                     </tbody>
                 </table>
@@ -229,6 +232,16 @@ export default function ItemManagement() {
                             className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-[#0176D3] focus:ring-1 focus:ring-[#0176D3] outline-none" 
                             required 
                             defaultValue={editingItem?.sku || ''}
+                        />
+                    </div>
+                    {/* NEW INPUT FOR NETSUITE ID */}
+                    <div>
+                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">NetSuite ID (Optional)</label>
+                        <input 
+                            name="netsuite_id" 
+                            className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-[#0176D3] focus:ring-1 focus:ring-[#0176D3] outline-none" 
+                            placeholder="e.g. 4022" 
+                            defaultValue={editingItem?.netsuite_id || ''}
                         />
                     </div>
                     <div>

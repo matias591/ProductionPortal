@@ -11,13 +11,16 @@ export async function POST(request) {
   try {
     const { orderId } = await request.json();
 
-    // 1. Gather Order, Items, Files
+    // 1. Gather Order, OrderItems, Files
     const { data: order } = await supabase.from('orders').select('*').eq('id', orderId).single();
-    const { data: items } = await supabase.from('order_items').select('*').eq('order_id', orderId);
+    const { data: orderItems } = await supabase.from('order_items').select('*').eq('order_id', orderId);
     
+    // --- NEW: Gather Master Items (To map NetSuite IDs) ---
+    // We fetch all items to ensure we can look up the ID by name
+    const { data: masterItems } = await supabase.from('items').select('name, netsuite_id');
+
     // 2. Gather Files AND Generate Download URLs
     const { data: files } = await supabase.from('order_files').select('*').eq('order_id', orderId);
-
     const filesWithUrls = files.map(file => {
         const { data } = supabase.storage
             .from('order-attachments')
@@ -29,7 +32,7 @@ export async function POST(request) {
         };
     });
 
-    // --- NEW LOGIC: FETCH SEAPOD VERSIONS ---
+    // 3. Seapod Info Lookup (Versions)
     let seapodDetails = {
         serial: null,
         hw_version: null,
@@ -37,8 +40,7 @@ export async function POST(request) {
         seapod_version: null
     };
 
-    // Find the item that looks like a Seapod
-    const seapodItem = items.find(i => i.piece && i.piece.toLowerCase().includes('seapod'));
+    const seapodItem = orderItems.find(i => i.piece && i.piece.toLowerCase().includes('seapod'));
 
     if (seapodItem && seapodItem.serial) {
         // Fetch the production record for this specific serial
@@ -58,31 +60,68 @@ export async function POST(request) {
         }
     }
 
-    // 3. Prepare Payload
-    const payload = {
+    // --- PAYLOAD 1: ORIGINAL (Existing Webhook) ---
+    const originalPayload = {
       order: order,
-      items: items,
+      items: orderItems,
       files: filesWithUrls,
-      seapod_info: seapodDetails, // <--- NEW BLOCK WITH VERSIONS
+      seapod_info: seapodDetails,
       triggered_at: new Date().toISOString()
     };
 
-    // 4. Send to n8n
-    const webhookUrl = process.env.N8N_WEBHOOK_URL;
-    
-    if (webhookUrl) {
-        const n8nResponse = await fetch(webhookUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
+    // --- PAYLOAD 2: NETSUITE (New Requirement) ---
+    // Mapping items to include the new netsuite_id
+    const netsuitePayload = {
+        vessel_name: order.vessel,
+        order_number: order.order_number,
+        type: order.type,
+        status: order.status,
+        warehouse: order.warehouse,
+        items: orderItems.map(item => {
+            // Find matching master item to get NetSuite ID
+            const master = masterItems.find(m => m.name === item.piece);
+            return {
+                name: item.piece,
+                quantity: item.quantity,
+                serial_number: item.serial || '',
+                orca_id: item.orca_id || '',
+                price: item.price,
+                netsuite_id: master ? master.netsuite_id : null // <--- NEW FIELD
+            };
+        })
+    };
 
-        if (!n8nResponse.ok) {
-            throw new Error(`n8n Webhook failed: ${n8nResponse.statusText}`);
+    // --- SEND WEBHOOK 1 (Original) ---
+    const webhookUrl1 = process.env.N8N_WEBHOOK_URL;
+    if (webhookUrl1) {
+        try {
+            await fetch(webhookUrl1, { 
+                method: 'POST', 
+                headers: { 'Content-Type': 'application/json' }, 
+                body: JSON.stringify(originalPayload) 
+            });
+        } catch (e) { 
+            console.error("Webhook 1 Failed", e); 
+            // We do NOT stop execution here, we try webhook 2
+        }
+    }
+
+    // --- SEND WEBHOOK 2 (NetSuite - NEW) ---
+    const webhookUrl2 = process.env.N8N_NETSUITE_WEBHOOK_URL;
+    if (webhookUrl2) {
+        try {
+            await fetch(webhookUrl2, { 
+                method: 'POST', 
+                headers: { 'Content-Type': 'application/json' }, 
+                body: JSON.stringify(netsuitePayload) 
+            });
+        } catch (e) { 
+            console.error("Webhook 2 Failed", e); 
         }
     }
 
     // 5. Update Status to 'Shipped' (Locking it)
+    // Only update DB if at least one webhook didn't crash the script completely
     const { error: updateError } = await supabase
         .from('orders')
         .update({ 
