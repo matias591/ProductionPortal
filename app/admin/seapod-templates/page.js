@@ -2,8 +2,41 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { useRouter } from 'next/navigation';
-import { Plus, Trash2, Cpu, ChevronRight } from 'lucide-react';
+import { Plus, Trash2, Cpu, ChevronRight, GripVertical } from 'lucide-react';
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import Sidebar from '../../components/Sidebar';
+
+// --- NEW SORTABLE ROW COMPONENT ---
+function SortableTemplateRow({ template, onClick, onDelete }) {
+  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: template.id });
+  const style = { transform: CSS.Transform.toString(transform), transition };
+
+  return (
+    <div ref={setNodeRef} style={style} className="p-4 flex justify-between items-center bg-white border-b border-slate-100 hover:bg-slate-50 group">
+        <div className="flex items-center gap-4">
+            <div {...attributes} {...listeners} className="text-slate-300 cursor-grab hover:text-slate-600">
+                <GripVertical size={20} />
+            </div>
+            <div onClick={onClick} className="cursor-pointer">
+                <div className="font-bold text-slate-700">{template.name}</div>
+                <div className="text-xs text-slate-500 mt-1 flex gap-3">
+                    <span className="bg-slate-100 px-1.5 rounded border font-medium text-slate-600">Ver: {template.seapod_version || 'N/A'}</span>
+                    <span className="bg-slate-50 px-1.5 rounded border">HW: {template.hw_version || 'N/A'}</span>
+                    <span className="bg-slate-50 px-1.5 rounded border">SW: {template.sw_version || 'N/A'}</span>
+                </div>
+            </div>
+        </div>
+        <div className="flex items-center gap-4">
+            <span onClick={onClick} className="cursor-pointer text-xs font-bold text-[#0176D3] flex items-center gap-1 group-hover:underline">Edit Items <ChevronRight size={14}/></span>
+            {/* Z-index to ensure click registers over drag layer */}
+            <button onClick={(e) => { e.stopPropagation(); onDelete(template.id); }} className="text-slate-300 hover:text-red-500 z-10 relative"><Trash2 size={16}/></button>
+        </div>
+    </div>
+  );
+}
+
 
 export default function SeapodTemplates() {
   const [templates, setTemplates] = useState([]);
@@ -11,21 +44,29 @@ export default function SeapodTemplates() {
   const router = useRouter();
   const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 
+  const sensors = useSensors(useSensor(PointerSensor), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }));
+
   useEffect(() => { fetchTemplates(); }, []);
 
   async function fetchTemplates() {
-    const { data } = await supabase.from('seapod_templates').select('*').order('created_at', { ascending: false });
+    // --- FETCH ORDERED BY SORT_ORDER ---
+    const { data } = await supabase.from('seapod_templates').select('*').order('sort_order', { ascending: true }).order('created_at', { ascending: false });
     setTemplates(data || []);
   }
 
   async function createTemplate(e) {
     e.preventDefault();
     const formData = new FormData(e.target);
+    
+    // Calculate new sort order
+    const nextOrder = templates.length > 0 ? Math.max(...templates.map(t => t.sort_order || 0)) + 1 : 1;
+
     const newTemplate = {
         name: formData.get('name'),
-        seapod_version: formData.get('seapod_version'), // <--- New Field
+        seapod_version: formData.get('seapod_version'),
         hw_version: formData.get('hw'),
-        sw_version: formData.get('sw')
+        sw_version: formData.get('sw'),
+        sort_order: nextOrder
     };
 
     const { error } = await supabase.from('seapod_templates').insert([newTemplate]);
@@ -40,6 +81,27 @@ export default function SeapodTemplates() {
     if(confirm("Delete this template?")) {
       await supabase.from('seapod_templates').delete().eq('id', id);
       fetchTemplates();
+    }
+  }
+
+  // --- DRAG END HANDLER ---
+  async function handleDragEnd(event) {
+    const { active, over } = event;
+
+    if (active.id !== over.id) {
+      setTemplates((items) => {
+        const oldIndex = items.findIndex((i) => i.id === active.id);
+        const newIndex = items.findIndex((i) => i.id === over.id);
+        
+        const reorderedList = arrayMove(items, oldIndex, newIndex);
+
+        reorderedList.forEach(async (item, index) => {
+            item.sort_order = index + 1;
+            await supabase.from('seapod_templates').update({ sort_order: index + 1 }).eq('id', item.id);
+        });
+
+        return reorderedList;
+      });
     }
   }
 
@@ -58,24 +120,22 @@ export default function SeapodTemplates() {
             </div>
 
             <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-                <div className="divide-y divide-slate-100">
-                    {templates.map(t => (
-                        <div key={t.id} onClick={() => router.push(`/admin/seapod-templates/${t.id}`)} className="p-4 flex justify-between items-center hover:bg-slate-50 cursor-pointer group">
-                            <div>
-                                <div className="font-bold text-slate-700">{t.name}</div>
-                                <div className="text-xs text-slate-500 mt-1 flex gap-3">
-                                    <span className="bg-slate-100 px-1.5 rounded border font-medium text-slate-600">Ver: {t.seapod_version || 'N/A'}</span>
-                                    <span className="bg-slate-50 px-1.5 rounded border">HW: {t.hw_version || 'N/A'}</span>
-                                    <span className="bg-slate-50 px-1.5 rounded border">SW: {t.sw_version || 'N/A'}</span>
-                                </div>
-                            </div>
-                            <div className="flex items-center gap-4">
-                                <span className="text-xs font-bold text-[#0176D3] flex items-center gap-1 group-hover:underline">Edit Items <ChevronRight size={14}/></span>
-                                <button onClick={(e) => { e.stopPropagation(); deleteTemplate(t.id); }} className="text-slate-300 hover:text-red-500"><Trash2 size={16}/></button>
-                            </div>
+                {/* --- DRAG CONTEXT WRAPPER --- */}
+                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                    <SortableContext items={templates.map(t => t.id)} strategy={verticalListSortingStrategy}>
+                        <div className="divide-y divide-slate-100">
+                            {templates.map(t => (
+                                <SortableTemplateRow 
+                                    key={t.id} 
+                                    template={t} 
+                                    onClick={() => router.push(`/admin/seapod-templates/${t.id}`)}
+                                    onDelete={deleteTemplate}
+                                />
+                            ))}
+                            {templates.length === 0 && <div className="p-8 text-center text-slate-400">No templates found.</div>}
                         </div>
-                    ))}
-                </div>
+                    </SortableContext>
+                </DndContext>
             </div>
          </div>
        </main>
@@ -89,7 +149,6 @@ export default function SeapodTemplates() {
                         <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Template Name</label>
                         <input name="name" className="w-full border border-slate-300 rounded px-3 py-2 text-sm outline-none focus:border-[#0176D3]" placeholder="e.g. Standard Seapod V3" required />
                     </div>
-                    {/* NEW FIELD */}
                     <div>
                         <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Seapod Version</label>
                         <input name="seapod_version" className="w-full border border-slate-300 rounded px-3 py-2 text-sm outline-none focus:border-[#0176D3]" placeholder="e.g. Generation 3.5" />
