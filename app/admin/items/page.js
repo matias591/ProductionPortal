@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { useRouter } from 'next/navigation';
-import { Plus, Trash2, Tag, Search, Pencil, X, AlertTriangle } from 'lucide-react';
+import { Plus, Trash2, Tag, Search, Pencil, X, AlertTriangle, CheckSquare, Square } from 'lucide-react';
 import Sidebar from '../../components/Sidebar';
 
 export default function ItemManagement() {
@@ -12,7 +12,7 @@ export default function ItemManagement() {
   
   // Modal State
   const [showModal, setShowModal] = useState(false);
-  const [editingItem, setEditingItem] = useState(null); // If null, we are creating. If set, we are editing.
+  const [editingItem, setEditingItem] = useState(null); 
 
   const [search, setSearch] = useState('');
   const router = useRouter();
@@ -41,7 +41,6 @@ export default function ItemManagement() {
   }
 
   async function fetchItems() {
-    // Sorting by SKU A-Z as requested previously
     const { data } = await supabase
         .from('items')
         .select('*')
@@ -51,19 +50,16 @@ export default function ItemManagement() {
     setLoading(false);
   }
 
-  // --- OPEN MODAL (CREATE) ---
   function openCreateModal() {
-    setEditingItem(null); // Clear editing state
+    setEditingItem(null); 
     setShowModal(true);
   }
 
-  // --- OPEN MODAL (EDIT) ---
   function openEditModal(item) {
-    setEditingItem(item); // Load item data
+    setEditingItem(item); 
     setShowModal(true);
   }
 
-  // --- SAVE (HANDLE BOTH CREATE AND UPDATE) ---
   async function handleSaveItem(e) {
     e.preventDefault();
     const formData = new FormData(e.target);
@@ -71,24 +67,19 @@ export default function ItemManagement() {
     const itemData = {
       sku: formData.get('sku'),
       name: formData.get('name'),
-      netsuite_id: formData.get('netsuite_id'), // <--- NEW FIELD ADDED HERE
-      price: parseFloat(formData.get('price')) || 0
+      netsuite_id: formData.get('netsuite_id'), 
+      price: parseFloat(formData.get('price')) || 0,
+      // --- CAPTURE CHECKBOX STATE ---
+      serial_needed: formData.get('serial_needed') === 'on' 
     };
 
     let error;
 
     if (editingItem) {
-        // UPDATE Existing
-        const { error: updateError } = await supabase
-            .from('items')
-            .update(itemData)
-            .eq('id', editingItem.id);
+        const { error: updateError } = await supabase.from('items').update(itemData).eq('id', editingItem.id);
         error = updateError;
     } else {
-        // INSERT New
-        const { error: insertError } = await supabase
-            .from('items')
-            .insert([itemData]);
+        const { error: insertError } = await supabase.from('items').insert([itemData]);
         error = insertError;
     }
 
@@ -96,32 +87,19 @@ export default function ItemManagement() {
         alert("Error saving item: " + error.message);
     } else {
         setShowModal(false);
-        fetchItems(); // Refresh list
+        fetchItems(); 
     }
   }
 
-  // --- DELETE LOGIC ---
   async function deleteItem(id) {
     if(!confirm("Are you sure you want to delete this item?")) return;
-    
-    // 1. Optimistic Update (Remove from UI immediately for speed)
     const originalItems = [...items];
     setItems(items.filter(i => i.id !== id));
-
-    // 2. Database Delete
     const { error } = await supabase.from('items').delete().eq('id', id);
-
-    // 3. Handle Error (e.g., Item is used in a Kit or Order)
     if (error) {
-        console.error("Delete failed:", error);
-        // Revert UI
         setItems(originalItems);
-        
-        if (error.code === '23503') { // Foreign Key Violation code
-            alert("⚠️ Cannot delete this item because it is currently used in a Kit or an existing Order.\n\nPlease remove it from Kits/Orders first.");
-        } else {
-            alert("Delete failed: " + error.message);
-        }
+        if (error.code === '23503') alert("⚠️ Item is used in a Kit or Order. Cannot delete.");
+        else alert("Delete failed: " + error.message);
     }
   }
 
@@ -138,7 +116,6 @@ export default function ItemManagement() {
        <main className="flex-1 ml-64 p-8">
          <div className="max-w-6xl mx-auto">
             
-            {/* Header */}
             <div className="flex justify-between items-center mb-8">
                 <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
                     <Tag className="text-[#0176D3]"/> Master Items Database
@@ -148,7 +125,6 @@ export default function ItemManagement() {
                 </button>
             </div>
 
-            {/* Search */}
             <div className="bg-white p-4 rounded-t-xl border border-slate-200 border-b-0">
                 <div className="relative max-w-md">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16}/>
@@ -161,14 +137,14 @@ export default function ItemManagement() {
                 </div>
             </div>
 
-            {/* Table */}
             <div className="bg-white border border-slate-200 rounded-b-xl shadow-sm overflow-hidden">
                 <table className="w-full text-left">
                     <thead className="bg-slate-50 border-b border-slate-200 text-xs uppercase text-slate-500 font-bold">
                         <tr>
                             <th className="px-6 py-4 w-40">SKU</th>
-                            <th className="px-6 py-4 w-32">NetSuite ID</th> {/* NEW COLUMN */}
+                            <th className="px-6 py-4 w-32">NetSuite ID</th>
                             <th className="px-6 py-4">Item Name / Description</th>
+                            <th className="px-6 py-4 w-24 text-center">Serial Req.</th> {/* --- NEW HEADER --- */}
                             <th className="px-6 py-4 w-32">Price (Unit)</th>
                             <th className="px-6 py-4 w-32 text-right">Actions</th>
                         </tr>
@@ -177,33 +153,27 @@ export default function ItemManagement() {
                         {filteredItems.map(item => (
                             <tr key={item.id} className="hover:bg-blue-50/50 group transition-colors">
                                 <td className="px-6 py-4 font-bold text-slate-700">{item.sku}</td>
-                                <td className="px-6 py-4 text-xs font-mono text-slate-500">{item.netsuite_id || '-'}</td> {/* NEW DATA */}
+                                <td className="px-6 py-4 text-xs font-mono text-slate-500">{item.netsuite_id || '-'}</td>
                                 <td className="px-6 py-4 text-sm text-slate-600 font-medium">{item.name}</td>
+                                
+                                {/* --- NEW COLUMN (VISUAL CHECKBOX) --- */}
+                                <td className="px-6 py-4 text-center">
+                                    {item.serial_needed ? (
+                                        <CheckSquare size={16} className="text-[#0176D3] mx-auto" />
+                                    ) : (
+                                        <Square size={16} className="text-slate-300 mx-auto" />
+                                    )}
+                                </td>
+
                                 <td className="px-6 py-4 text-sm font-mono text-slate-800">${item.price?.toFixed(2)}</td>
                                 <td className="px-6 py-4 text-right flex justify-end gap-2">
-                                    
-                                    {/* Edit Button */}
-                                    <button 
-                                        onClick={() => openEditModal(item)} 
-                                        className="p-2 text-slate-400 hover:text-[#0176D3] hover:bg-blue-50 rounded transition-all"
-                                        title="Edit Item"
-                                    >
-                                        <Pencil size={16}/>
-                                    </button>
-
-                                    {/* Delete Button */}
-                                    <button 
-                                        onClick={() => deleteItem(item.id)} 
-                                        className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-all"
-                                        title="Delete Item"
-                                    >
-                                        <Trash2 size={16}/>
-                                    </button>
+                                    <button onClick={() => openEditModal(item)} className="p-2 text-slate-400 hover:text-[#0176D3] hover:bg-blue-50 rounded transition-all" title="Edit Item"><Pencil size={16}/></button>
+                                    <button onClick={() => deleteItem(item.id)} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-all" title="Delete Item"><Trash2 size={16}/></button>
                                 </td>
                             </tr>
                         ))}
                         {filteredItems.length === 0 && (
-                            <tr><td colSpan={5} className="p-8 text-center text-slate-400">No items found.</td></tr>
+                            <tr><td colSpan={6} className="p-8 text-center text-slate-400">No items found.</td></tr>
                         )}
                     </tbody>
                 </table>
@@ -227,42 +197,33 @@ export default function ItemManagement() {
                 <form onSubmit={handleSaveItem} className="space-y-4">
                     <div>
                         <label className="block text-xs font-bold text-slate-500 uppercase mb-1">SKU Code</label>
-                        <input 
-                            name="sku" 
-                            className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-[#0176D3] focus:ring-1 focus:ring-[#0176D3] outline-none" 
-                            required 
-                            defaultValue={editingItem?.sku || ''}
-                        />
+                        <input name="sku" className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-[#0176D3] focus:ring-1 focus:ring-[#0176D3] outline-none" required defaultValue={editingItem?.sku || ''}/>
                     </div>
-                    {/* NEW INPUT FOR NETSUITE ID */}
                     <div>
                         <label className="block text-xs font-bold text-slate-500 uppercase mb-1">NetSuite ID (Optional)</label>
-                        <input 
-                            name="netsuite_id" 
-                            className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-[#0176D3] focus:ring-1 focus:ring-[#0176D3] outline-none" 
-                            placeholder="e.g. 4022" 
-                            defaultValue={editingItem?.netsuite_id || ''}
-                        />
+                        <input name="netsuite_id" className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-[#0176D3] focus:ring-1 focus:ring-[#0176D3] outline-none" placeholder="e.g. 4022" defaultValue={editingItem?.netsuite_id || ''}/>
                     </div>
                     <div>
                         <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Item Description</label>
-                        <input 
-                            name="name" 
-                            className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-[#0176D3] focus:ring-1 focus:ring-[#0176D3] outline-none" 
-                            required 
-                            defaultValue={editingItem?.name || ''}
-                        />
+                        <input name="name" className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-[#0176D3] focus:ring-1 focus:ring-[#0176D3] outline-none" required defaultValue={editingItem?.name || ''}/>
                     </div>
                     <div>
                         <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Price per Unit ($)</label>
+                        <input name="price" type="number" step="0.01" className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-[#0176D3] focus:ring-1 focus:ring-[#0176D3] outline-none" required defaultValue={editingItem?.price || ''}/>
+                    </div>
+
+                    {/* --- NEW CHECKBOX FOR SERIAL NEEDED --- */}
+                    <div className="pt-2 pb-2 flex items-center gap-2">
                         <input 
-                            name="price" 
-                            type="number" 
-                            step="0.01" 
-                            className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-[#0176D3] focus:ring-1 focus:ring-[#0176D3] outline-none" 
-                            required 
-                            defaultValue={editingItem?.price || ''}
+                            type="checkbox" 
+                            name="serial_needed" 
+                            id="serial_needed" 
+                            defaultChecked={editingItem?.serial_needed || false} 
+                            className="w-4 h-4 text-[#0176D3] rounded border-slate-300 focus:ring-[#0176D3] cursor-pointer" 
                         />
+                        <label htmlFor="serial_needed" className="text-sm font-bold text-slate-700 cursor-pointer select-none">
+                            Requires Serial Number upon fulfillment
+                        </label>
                     </div>
                     
                     <div className="pt-4 flex justify-end gap-2 border-t border-slate-100 mt-4">

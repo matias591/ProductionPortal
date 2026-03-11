@@ -72,6 +72,7 @@ export default function OrderDetails({ params }) {
 
     const { data: orderData } = await supabase.from('orders').select('*').eq('id', orderId).single();
     
+    // Fetch Items
     const { data: itemData } = await supabase
         .from('order_items')
         .select('*')
@@ -81,9 +82,8 @@ export default function OrderDetails({ params }) {
     
     const { data: fileData } = await supabase.from('order_files').select('*').eq('order_id', orderId).order('created_at', { ascending: false });
     const { data: allItems } = await supabase.from('items').select('*').order('name');
-    
-    // --- FETCH TEMPLATES SORTED ---
-    const { data: tpls } = await supabase.from('seapod_templates').select('*').order('sort_order', { ascending: true });
+    const { data: tpls } = await supabase.from('seapod_templates').select('*').order('name');
+
     setSeapodTemplates(tpls || []);
     if (tpls?.length > 0) setSelectedSeapodTemplate(tpls[0].id);
 
@@ -123,7 +123,7 @@ export default function OrderDetails({ params }) {
     setCheckingVessel(false);
   }
 
-  // --- MANUAL WEBHOOK TRIGGER (Admin Only) ---
+  // --- MANUAL WEBHOOK TRIGGER ---
   async function handleManualWebhook() {
     if (!confirm("Are you sure you want to re-trigger the shipping webhook manually?")) return;
     setShipping(true);
@@ -136,13 +136,11 @@ export default function OrderDetails({ params }) {
     setShipping(false);
   }
 
-  // --- UPDATE ORDER LOGIC (Status Change Interceptor) ---
+  // --- UPDATE ORDER LOGIC ---
   async function updateOrder(field, value) {
     if (isLocked) return;
 
-    // =========================================================
-    // 1. UNLINK LOGIC (Moving BACK to New/In Prep)
-    // =========================================================
+    // 1. UNLINK LOGIC
     const downgradeStatuses = ['New', 'In preparation'];
     if (field === 'status' && downgradeStatuses.includes(value)) {
         if (['In Box', 'Ready for Pickup', 'Shipped'].includes(order.status)) {
@@ -160,9 +158,7 @@ export default function OrderDetails({ params }) {
         }
     }
 
-    // =========================================================
-    // 2. PICKUP DATE VALIDATION (Ready or Shipped)
-    // =========================================================
+    // 2. PICKUP DATE VALIDATION
     if (field === 'status' && (value === 'Ready for Pickup' || value === 'Shipped')) {
         if (!order.pickup_date) {
             alert("⚠️ Cannot move status: 'Pick up date' is required.");
@@ -170,9 +166,7 @@ export default function OrderDetails({ params }) {
         }
     }
 
-    // =========================================================
-    // 3. ADVANCED VALIDATION (In Box, Ready, Shipped)
-    // =========================================================
+    // 3. ADVANCED VALIDATION (Dynamic Serials & Seapod Link)
     const statusesRequiringValidation = ['In Box', 'Ready for Pickup', 'Shipped'];
 
     if (field === 'status' && statusesRequiringValidation.includes(value)) {
@@ -180,21 +174,19 @@ export default function OrderDetails({ params }) {
         // --- A. DYNAMIC SERIAL CHECK FOR ALL REQUIRED ITEMS ---
         const missingSerials = items.filter(item => {
             const master = masterItems.find(m => m.name === item.piece);
-            // Return true if serial is needed BUT the input is empty or '-'
             return master?.serial_needed && (!item.serial || item.serial.trim() === '' || item.serial === '-');
         });
 
         if (missingSerials.length > 0) {
             const names = missingSerials.map(i => i.piece).join(', ');
             alert(`⚠️ The following items require a Serial Number:\n\n${names}\n\nPlease fill them before proceeding.`);
-            return; // STOP!
+            return; // STOP
         }
 
-        // --- B. SEAPOD LINKING CHECK (Existing Logic) ---
+        // --- B. SEAPOD LINKING CHECK ---
         const seapodItem = items.find(i => i.piece && i.piece.toLowerCase().includes('seapod'));
         
         if (seapodItem && seapodItem.serial) {
-            // Check DB
             const { data: existingSeapod } = await supabase
                 .from('seapod_production')
                 .select('id, status, order_number')
@@ -202,7 +194,6 @@ export default function OrderDetails({ params }) {
                 .single();
 
             if (!existingSeapod) {
-                // Not Found -> Wizard
                 setMissingSeapodSerial(seapodItem.serial);
                 setPendingStatus(value);
                 setSeapodStep(1); 
@@ -217,19 +208,24 @@ export default function OrderDetails({ params }) {
                         return;
                     }
                     if (existingSeapod.order_number && String(existingSeapod.order_number) !== String(order.order_number)) {
-                        setConflictDetails({ serial: seapodItem.serial, assignedTo: existingSeapod.order_number, itemId: seapodItem.id });
+                        setConflictDetails({
+                            serial: seapodItem.serial,
+                            assignedTo: existingSeapod.order_number,
+                            itemId: seapodItem.id
+                        });
                         setShowAssignedModal(true);
                         return; 
                     }
-                    await supabase.from('seapod_production').update({ order_number: order.order_number, status: 'Assigned to Order' }).eq('id', existingSeapod.id);
+                    await supabase.from('seapod_production').update({ 
+                        order_number: String(order.order_number), 
+                        status: 'Assigned to Order' 
+                    }).eq('id', existingSeapod.id);
                 }
             }
         }
     }
 
-    // =========================================================
-    // 4. SHIPPING MODAL INTERCEPT
-    // =========================================================
+    // 4. SHIPPING MODAL
     if (field === 'status' && value === 'Shipped') {
         if (!order.vessel || order.vessel === 'Unknown Vessel') {
             alert("⚠️ Cannot Ship: Vessel Name is required.");
@@ -239,7 +235,6 @@ export default function OrderDetails({ params }) {
         return; 
     }
 
-    // Normal Save
     setOrder({ ...order, [field]: value });
     await supabase.from('orders').update({ [field]: value }).eq('id', orderId);
   }
@@ -256,18 +251,14 @@ export default function OrderDetails({ params }) {
         hw_version: tpl.hw_version,
         sw_version: tpl.sw_version,
         status: 'In Progress',
-        created_by: userEmail 
+        created_by: userEmail
     }]).select().single().then(({data, error}) => {
         if(error) { alert(error.message); return; }
         setNewSeapodId(data.id);
         
         supabase.from('seapod_template_items').select('*').eq('template_id', selectedSeapodTemplate).then(({data: tItems}) => {
             const itemsToInsert = tItems.map(i => ({ 
-                seapod_id: data.id, 
-                piece: i.piece, 
-                item_id: i.item_id, 
-                quantity: i.quantity, 
-                sort_order: i.sort_order,
+                seapod_id: data.id, piece: i.piece, item_id: i.item_id, quantity: i.quantity, sort_order: i.sort_order,
                 serial: i.piece.toLowerCase().includes('seapod') ? missingSeapodSerial : ''
             }));
             supabase.from('seapod_items').insert(itemsToInsert).then(() => {
@@ -307,28 +298,22 @@ export default function OrderDetails({ params }) {
     }
   }
 
-  // --- SHIPPING ACTIONS ---
+  // --- ACTIONS ---
   async function confirmShipping() {
     setShipping(true);
     try {
         const res = await fetch('/api/trigger-shipping', { method: 'POST', body: JSON.stringify({ orderId: orderId }) });
         const json = await res.json();
-        
-        if (json.error) {
-             alert("Error: " + json.error);
-        } else {
-             setOrder({ ...order, status: 'Shipped' });
-             await supabase.from('orders').update({ 
-                 status: 'Shipped',
-                 shipped_at: new Date().toISOString()
-             }).eq('id', orderId);
-             setShowShipModal(false); 
+        if (json.error) alert("Error: " + json.error);
+        else { 
+            setOrder({ ...order, status: 'Shipped' }); 
+            await supabase.from('orders').update({ status: 'Shipped', shipped_at: new Date().toISOString() }).eq('id', orderId); 
+            setShowShipModal(false); 
         }
     } catch (e) { alert(e.message); }
     setShipping(false);
   }
 
-  // --- CONFLICT ACTIONS ---
   async function handleClearConflict() {
     setItems(prev => prev.map(i => i.id === conflictDetails.itemId ? { ...i, serial: '' } : i));
     await supabase.from('order_items').update({ serial: '' }).eq('id', conflictDetails.itemId);
@@ -358,7 +343,6 @@ export default function OrderDetails({ params }) {
     if (data?.publicUrl) window.open(data.publicUrl, '_blank');
   }
 
-  // --- ITEM ACTIONS ---
   function exportToExcel() {
     const dataToExport = items.map(item => ({
         "Order #": order.order_number, "Vessel": order.vessel, "Account": order.account_name || '-', "Warehouse": order.warehouse || '-',
@@ -409,7 +393,9 @@ export default function OrderDetails({ params }) {
   // --- RENDER ---
   if (loading) return <div className="flex min-h-screen bg-[#F3F4F6]"><Sidebar /><div className="ml-64 p-10 text-slate-500">Loading Order...</div></div>;
   if (!order) return <div className="flex min-h-screen bg-[#F3F4F6]"><Sidebar /><div className="ml-64 p-10 text-red-500">Order not found.</div></div>;
+  
   const totalCost = items.reduce((sum, item) => sum + ((item.quantity || 0) * (item.price || 0)), 0);
+  const isLockedOrder = order.status === 'Shipped' && !isAdmin && !canShip;
 
   return (
     <div className="flex min-h-screen bg-[#F3F4F6] font-sans">
@@ -421,7 +407,7 @@ export default function OrderDetails({ params }) {
                 <div className="flex items-center gap-4">
                    <div className="w-12 h-12 bg-[#0176D3]/10 text-[#0176D3] border border-[#0176D3]/20 rounded-lg flex items-center justify-center"><Box size={24} /></div>
                    <div>
-                     <div className="flex items-center gap-2"><h1 className="text-2xl font-bold text-slate-900">{order.vessel || 'No Vessel Name'}</h1>{isLocked && <Lock size={18} className="text-red-500" title="Order Locked" />}</div>
+                     <div className="flex items-center gap-2"><h1 className="text-2xl font-bold text-slate-900">{order.vessel || 'No Vessel Name'}</h1>{isLockedOrder && <Lock size={18} className="text-red-500" title="Order Locked" />}</div>
                      <div className="flex items-center gap-3 text-sm text-slate-500 mt-1">
                         <span className="font-mono bg-slate-100 px-2 py-0.5 rounded text-xs border border-slate-200 text-slate-600">#{order.order_number}</span>
                         <span className="flex items-center gap-1 text-slate-600 font-medium"><Building2 size={12} /> {order.account_name || 'No Account'}</span>
@@ -431,12 +417,14 @@ export default function OrderDetails({ params }) {
                 </div>
                 <div className="flex items-end gap-3">
                     {isAdmin && (
-                        <button onClick={handleManualWebhook} className="bg-white border border-orange-200 text-orange-600 font-bold px-3 py-2 rounded-md text-sm shadow-sm hover:bg-orange-50 flex items-center gap-2" title="Force Resend Webhook"><RefreshCcw size={16}/> Resend Data</button>
+                        <button onClick={handleManualWebhook} className="bg-white border border-orange-200 text-orange-600 font-bold px-3 py-2 rounded-md text-sm shadow-sm hover:bg-orange-50 flex items-center gap-2" title="Force Resend Webhook">
+                            <RefreshCcw size={16}/> Resend Data
+                        </button>
                     )}
                     <button onClick={exportToExcel} className="bg-white border border-slate-300 text-slate-700 font-bold px-3 py-2 rounded-md text-sm shadow-sm hover:bg-slate-50 flex items-center gap-2"><Download size={16}/> Export Excel</button>
                     <div className="flex flex-col items-end">
                         <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Status</label>
-                        <select value={order.status || 'New'} onChange={(e) => updateOrder('status', e.target.value)} disabled={isLocked && !canShip} className={`bg-white border border-slate-300 text-slate-900 text-sm font-bold rounded-md shadow-sm focus:ring-2 focus:ring-[#0176D3] block w-44 p-2 outline-none ${isLocked ? 'bg-gray-100 text-gray-500' : ''}`}>
+                        <select value={order.status || 'New'} onChange={(e) => updateOrder('status', e.target.value)} disabled={isLockedOrder && !canShip} className={`bg-white border border-slate-300 text-slate-900 text-sm font-bold rounded-md shadow-sm focus:ring-2 focus:ring-[#0176D3] block w-44 p-2 outline-none ${isLockedOrder ? 'bg-gray-100 text-gray-500' : ''}`}>
                         <option value="New">New</option><option value="In preparation">In preparation</option><option value="In Box">In Box</option><option value="Ready for Pickup">Ready for Pickup</option>{(canShip || order.status === 'Shipped') && <option value="Shipped">Shipped</option>}
                         </select>
                     </div>
@@ -450,16 +438,16 @@ export default function OrderDetails({ params }) {
                 <div className="bg-white border border-slate-200 rounded-lg shadow-sm">
                     <div className="px-5 py-3 border-b border-slate-100 bg-slate-50/50"><h3 className="text-xs font-bold text-slate-500 uppercase tracking-wide">Order Details</h3></div>
                     <div className="p-5 space-y-5">
-                        <div><label className="flex items-center justify-between text-xs font-bold text-slate-400 uppercase mb-1.5"><span className="flex items-center gap-2"><Ship size={14} /> Vessel Name <span className="text-red-500">*</span></span>{checkingVessel && <span className="text-[#0176D3] flex items-center gap-1"><Loader2 size={12} className="animate-spin"/> Checking...</span>}</label><input className="w-full text-sm font-medium border border-slate-200 rounded px-3 py-2 focus:border-[#0176D3] focus:ring-1 focus:ring-[#0176D3] outline-none text-slate-900" placeholder="Enter Name & Click Away" value={order.vessel || ''} disabled={!canShip || isLocked || checkingVessel} onChange={(e) => updateOrder('vessel', e.target.value)} onBlur={handleVesselBlur} /></div>
+                        <div><label className="flex items-center justify-between text-xs font-bold text-slate-400 uppercase mb-1.5"><span className="flex items-center gap-2"><Ship size={14} /> Vessel Name <span className="text-red-500">*</span></span>{checkingVessel && <span className="text-[#0176D3] flex items-center gap-1"><Loader2 size={12} className="animate-spin"/> Checking...</span>}</label><input className="w-full text-sm font-medium border border-slate-200 rounded px-3 py-2 focus:border-[#0176D3] focus:ring-1 focus:ring-[#0176D3] outline-none text-slate-900" placeholder="Enter Name & Click Away" value={order.vessel || ''} disabled={!canShip || isLockedOrder || checkingVessel} onChange={(e) => updateOrder('vessel', e.target.value)} onBlur={handleVesselBlur} /></div>
                         <div><label className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase mb-1.5"><Building2 size={14} /> Account Name</label><input className="w-full text-sm font-medium border border-slate-200 bg-slate-50 rounded px-3 py-2 text-slate-500 cursor-not-allowed" value={order.account_name || ''} readOnly placeholder="Auto-filled" /></div>
-                        {isAdmin && (<div><label className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase mb-1.5"><Warehouse size={14} /> Warehouse</label><select className="w-full text-sm font-medium border border-slate-200 rounded px-3 py-2 focus:border-[#0176D3] outline-none bg-white text-slate-900" value={order.warehouse || 'Orca'} onChange={(e) => updateOrder('warehouse', e.target.value)} disabled={isLocked}><option value="Orca">Orca</option><option value="Baz">Baz</option></select></div>)}
-                        <div><label className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase mb-1.5"><Calendar size={14} /> Pickup Date</label><input type="date" className="w-full text-sm font-medium border border-slate-200 rounded px-3 py-2 focus:border-[#0176D3] outline-none text-slate-700" value={order.pickup_date || ''} disabled={isLocked} onChange={(e) => updateOrder('pickup_date', e.target.value)} /></div>
-                        <div><label className="block text-xs font-bold text-slate-400 uppercase mb-1.5">Kit Type</label><select className="w-full text-sm font-medium border border-slate-200 rounded px-3 py-2 focus:border-[#0176D3] outline-none bg-white" value={order.type || ''} disabled={isLocked} onChange={(e) => updateOrder('type', e.target.value)} ><option>Full system</option><option>Upgrade</option><option>Replacement</option><option>Spare Parts</option></select></div>
+                        {isAdmin && (<div><label className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase mb-1.5"><Warehouse size={14} /> Warehouse</label><select className="w-full text-sm font-medium border border-slate-200 rounded px-3 py-2 focus:border-[#0176D3] outline-none bg-white text-slate-900" value={order.warehouse || 'Orca'} onChange={(e) => updateOrder('warehouse', e.target.value)} disabled={isLockedOrder}><option value="Orca">Orca</option><option value="Baz">Baz</option></select></div>)}
+                        <div><label className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase mb-1.5"><Calendar size={14} /> Pickup Date</label><input type="date" className="w-full text-sm font-medium border border-slate-200 rounded px-3 py-2 focus:border-[#0176D3] outline-none text-slate-700" value={order.pickup_date || ''} disabled={isLockedOrder} onChange={(e) => updateOrder('pickup_date', e.target.value)} /></div>
+                        <div><label className="block text-xs font-bold text-slate-400 uppercase mb-1.5">Kit Type</label><select className="w-full text-sm font-medium border border-slate-200 rounded px-3 py-2 focus:border-[#0176D3] outline-none bg-white" value={order.type || ''} disabled={isLockedOrder} onChange={(e) => updateOrder('type', e.target.value)} ><option>Full system</option><option>Upgrade</option><option>Replacement</option><option>Spare Parts</option></select></div>
                     </div>
                 </div>
-                <div className={`bg-white border rounded-lg shadow-sm overflow-hidden transition-colors ${isDragging && !isLocked ? 'border-[#0176D3] bg-blue-50/50' : 'border-slate-200'}`} onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop}>
-                    <div className="px-5 py-3 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center"><h3 className="text-xs font-bold text-slate-500 uppercase tracking-wide flex items-center gap-2"><Paperclip size={14}/> Attachments ({files.length})</h3>{canShip && !isLocked && (<label className="cursor-pointer text-xs font-bold text-[#0176D3] hover:underline flex items-center gap-1">{uploading ? 'Uploading...' : '+ Upload'}<input type="file" className="hidden" onChange={onFileSelect} disabled={uploading || isLocked} /></label>)}</div>
-                    {isDragging && !isLocked && <div className="p-4 text-center text-[#0176D3] font-bold text-sm bg-blue-50">Drop files here to upload</div>}
+                <div className={`bg-white border rounded-lg shadow-sm overflow-hidden transition-colors ${isDragging && !isLockedOrder ? 'border-[#0176D3] bg-blue-50/50' : 'border-slate-200'}`} onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop}>
+                    <div className="px-5 py-3 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center"><h3 className="text-xs font-bold text-slate-500 uppercase tracking-wide flex items-center gap-2"><Paperclip size={14}/> Attachments ({files.length})</h3>{canShip && !isLockedOrder && (<label className="cursor-pointer text-xs font-bold text-[#0176D3] hover:underline flex items-center gap-1">{uploading ? 'Uploading...' : '+ Upload'}<input type="file" className="hidden" onChange={onFileSelect} disabled={uploading || isLockedOrder} /></label>)}</div>
+                    {isDragging && !isLockedOrder && <div className="p-4 text-center text-[#0176D3] font-bold text-sm bg-blue-50">Drop files here to upload</div>}
                     <div className="divide-y divide-slate-50">{files.map(file => (<div key={file.id} onClick={() => openFile(file.file_path)} className="px-5 py-3 flex items-center gap-3 hover:bg-blue-50 cursor-pointer transition-colors group"><div className="bg-blue-100 p-1.5 rounded text-blue-600"><FileText size={16}/></div><div className="overflow-hidden"><p className="text-sm font-medium text-slate-700 truncate group-hover:text-[#0176D3] group-hover:underline">{file.file_name}</p><p className="text-[10px] text-slate-400">Uploaded by {file.uploaded_by}</p></div></div>))}{files.length === 0 && !isDragging && <div className="p-6 text-center text-slate-400 text-xs italic">No files attached. Drag & drop here.</div>}</div>
                 </div>
             </div>
@@ -475,7 +463,7 @@ export default function OrderDetails({ params }) {
                      </thead>
                      <tbody className="divide-y divide-slate-50">
                        {items.map((item) => {
-                         // Find master item to see if serial is needed
+                         // --- LOGIC: CHECK IF SERIAL IS NEEDED FOR RED BORDER ---
                          const isSerialReq = masterItems.find(m => m.name === item.piece)?.serial_needed;
                          return (
                          <tr key={item.id} className="group hover:bg-slate-50 transition-colors">
@@ -485,27 +473,27 @@ export default function OrderDetails({ params }) {
                                    className={`w-full bg-transparent border-none outline-none focus:ring-0 text-sm font-medium text-slate-900 ${!item.piece ? 'border-b border-red-300' : ''}`}
                                    value={item.piece || ''}
                                    onChange={(e) => updateItem(item.id, 'piece', e.target.value)}
-                                   disabled={isLocked}
+                                   disabled={isLockedOrder}
                                    placeholder="Search Item..."
                                />
                                <datalist id={`options-${item.id}`}>{masterItems.map(m => (<option key={m.id} value={m.name}>{m.sku}</option>))}</datalist>
                             </td>
-                            <td className="px-6 py-3"><input type="number" className="w-full bg-transparent border-none outline-none" value={item.quantity || 1} disabled={isLocked} onChange={(e) => updateItem(item.id, 'quantity', e.target.value)} /></td>
+                            <td className="px-6 py-3"><input type="number" className="w-full bg-transparent border-none outline-none" value={item.quantity || 1} disabled={isLockedOrder} onChange={(e) => updateItem(item.id, 'quantity', e.target.value)} /></td>
                             
                             <td className="px-6 py-3">
                                <input 
-                                   className={`w-full bg-transparent border-b ${isSerialReq && !item.serial ? 'border-red-300 bg-red-50/50' : 'border-transparent'} outline-none text-[#0176D3] font-medium placeholder-slate-300`} 
+                                   className={`w-full bg-transparent border-b ${isSerialReq && (!item.serial || item.serial.trim() === '') ? 'border-red-300 bg-red-50' : 'border-transparent'} outline-none text-[#0176D3] font-medium placeholder-slate-300`} 
                                    value={item.serial || ''} 
-                                   disabled={isLocked} 
+                                   disabled={isLockedOrder} 
                                    onChange={(e) => updateItem(item.id, 'serial', e.target.value)} 
                                    placeholder="---" 
                                />
                             </td>
                             
-                            <td className="px-6 py-3"><input className="w-full bg-transparent border-none outline-none text-slate-600 placeholder-slate-300" value={item.orca_id || ''} disabled={isLocked} onChange={(e) => updateItem(item.id, 'orca_id', e.target.value)} placeholder="---" /></td>
+                            <td className="px-6 py-3"><input className="w-full bg-transparent border-none outline-none text-slate-600 placeholder-slate-300" value={item.orca_id || ''} disabled={isLockedOrder} onChange={(e) => updateItem(item.id, 'orca_id', e.target.value)} placeholder="---" /></td>
                             {isAdmin && (<td className="px-6 py-3 text-right text-xs font-mono text-slate-600">${(item.price * item.quantity).toFixed(2)}</td>)}
                             <td className="px-4 py-3 text-right">
-                                {(!isLocked) && (isAdmin || (canShip && !['In Box', 'Ready for Pickup', 'Shipped'].includes(order.status))) && (
+                                {(!isLockedOrder) && (isAdmin || (canShip && !['In Box', 'Ready for Pickup', 'Shipped'].includes(order.status))) && (
                                    <button onClick={() => deleteItem(item.id)} className="text-slate-300 hover:text-red-600 opacity-0 group-hover:opacity-100"><Trash2 size={16}/></button>
                                 )}
                             </td>
@@ -513,12 +501,12 @@ export default function OrderDetails({ params }) {
                        )})}
                      </tbody>
                    </table>
-                   {!isLocked && (<button onClick={addItem} className="w-full py-4 text-sm font-bold text-slate-500 hover:bg-slate-50 hover:text-[#0176D3] transition-colors flex items-center justify-center gap-2 border-t border-slate-200"><Plus size={16} /> Add New Line Item</button>)}
+                   {!isLockedOrder && (<button onClick={addItem} className="w-full py-4 text-sm font-bold text-slate-500 hover:bg-slate-50 hover:text-[#0176D3] transition-colors flex items-center justify-center gap-2 border-t border-slate-200"><Plus size={16} /> Add New Line Item</button>)}
                 </div>
             </div>
           </main>
 
-          {/* ... ALL MODALS ... */}
+          {/* ... MODALS ... */}
           {showShipModal && (<div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4"><div className="bg-white rounded-xl shadow-2xl max-w-sm w-full p-6 animate-in fade-in zoom-in duration-200 border border-slate-200"><div className="flex flex-col items-center text-center"><div className="w-12 h-12 bg-blue-100 text-[#0176D3] rounded-full flex items-center justify-center mb-4"><Ship size={24} /></div><h3 className="text-lg font-bold text-slate-900">Confirm Shipment?</h3><p className="text-sm text-slate-500 mt-2 mb-6">This will <strong>lock the order</strong> and send data. Cannot be undone.</p><div className="flex gap-3 w-full"><button onClick={() => setShowShipModal(false)} disabled={shipping} className="flex-1 px-4 py-2.5 border border-slate-300 rounded-lg text-sm font-bold text-slate-700 hover:bg-slate-50">Cancel</button><button onClick={confirmShipping} disabled={shipping} className="flex-1 px-4 py-2.5 bg-[#0176D3] text-white rounded-lg text-sm font-bold hover:bg-blue-700 shadow-sm">{shipping ? 'Processing...' : 'Confirm & Ship'}</button></div></div></div></div>)}
           {showAssignedModal && conflictDetails && (<div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4"><div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 animate-in fade-in zoom-in duration-200 border border-red-200"><div className="flex flex-col items-center text-center"><div className="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center mb-4"><XCircle size={24} /></div><h3 className="text-lg font-bold text-slate-900">Seapod Already Assigned</h3><p className="text-sm text-slate-500 mt-2 mb-6">Seapod <strong>{conflictDetails.serial}</strong> is already assigned to <strong>Order #{conflictDetails.assignedTo}</strong>.<br/>Please use a different Seapod or check the number.</p><div className="flex gap-3 w-full"><button onClick={handleClearConflict} className="flex-1 px-4 py-2.5 bg-[#0176D3] text-white rounded-lg text-sm font-bold hover:bg-blue-700 shadow-sm">OK, Clear Serial</button></div></div></div></div>)}
           {showSeapodModal && (<div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"><div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-2xl border border-blue-100 h-[80vh] flex flex-col"><div className="flex flex-col items-center text-center mb-6"><div className="w-12 h-12 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center mb-2"><Cpu size={24} /></div><h3 className="text-xl font-bold text-slate-900">{seapodStep === 1 ? "Seapod Not Found" : seapodStep === 3 ? "Verify Versions" : `Build: ${missingSeapodSerial}`}</h3>{seapodStep === 1 && <p className="text-sm text-slate-500">Seapod <strong>{missingSeapodSerial}</strong> does not exist. Create it now to proceed.</p>}</div>
