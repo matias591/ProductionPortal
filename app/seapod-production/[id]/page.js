@@ -27,7 +27,11 @@ export default function SeapodBuildDetails({ params }) {
     const { data: s } = await supabase.from('seapod_production').select('*').eq('id', seapodId).single();
     const { data: i } = await supabase.from('seapod_items').select('*').eq('seapod_id', seapodId).order('sort_order', { ascending: true });
     const { data: f } = await supabase.from('seapod_files').select('*').eq('seapod_id', seapodId).order('created_at', { ascending: false });
-    setSeapod(s); setItems(i || []); setFiles(f || []); setLoading(false);
+    
+    setSeapod(s); 
+    setItems(i || []); 
+    setFiles(f || []); 
+    setLoading(false);
   }
 
   // --- DRAG & DROP LOGIC ---
@@ -62,6 +66,11 @@ export default function SeapodBuildDetails({ params }) {
     const now = new Date().toISOString();
     setSeapod(prev => ({ ...prev, status: 'Completed', completed_at: now }));
     await supabase.from('seapod_production').update({ status: 'Completed', completed_at: now }).eq('id', seapodId);
+    
+    // Call Webhook
+    try {
+        await fetch('/api/trigger-seapod-build', { method: 'POST', body: JSON.stringify({ seapodId }) });
+    } catch(e) { console.error(e); }
   }
 
   async function updateItem(itemId, field, value) {
@@ -70,7 +79,7 @@ export default function SeapodBuildDetails({ params }) {
     await supabase.from('seapod_items').update({ [field]: value }).eq('id', itemId);
   }
 
-  // --- NEW: HANDLE ENTER KEY NAVIGATION ---
+  // --- ENTER KEY NAVIGATION ---
   const handleKeyDown = (e, index) => {
     if (e.key === 'Enter') {
         e.preventDefault();
@@ -93,8 +102,18 @@ export default function SeapodBuildDetails({ params }) {
     if(data) setItems([...items, data]);
   }
 
-  function openFile(path) { const { data } = supabase.storage.from('seapod-attachments').getPublicUrl(path); window.open(data.publicUrl, '_blank'); }
-  function exportExcel() { const data = items.map(i => ({ "Component": i.piece, "Qty": i.quantity, "Serial": i.serial })); const ws = XLSX.utils.json_to_sheet(data); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Checklist"); XLSX.writeFile(wb, `Seapod_${seapod.serial_number}.xlsx`); }
+  function openFile(path) { 
+      const { data } = supabase.storage.from('seapod-attachments').getPublicUrl(path); 
+      if (data?.publicUrl) window.open(data.publicUrl, '_blank'); 
+  }
+  
+  function exportExcel() { 
+      const data = items.map(i => ({ "Component": i.piece, "Qty": i.quantity, "Serial": i.serial })); 
+      const ws = XLSX.utils.json_to_sheet(data); 
+      const wb = XLSX.utils.book_new(); 
+      XLSX.utils.book_append_sheet(wb, ws, "Checklist"); 
+      XLSX.writeFile(wb, `Seapod_${seapod.serial_number}.xlsx`); 
+  }
 
   if (loading) return <div className="flex min-h-screen bg-[#F3F4F6]"><Sidebar /><div className="ml-64 p-10 text-slate-500">Loading...</div></div>;
 
@@ -125,19 +144,23 @@ export default function SeapodBuildDetails({ params }) {
                                 {seapod.order_number && (<span className="bg-purple-100 text-purple-700 border border-purple-200 px-2 py-0.5 rounded text-xs font-bold flex items-center gap-1"><Box size={10} /> Assigned to Order #{seapod.order_number}</span>)}
                             </div>
                             
-                            {/* --- CREATED BY --- */}
                             <div className="flex gap-4 mt-2 text-[10px] text-slate-400">
                                 {seapod.created_by && <span className="flex items-center gap-1"><User size={10}/> By {seapod.created_by}</span>}
                                 <span>Created: {new Date(seapod.created_at).toLocaleDateString()}</span>
                                 {seapod.completed_at && <span className="text-green-600 font-bold flex items-center gap-1"><Calendar size={10}/> Completed: {new Date(seapod.completed_at).toLocaleDateString()}</span>}
                             </div>
-
                         </div>
                     </div>
                     <div className="flex items-end flex-col gap-2">
-                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Status</label>
-                        <select value={seapod.status} onChange={(e) => handleStatusChange(e.target.value)} className="bg-white border border-slate-300 rounded px-3 py-2 text-sm font-bold focus:border-[#0176D3] outline-none">
-                            <option>In Progress</option><option>Completed</option><option disabled>Assigned to Order</option>
+                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block text-right">Status</label>
+                        <select 
+                            value={seapod.status} 
+                            onChange={(e) => handleStatusChange(e.target.value)}
+                            className="bg-white border border-slate-300 rounded px-3 py-2 text-sm font-bold focus:border-[#0176D3] outline-none"
+                        >
+                            <option>In Progress</option>
+                            <option>Completed</option>
+                            <option disabled>Assigned to Order</option>
                         </select>
                         <button onClick={exportExcel} className="text-xs font-bold text-slate-500 flex items-center gap-1 hover:text-[#0176D3]"><Download size={12}/> Export Details</button>
                     </div>
@@ -150,29 +173,44 @@ export default function SeapodBuildDetails({ params }) {
                 <div className={`bg-white border rounded-xl shadow-sm overflow-hidden transition-colors ${isDragging ? 'border-[#0176D3] bg-blue-50/50' : 'border-slate-200'}`} onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop}>
                     <div className="px-5 py-3 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center"><h3 className="text-xs font-bold text-slate-500 uppercase tracking-wide flex items-center gap-2"><Paperclip size={14}/> Files ({files.length})</h3><label className="cursor-pointer text-xs font-bold text-[#0176D3] hover:underline flex items-center gap-1">{uploading ? '...' : '+ Upload'}<input type="file" className="hidden" onChange={onFileSelect} disabled={uploading} /></label></div>
                     {isDragging && <div className="p-4 text-center text-[#0176D3] font-bold text-sm bg-blue-50">Drop files here</div>}
-                    <div className="divide-y divide-slate-50">{files.map(file => (<div key={file.id} onClick={() => openFile(file.file_path)} className="px-5 py-3 flex items-center gap-3 hover:bg-blue-50 cursor-pointer transition-colors group"><div className="bg-blue-100 p-1.5 rounded text-blue-600"><FileText size={16}/></div><div className="overflow-hidden"><p className="text-sm font-medium text-slate-700 truncate group-hover:text-[#0176D3] group-hover:underline">{file.file_name}</p><p className="text-[10px] text-slate-400">By {file.uploaded_by}</p></div></div>))}</div>
+                    <div className="divide-y divide-slate-50">
+                        {files.map(file => (
+                            <div key={file.id} onClick={() => openFile(file.file_path)} className="px-5 py-3 flex items-center gap-3 hover:bg-blue-50 cursor-pointer transition-colors group">
+                                <div className="bg-blue-100 p-1.5 rounded text-blue-600"><FileText size={16}/></div>
+                                <div className="overflow-hidden"><p className="text-sm font-medium text-slate-700 truncate group-hover:text-[#0176D3] group-hover:underline">{file.file_name}</p><p className="text-[10px] text-slate-400">By {file.uploaded_by}</p></div>
+                            </div>
+                        ))}
+                    </div>
                 </div>
             </div>
 
             <div className="col-span-2">
                 <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-                    <div className="bg-slate-50 px-6 py-3 border-b border-slate-200 flex justify-between items-center"><h3 className="font-bold text-sm text-slate-700 uppercase">Components Checklist</h3><span className="text-xs font-bold bg-white border border-slate-200 px-2 py-1 rounded text-slate-500">{items.length} Items</span></div>
+                    <div className="bg-slate-50 px-6 py-3 border-b border-slate-200 flex justify-between items-center">
+                        <h3 className="font-bold text-sm text-slate-700 uppercase">Components Checklist</h3>
+                        <span className="text-xs font-bold bg-white border border-slate-200 px-2 py-1 rounded text-slate-500">{items.length} Items</span>
+                    </div>
                     <table className="w-full text-left">
-                        <thead className="text-xs font-bold text-slate-400 uppercase border-b border-slate-200"><tr>{/* NO CHECKBOX HEADER */}<th className="px-6 py-3">Component</th><th className="px-6 py-3 w-24">Qty</th><th className="px-6 py-3 w-48">Serial Number</th><th className="w-12"></th></tr></thead>
+                        <thead className="text-xs font-bold text-slate-400 uppercase border-b border-slate-200">
+                            <tr>
+                                <th className="px-6 py-3">Component</th>
+                                <th className="px-6 py-3 w-24">Qty</th>
+                                <th className="px-6 py-3 w-48">Serial Number</th>
+                                <th className="w-12"></th>
+                            </tr>
+                        </thead>
                         <tbody className="divide-y divide-slate-100">
                             {items.map((item, index) => (
                                 <tr key={item.id} className="group hover:bg-slate-50">
-                                    {/* NO CHECKBOX CELL */}
                                     <td className="px-6 py-3 text-sm font-medium text-slate-700">{item.piece}</td>
                                     <td className="px-6 py-3 text-sm">{item.quantity}</td>
                                     <td className="px-6 py-3">
-                                        {/* --- UPDATED INPUT WITH CLASS AND ONKEYDOWN --- */}
                                         <input 
-                                            className="serial-input w-full border border-slate-200 rounded px-2 py-1.5 text-sm focus:border-[#0176D3] outline-none text-[#0176D3] font-medium placeholder-slate-300"
+                                            className="serial-input w-full border border-slate-200 rounded px-2 py-1.5 text-sm focus:border-[#0176D3] outline-none text-[#0176D3] font-medium placeholder-slate-300" 
                                             placeholder="Scan Serial" 
                                             value={item.serial || ''} 
-                                            onChange={(e) => updateItem(item.id, 'serial', e.target.value)}
-                                            onKeyDown={(e) => handleKeyDown(e, index)} // <--- Navigation
+                                            onChange={(e) => updateItem(item.id, 'serial', e.target.value)} 
+                                            onKeyDown={(e) => handleKeyDown(e, index)}
                                         />
                                     </td>
                                     <td className="px-4 py-3 text-right"><button onClick={() => deleteItem(item.id)} className="text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 size={16}/></button></td>
@@ -186,7 +224,32 @@ export default function SeapodBuildDetails({ params }) {
         </div>
 
         {/* ACKNOWLEDGEMENT MODAL */}
-        {showAck && (<div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"><div className="bg-white rounded-xl shadow-2xl p-8 w-full max-w-md text-center border-t-4 border-[#0176D3]"><div className="w-16 h-16 bg-blue-50 text-[#0176D3] rounded-full flex items-center justify-center mx-auto mb-4"><AlertTriangle size={32}/></div><h2 className="text-xl font-bold text-slate-900 mb-2">Build Verification</h2><p className="text-slate-500 text-sm mb-6">You are marking Seapod <strong>{seapod.serial_number}</strong> as Completed.</p><div className="bg-slate-50 border border-slate-200 rounded-lg p-4 mb-6 text-left"><div className="mb-4 pb-4 border-b border-slate-200"><span className="text-[10px] font-bold text-slate-400 uppercase block">Seapod Version</span><span className="text-lg font-bold text-[#0176D3]">{seapod.seapod_version || 'N/A'}</span></div><div className="grid grid-cols-2 gap-4"><div><span className="text-[10px] font-bold text-slate-400 uppercase block">Hardware Ver.</span><span className="text-lg font-bold text-slate-800">{seapod.hw_version || 'N/A'}</span></div><div><span className="text-[10px] font-bold text-slate-400 uppercase block">Software Ver.</span><span className="text-lg font-bold text-slate-800">{seapod.sw_version || 'N/A'}</span></div></div></div><div className="flex gap-3"><button onClick={() => setShowAck(false)} className="flex-1 py-3 border border-slate-300 rounded-lg font-bold text-slate-600 hover:bg-slate-50">Cancel</button><button onClick={confirmCompletion} className="flex-1 py-3 bg-[#0176D3] text-white rounded-lg font-bold hover:bg-blue-700 shadow-lg">Confirm & Complete</button></div><p className="text-xs text-slate-400 mt-4">By confirming, you acknowledge the Seapod contains these versions.</p></div></div>)}
+        {showAck && (
+            <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                <div className="bg-white rounded-xl shadow-2xl p-8 w-full max-w-md text-center border-t-4 border-[#0176D3]">
+                    <div className="w-16 h-16 bg-blue-50 text-[#0176D3] rounded-full flex items-center justify-center mx-auto mb-4"><AlertTriangle size={32}/></div>
+                    <h2 className="text-xl font-bold text-slate-900 mb-2">Build Verification</h2>
+                    <p className="text-slate-500 text-sm mb-6">You are marking Seapod <strong>{seapod.serial_number}</strong> as Completed.</p>
+                    
+                    <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 mb-6 text-left">
+                        <div className="mb-4 pb-4 border-b border-slate-200">
+                            <span className="text-[10px] font-bold text-slate-400 uppercase block">Seapod Version</span>
+                            <span className="text-lg font-bold text-[#0176D3]">{seapod.seapod_version || 'N/A'}</span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div><span className="text-[10px] font-bold text-slate-400 uppercase block">Hardware Ver.</span><span className="text-lg font-bold text-slate-800">{seapod.hw_version || 'N/A'}</span></div>
+                            <div><span className="text-[10px] font-bold text-slate-400 uppercase block">Software Ver.</span><span className="text-lg font-bold text-slate-800">{seapod.sw_version || 'N/A'}</span></div>
+                        </div>
+                    </div>
+                    
+                    <div className="flex gap-3">
+                        <button onClick={() => setShowAck(false)} className="flex-1 py-3 border border-slate-300 rounded-lg font-bold text-slate-600 hover:bg-slate-50">Cancel</button>
+                        <button onClick={confirmCompletion} className="flex-1 py-3 bg-[#0176D3] text-white rounded-lg font-bold hover:bg-blue-700 shadow-lg">Confirm & Complete</button>
+                    </div>
+                    <p className="text-xs text-slate-400 mt-4">By confirming, you acknowledge the Seapod contains these versions.</p>
+                </div>
+            </div>
+        )}
       </main>
     </div>
   );

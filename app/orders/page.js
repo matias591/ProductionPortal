@@ -117,7 +117,7 @@ export default function OrderList() {
       kit: selectedKitId ? selectedKitName : 'Custom', 
       warehouse: isAdmin ? formData.get('warehouse') : 'Baz', 
       status: 'New',
-      created_by: userEmail // <--- VITAL: Saves the current user's email
+      created_by: userEmail // Saves the current user's email
     };
 
     const { data: orderData, error } = await supabase.from('orders').insert([newOrder]).select().single();
@@ -128,7 +128,7 @@ export default function OrderList() {
         const { data: templateItems } = await supabase.from('kit_items').select('*').eq('kit_id', selectedKitId).order('sort_order', { ascending: true });
         
         if (templateItems && templateItems.length > 0) {
-            const { data: masterList } = await supabase.from('items').select('id, price');
+            const { data: masterList } = await supabase.from('items').select('id, price, serial_needed'); // Added serial_needed to fetch
 
             const itemsToInsert = templateItems.map((item, index) => {
                 const masterPrice = masterList?.find(m => m.id === item.item_id)?.price || 0;
@@ -259,7 +259,6 @@ export default function OrderList() {
                 >
                   <td className="px-6 py-4">
                       <div className="font-semibold text-[#0176D3] hover:underline">{order.order_number}</div>
-                      {/* --- AUDIT IN LIST VIEW --- */}
                       <div className="text-[10px] text-slate-400 mt-1 flex items-center gap-1">
                           <User size={10}/> {order.created_by || 'Unknown'}
                       </div>
