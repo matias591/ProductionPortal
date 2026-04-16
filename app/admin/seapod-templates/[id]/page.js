@@ -40,7 +40,7 @@ export default function SeapodTemplateDetails({ params }) {
   const [templateId, setTemplateId] = useState(null);
   
   // Template Data State
-  const [template, setTemplate] = useState({ name: '', seapod_version: '', hw_version: '', sw_version: '' });
+  const [template, setTemplate] = useState({ name: '', seapod_version: '', hw_version: '', sw_version: '', assembly_item_id: '', bom_id: '' });
   const [items, setItems] = useState([]);
   const [masterItems, setMasterItems] = useState([]);
   
@@ -133,6 +133,16 @@ export default function SeapodTemplateDetails({ params }) {
                             <div>
                                 <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">SW Version</label>
                                 <input className="text-sm font-medium bg-slate-50 border border-slate-200 rounded px-2 py-1 w-32 focus:border-[#0176D3] outline-none" value={template.sw_version || ''} onChange={(e) => updateHeader('sw_version', e.target.value)} placeholder="e.g. v2.4" />
+                            </div>
+                        </div>
+                        <div className="flex gap-6">
+                            <div>
+                                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Assembly Item ID</label>
+                                <input className="text-sm font-medium bg-slate-50 border border-slate-200 rounded px-2 py-1 w-48 focus:border-[#0176D3] outline-none" value={template.assembly_item_id || ''} onChange={(e) => updateHeader('assembly_item_id', e.target.value)} placeholder="e.g. ASM-12345" />
+                            </div>
+                            <div>
+                                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">BOM ID</label>
+                                <input className="text-sm font-medium bg-slate-50 border border-slate-200 rounded px-2 py-1 w-48 focus:border-[#0176D3] outline-none" value={template.bom_id || ''} onChange={(e) => updateHeader('bom_id', e.target.value)} placeholder="e.g. BOM-67890" />
                             </div>
                         </div>
                     </div>

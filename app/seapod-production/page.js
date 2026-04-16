@@ -61,7 +61,8 @@ export default function SeapodList() {
     if(!tpl) return;
 
     const { data: newSeapod, error } = await supabase.from('seapod_production').insert([{
-        serial_number: serialNumber, template_name: tpl.name, seapod_version: tpl.seapod_version, hw_version: tpl.hw_version, sw_version: tpl.sw_version, status: 'In Progress', 
+        serial_number: serialNumber, template_name: tpl.name, seapod_version: tpl.seapod_version, hw_version: tpl.hw_version, sw_version: tpl.sw_version, 
+        assembly_item_id: tpl.assembly_item_id, bom_id: tpl.bom_id, status: 'In Progress', 
         created_by: userEmail 
     }]).select().single();
 
