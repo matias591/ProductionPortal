@@ -20,6 +20,7 @@ export default function OrderDetails({ params }) {
   // --- PERMISSIONS STATE ---
   const [isAdmin, setIsAdmin] = useState(false); 
   const [canShip, setCanShip] = useState(false);
+  const [canEditWarehouse, setCanEditWarehouse] = useState(false);
   const [userEmail, setUserEmail] = useState(''); 
 
   // --- UI STATE ---
@@ -64,7 +65,10 @@ export default function OrderDetails({ params }) {
        setUserEmail(session.user.email);
        const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).single();
        if (profile?.role === 'admin') setIsAdmin(true);
-       if (['admin', 'operation'].includes(profile?.role)) setCanShip(true);
+       if (['admin', 'operation'].includes(profile?.role)) {
+           setCanShip(true);
+           setCanEditWarehouse(true);
+       }
     }
 
     const { data: orderData } = await supabase.from('orders').select('*').eq('id', orderId).single();
@@ -516,7 +520,7 @@ export default function OrderDetails({ params }) {
                             <input className="w-full text-sm font-medium border border-slate-200 bg-slate-50 rounded px-3 py-2 text-slate-500 cursor-not-allowed" value={order.account_name || ''} readOnly placeholder="Auto-filled" />
                         </div>
                         
-                        {isAdmin && (
+                        {canEditWarehouse && (
                             <div>
                                 <label className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase mb-1.5"><Warehouse size={14} /> Warehouse</label>
                                 <select className="w-full text-sm font-medium border border-slate-200 rounded px-3 py-2 focus:border-[#0176D3] outline-none bg-white text-slate-900" value={order.warehouse || 'Orca'} onChange={(e) => updateOrder('warehouse', e.target.value)} disabled={isLocked}>
