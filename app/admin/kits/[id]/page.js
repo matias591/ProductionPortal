@@ -116,6 +116,7 @@ export default function KitDetails({ params }) {
   }
 
   async function deleteItem(id) {
+    if (!confirm('Remove this item from the kit?')) return;
     setItems(items.filter(i => i.id !== id));
     await supabase.from('kit_items').delete().eq('id', id);
   }
