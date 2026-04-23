@@ -44,8 +44,13 @@ function SortableItem({ item, onDelete, onUpdate, masterItems }) {
       />
 
       {/* Delete */}
-      <button onClick={() => onDelete(item.id)} className="text-slate-300 hover:text-red-500 transition-colors">
-        <Trash2 size={16}/>
+      <button 
+        onClick={() => onDelete(item.id)} 
+        className="text-red-400 hover:text-red-600 transition-colors p-1"
+        type="button"
+        title="Remove item from kit"
+      >
+        <Trash2 size={18}/>
       </button>
     </div>
   );
