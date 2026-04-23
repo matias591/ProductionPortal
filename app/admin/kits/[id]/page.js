@@ -17,15 +17,15 @@ function SortableItem({ item, onDelete, onUpdate, masterItems }) {
   };
 
   return (
-    <div ref={setNodeRef} style={style} className="flex items-center px-4 py-3 bg-white border-b border-slate-100 hover:bg-slate-50 group gap-4">
+    <div ref={setNodeRef} style={style} className="px-4 py-3 bg-white border-b border-slate-100 hover:bg-slate-50 group grid grid-cols-12 gap-4 items-center">
       {/* Drag Handle */}
-      <div {...attributes} {...listeners} className="text-slate-300 cursor-grab hover:text-slate-600">
+      <div {...attributes} {...listeners} className="text-slate-300 cursor-grab hover:text-slate-600 col-span-1 flex justify-center">
         <GripVertical size={20} />
       </div>
 
       {/* Item Dropdown */}
       <select 
-        className="flex-1 bg-transparent border border-transparent hover:border-slate-300 rounded px-2 py-1 outline-none focus:border-[#0176D3] text-sm"
+        className="col-span-7 bg-transparent border border-transparent hover:border-slate-300 rounded px-2 py-1 outline-none focus:border-[#0176D3] text-sm"
         value={item.item_id || ''}
         onChange={(e) => onUpdate(item.id, 'item_id', e.target.value)}
       >
@@ -38,20 +38,22 @@ function SortableItem({ item, onDelete, onUpdate, masterItems }) {
       {/* Quantity */}
       <input 
         type="number"
-        className="w-20 bg-transparent border border-transparent hover:border-slate-300 rounded px-2 py-1 outline-none focus:border-[#0176D3] text-sm"
+        className="col-span-2 bg-transparent border border-transparent hover:border-slate-300 rounded px-2 py-1 outline-none focus:border-[#0176D3] text-sm"
         value={item.quantity || 1}
         onChange={(e) => onUpdate(item.id, 'quantity', e.target.value)}
       />
 
       {/* Delete */}
-      <button 
-        onClick={() => onDelete(item.id)} 
-        className="text-red-400 hover:text-red-600 transition-colors p-1"
-        type="button"
-        title="Remove item from kit"
-      >
-        <Trash2 size={18}/>
-      </button>
+      <div className="col-span-2 flex justify-center">
+        <button 
+          onClick={() => onDelete(item.id)} 
+          className="text-red-500 hover:text-red-700 hover:bg-red-50 transition-colors p-2 rounded"
+          type="button"
+          title="Remove item from kit"
+        >
+          <Trash2 size={20}/>
+        </button>
+      </div>
     </div>
   );
 }
@@ -168,9 +170,11 @@ export default function KitDetails({ params }) {
             </div>
 
             <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-                <div className="px-14 py-3 bg-slate-50 border-b border-slate-200 flex justify-between">
-                    <span className="text-xs font-bold text-slate-500 uppercase">Item Selection</span>
-                    <span className="text-xs font-bold text-slate-500 uppercase mr-12">Qty</span>
+                <div className="px-4 py-3 bg-slate-50 border-b border-slate-200 grid grid-cols-12 gap-4 items-center">
+                    <span className="text-xs font-bold text-slate-500 uppercase col-span-1">Order</span>
+                    <span className="text-xs font-bold text-slate-500 uppercase col-span-7">Item Selection</span>
+                    <span className="text-xs font-bold text-slate-500 uppercase col-span-2">Qty</span>
+                    <span className="text-xs font-bold text-slate-500 uppercase col-span-2 text-center">Action</span>
                 </div>
                 
                 {/* DRAG CONTEXT */}
