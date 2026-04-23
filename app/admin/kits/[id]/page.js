@@ -44,7 +44,7 @@ function SortableItem({ item, onDelete, onUpdate, masterItems }) {
       />
 
       {/* Delete */}
-      <button onClick={() => onDelete(item.id)} className="text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
+      <button onClick={() => onDelete(item.id)} className="text-slate-300 hover:text-red-500 transition-colors">
         <Trash2 size={16}/>
       </button>
     </div>
