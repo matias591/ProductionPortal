@@ -197,4 +197,4 @@ export default function KitDetails({ params }) {
         </div>
     </div>
   );
-}
+}//nothing
