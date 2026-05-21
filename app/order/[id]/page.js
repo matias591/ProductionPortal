@@ -519,7 +519,12 @@ export default function OrderDetails({ params }) {
                             <label className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase mb-1.5"><Building2 size={14} /> Account Name</label>
                             <input className="w-full text-sm font-medium border border-slate-200 bg-slate-50 rounded px-3 py-2 text-slate-500 cursor-not-allowed" value={order.account_name || ''} readOnly placeholder="Auto-filled" />
                         </div>
-                        
+
+                        <div>
+                            <label className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase mb-1.5"><Box size={14} /> NS Sales Order</label>
+                            <input className="w-full text-sm font-medium border border-slate-200 bg-slate-50 rounded px-3 py-2 text-slate-500 cursor-not-allowed" value={order.ns_so_number || ''} readOnly placeholder="Assigned after shipping" />
+                        </div>
+
                         {canEditWarehouse && (
                             <div>
                                 <label className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase mb-1.5"><Warehouse size={14} /> Warehouse</label>
@@ -538,7 +543,7 @@ export default function OrderDetails({ params }) {
                         <div>
                             <label className="block text-xs font-bold text-slate-400 uppercase mb-1.5">Kit Type</label>
                             <select className="w-full text-sm font-medium border border-slate-200 rounded px-3 py-2 focus:border-[#0176D3] outline-none bg-white" value={order.type || ''} disabled={isLocked} onChange={(e) => updateOrder('type', e.target.value)} >
-                                <option>Full system</option><option>Upgrade</option><option>Replacement</option><option>Spare Parts</option>
+                                <option>Full system</option><option>Upgrade</option><option>Replacement</option><option>Spare Parts</option><option>Partial System</option>
                             </select>
                         </div>
                     </div>
