@@ -22,7 +22,8 @@ export default function OrderList() {
 
   const [userEmail, setUserEmail] = useState('');
   const [isAdmin, setIsAdmin] = useState(false);
-  const [canCreate, setCanCreate] = useState(false); // Admin or Operation
+  const [canCreate, setCanCreate] = useState(false); // Admin, Operation, or Vendor
+  const [canDelete, setCanDelete] = useState(false); // Admin or Operation only
 
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [orderToDelete, setOrderToDelete] = useState(null);
@@ -72,7 +73,8 @@ export default function OrderList() {
       const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).single();
       const role = profile?.role || 'vendor';
       if (role === 'admin') setIsAdmin(true);
-      if (role === 'admin' || role === 'operation') setCanCreate(true);
+      if (role === 'admin' || role === 'operation' || role === 'vendor') setCanCreate(true);
+      if (role === 'admin' || role === 'operation') setCanDelete(true);
     }
   }
 
@@ -284,7 +286,7 @@ export default function OrderList() {
                     <span className="text-slate-400 text-xs group-hover:text-[#0176D3] font-bold uppercase flex items-center justify-end gap-1">
                         View <ChevronRight size={14}/>
                     </span>
-                    {canCreate && ['New', 'In preparation', 'In Box'].includes(order.status) && (
+                    {canDelete && ['New', 'In preparation', 'In Box'].includes(order.status) && (
                         <button 
                             onClick={(e) => clickDeleteOrder(e, order)}
                             className="p-1.5 text-slate-300 hover:text-red-600 hover:bg-red-50 rounded transition-all"
