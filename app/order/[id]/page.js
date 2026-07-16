@@ -3,7 +3,6 @@ import { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Plus, Trash2, Box, Calendar, Ship, Upload, FileText, Paperclip, Lock, Download, Building2, Loader2, Warehouse, Cpu, Check, AlertTriangle, XCircle, User, RefreshCcw } from 'lucide-react';
-import * as XLSX from 'xlsx';
 import Sidebar from '../../components/Sidebar';
 
 export default function OrderDetails({ params }) {
@@ -45,6 +44,14 @@ export default function OrderDetails({ params }) {
   // --- CONFLICT MODAL STATE ---
   const [showAssignedModal, setShowAssignedModal] = useState(false);
   const [conflictDetails, setConflictDetails] = useState(null);
+
+  // --- INVOICE STATE ---
+  const [showInvoiceModal, setShowInvoiceModal] = useState(false);
+  const [invoiceForm, setInvoiceForm] = useState({ currency: 'USD', termsOfFreight: 'DDP', packages: 1, addressId: '' });
+  const [addresses, setAddresses] = useState([]);
+  const [showAddressCreate, setShowAddressCreate] = useState(false);
+  const [newAddress, setNewAddress] = useState({ company_name: '', address: '', phone: '', email: '', pic: '' });
+  const [generatingInvoice, setGeneratingInvoice] = useState(false);
 
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -360,19 +367,272 @@ export default function OrderDetails({ params }) {
     if (data?.publicUrl) window.open(data.publicUrl, '_blank');
   }
 
-  // --- ITEM ACTIONS ---
-  function exportToExcel() {
-    const dataToExport = items.map(item => ({
-        "Order #": order.order_number, "Vessel": order.vessel, "Account": order.account_name || '-', "Warehouse": order.warehouse || '-',
-        "Item Name": item.piece, "SKU": masterItems.find(m => m.name === item.piece)?.sku || '-', 
-        "Serial Number": item.serial || '-', "Quantity": item.quantity,
-        ...(isAdmin ? { "Unit Price": item.price, "Total Price": item.price * item.quantity } : {})
-    }));
-    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Order Details");
-    XLSX.writeFile(workbook, `Order_${order.order_number}.xlsx`);
+  // --- PDF + INVOICE ACTIONS ---
+  async function getLogoDataUrl() {
+    const res = await fetch('/orca-logo.png');
+    const blob = await res.blob();
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+    });
   }
+
+  async function exportToPdf() {
+    const { jsPDF } = await import('jspdf');
+    const jspdfautotable = await import('jspdf-autotable');
+    const autoTable = jspdfautotable.default || jspdfautotable;
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    const pageW = 297;
+    const margin = 14;
+    const logoDataUrl = await getLogoDataUrl();
+
+    doc.addImage(logoDataUrl, 'PNG', margin, 8, 48, 9);
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(13);
+    doc.text(`Master of ${(order.vessel || '').toUpperCase()}`, pageW / 2, 16, { align: 'center' });
+
+    doc.setDrawColor(200, 200, 200);
+    doc.line(margin, 20, pageW - margin, 20);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8.5);
+    doc.text(`Vessel: ${order.vessel || ''}`, margin, 26);
+    doc.text('Packing list', pageW / 2, 26, { align: 'center' });
+    doc.text(String(order.order_number), pageW - margin, 26, { align: 'right' });
+
+    const tableData = items.map(item => [
+        item.piece || '-',
+        item.serial || '-',
+        masterItems.find(m => m.name === item.piece)?.sku || item.orca_id || '-',
+        isAdmin ? `$${(item.price || 0).toLocaleString()}` : '-',
+        String(item.quantity || 1),
+        ''
+    ]);
+
+    autoTable(doc, {
+        startY: 30,
+        margin: { left: margin, right: margin },
+        head: [['ITEM', 'REF', 'PART NUMBER', 'PRICE PER QTY', 'QTY', 'CH']],
+        body: tableData,
+        styles: { fontSize: 9, cellPadding: 3 },
+        headStyles: { fillColor: [1, 118, 211], textColor: 255, fontStyle: 'bold' },
+        columnStyles: {
+            4: { halign: 'center', cellWidth: 16 },
+            5: { halign: 'center', cellWidth: 14 }
+        }
+    });
+
+    const finalY = doc.lastAutoTable.finalY + 8;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8.5);
+    doc.text('Orca AI Representative: Israel Kalaora', margin, finalY);
+    if (order.pickup_date) {
+        doc.text(new Date(order.pickup_date + 'T00:00:00').toLocaleDateString('en-GB'), margin, finalY + 5.5);
+    }
+
+    if (isAdmin) {
+        const total = items.reduce((sum, i) => sum + (i.quantity || 0) * (i.price || 0), 0);
+        doc.setFont('helvetica', 'bold');
+        doc.text(`Total cost   $${total.toLocaleString()}`, pageW - margin, finalY, { align: 'right' });
+    }
+
+    doc.save(`PackingList_${order.order_number}.pdf`);
+  }
+
+  async function loadAddresses() {
+    const { data } = await supabase.from('addresses').select('*').order('company_name');
+    setAddresses(data || []);
+  }
+
+  async function createNewAddress() {
+    if (!newAddress.company_name || !newAddress.address) {
+        alert('Company name and address are required.');
+        return;
+    }
+    const { data, error } = await supabase.from('addresses').insert([newAddress]).select().single();
+    if (error) { alert(error.message); return; }
+    const updated = [...addresses, data].sort((a, b) => a.company_name.localeCompare(b.company_name));
+    setAddresses(updated);
+    setInvoiceForm(prev => ({ ...prev, addressId: data.id }));
+    setNewAddress({ company_name: '', address: '', phone: '', email: '', pic: '' });
+    setShowAddressCreate(false);
+  }
+
+  async function generateCommercialInvoice() {
+    if (!invoiceForm.addressId) { alert('Please select a receiver address.'); return; }
+    setGeneratingInvoice(true);
+    try {
+        const { jsPDF } = await import('jspdf');
+        const jspdfautotable = await import('jspdf-autotable');
+        const autoTable = jspdfautotable.default || jspdfautotable;
+        const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+        const pageW = 210;
+        const margin = 14;
+        const logoDataUrl = await getLogoDataUrl();
+
+        const address = addresses.find(a => a.id === invoiceForm.addressId);
+        const shipDate = order.pickup_date
+            ? new Date(order.pickup_date + 'T00:00:00').toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })
+            : '-';
+
+        // HEADER
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(17);
+        doc.setTextColor(0, 0, 0);
+        doc.text('Commercial Invoice', margin, 20);
+        doc.addImage(logoDataUrl, 'PNG', 155, 9, 41, 8);
+        doc.setDrawColor(200, 200, 200);
+        doc.line(margin, 25, pageW - margin, 25);
+
+        // SHIPPER (left column)
+        let y = 33;
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Shipper/Exporter:', margin, y);
+        doc.line(margin, y + 0.8, margin + 36, y + 0.8);
+        y += 7;
+
+        const shipperRows = [
+            { label: 'Point of Contact: ', value: 'Izel Kalaora' },
+            { label: 'Company Name: ', value: 'Orca AI' },
+            { label: 'Address: ', value: '35 Hamasger Street, Orca AI Office,' },
+            { label: '', value: '28th Floor, Sky Tower,' },
+            { label: '', value: 'Tel Aviv, 6721407, Israel' },
+            { label: 'Phone: ', value: '+972 52-374-4737' },
+            { label: 'Email: ', value: 'israel@orca-ai.io' },
+            { label: 'VAT/Tax ID: ', value: '515829422' },
+        ];
+
+        doc.setFontSize(8.5);
+        shipperRows.forEach(({ label, value }) => {
+            if (label) {
+                doc.setFont('helvetica', 'bold');
+                doc.text(label, margin, y);
+                doc.setFont('helvetica', 'normal');
+                doc.text(value, margin + doc.getTextWidth(label), y);
+            } else {
+                doc.setFont('helvetica', 'normal');
+                doc.text(value, margin, y);
+            }
+            y += 5.5;
+        });
+
+        const shipperEndY = y;
+
+        // INVOICE DETAILS TABLE (right column)
+        autoTable(doc, {
+            startY: 33,
+            margin: { left: 110, right: margin },
+            tableWidth: pageW - margin - 110,
+            body: [
+                [
+                    { content: `Date:\n${shipDate}`, styles: { fontStyle: 'bold' } },
+                    { content: `Invoice No. ${order.order_number}`, styles: { fontStyle: 'bold', halign: 'right' } }
+                ],
+                [
+                    { content: 'Currency Used', styles: { fontStyle: 'bold' } },
+                    { content: invoiceForm.currency }
+                ],
+                [
+                    { content: 'Terms of Sale', styles: { fontStyle: 'bold' } },
+                    { content: 'Terms of Freight', styles: { fontStyle: 'bold' } }
+                ],
+                [
+                    { content: 'Warranty Replacement' },
+                    { content: invoiceForm.termsOfFreight }
+                ],
+                [
+                    { content: 'No of Packages', colSpan: 2, styles: { halign: 'center', fontStyle: 'bold' } }
+                ],
+                [
+                    { content: String(invoiceForm.packages), colSpan: 2, styles: { halign: 'center' } }
+                ],
+            ],
+            styles: { fontSize: 8, cellPadding: 2.5 },
+            theme: 'grid',
+        });
+
+        // RECEIVER OF GOODS
+        let y2 = Math.max(shipperEndY, doc.lastAutoTable.finalY) + 8;
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Receiver of Goods:', margin, y2);
+        doc.line(margin, y2 + 0.8, margin + 38, y2 + 0.8);
+
+        y2 += 8;
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'bold');
+        doc.text(`TO MASTER OF ${(order.vessel || '').toUpperCase()}`, margin, y2);
+
+        y2 += 8;
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8.5);
+
+        if (address) {
+            doc.text(address.company_name || '', margin, y2); y2 += 5.5;
+            const addrLines = doc.splitTextToSize(address.address || '', 92);
+            addrLines.forEach(line => { doc.text(line, margin, y2); y2 += 5.5; });
+            if (address.phone) {
+                doc.setFont('helvetica', 'bold'); doc.text('Phone :', margin, y2);
+                doc.setFont('helvetica', 'normal'); doc.text(` ${address.phone}`, margin + doc.getTextWidth('Phone :'), y2); y2 += 5.5;
+            }
+            if (address.email) {
+                doc.setFont('helvetica', 'bold'); doc.text('Email:', margin, y2);
+                doc.setFont('helvetica', 'normal'); doc.text(`   ${address.email}`, margin + doc.getTextWidth('Email:'), y2); y2 += 5.5;
+            }
+            if (address.pic) { doc.text(`PIC- ${address.pic}`, margin, y2); y2 += 5.5; }
+        }
+
+        // ITEMS TABLE
+        y2 += 8;
+        autoTable(doc, {
+            startY: y2,
+            margin: { left: margin, right: margin },
+            head: [['Item & Description', 'HS No.', 'Unit Value', 'Quantity', 'Weight: Lbs', 'Value']],
+            body: [['ASUS COMPUTER\n(Made in China)', '847180', '$1000', '1', '19.84', '$1000']],
+            styles: { fontSize: 8.5, cellPadding: 3 },
+            headStyles: { fillColor: [255, 255, 255], textColor: 0, fontStyle: 'bold', lineWidth: 0.3, lineColor: [100, 100, 100] },
+            bodyStyles: { lineWidth: 0.3, lineColor: [100, 100, 100] },
+            theme: 'plain',
+        });
+
+        // FOOTER
+        const footerY = doc.lastAutoTable.finalY + 14;
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        doc.text('I hereby certify this commercial invoice to be true and correct.', margin, footerY);
+        doc.text(`Date: ${shipDate}`, margin, footerY + 9);
+        doc.text('Respectfully,', margin, footerY + 18);
+        doc.text('Orca AI Ltd.', margin, footerY + 27);
+
+        // ATTACH TO ORDER
+        const pdfBlob = doc.output('blob');
+        const fileName = `CommercialInvoice_${order.order_number}.pdf`;
+        const filePath = `${orderId}/${Date.now()}_${fileName}`;
+
+        const { error: uploadError } = await supabase.storage.from('order-attachments').upload(filePath, pdfBlob, { contentType: 'application/pdf' });
+        if (uploadError) { alert(uploadError.message); setGeneratingInvoice(false); return; }
+
+        const { data: fileRecord } = await supabase.from('order_files').insert([{
+            order_id: orderId,
+            file_name: fileName,
+            file_path: filePath,
+            uploaded_by: 'System'
+        }]).select().single();
+
+        if (fileRecord) setFiles(prev => [fileRecord, ...prev]);
+        setShowInvoiceModal(false);
+    } catch (e) {
+        console.error(e);
+        alert('Failed to generate invoice: ' + e.message);
+    }
+    setGeneratingInvoice(false);
+  }
+
+  // --- ITEM ACTIONS ---
 
   async function updateItem(itemId, field, value) {
     if (isLocked) return;
@@ -466,9 +726,18 @@ export default function OrderDetails({ params }) {
                         </button>
                     )}
 
-                    <button onClick={exportToExcel} className="bg-white border border-slate-300 text-slate-700 font-bold px-3 py-2 rounded-md text-sm shadow-sm hover:bg-slate-50 flex items-center gap-2">
-                        <Download size={16}/> Export Excel
+                    <button onClick={exportToPdf} className="bg-white border border-slate-300 text-slate-700 font-bold px-3 py-2 rounded-md text-sm shadow-sm hover:bg-slate-50 flex items-center gap-2">
+                        <Download size={16}/> Export PDF
                     </button>
+
+                    {canShip && (
+                        <button
+                            onClick={() => { loadAddresses(); setShowInvoiceModal(true); }}
+                            className="bg-white border border-emerald-300 text-emerald-700 font-bold px-3 py-2 rounded-md text-sm shadow-sm hover:bg-emerald-50 flex items-center gap-2"
+                        >
+                            <FileText size={16}/> Generate Commercial Invoice
+                        </button>
+                    )}
 
                     <div className="flex flex-col items-end">
                         <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Status</label>
@@ -787,6 +1056,169 @@ export default function OrderDetails({ params }) {
                 </div>
             </div>
           )}
+          {/* COMMERCIAL INVOICE MODAL */}
+          {showInvoiceModal && (
+            <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+              <div className="bg-white rounded-xl shadow-2xl w-full max-w-md border border-slate-200 flex flex-col">
+                <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+                  <h3 className="text-base font-bold text-slate-900">Generate Commercial Invoice</h3>
+                  <button onClick={() => setShowInvoiceModal(false)} className="text-slate-400 hover:text-slate-600 text-xl leading-none">&times;</button>
+                </div>
+
+                <div className="p-6 space-y-4 overflow-y-auto">
+                  {/* Currency */}
+                  <div>
+                    <label className="block text-xs font-bold text-slate-400 uppercase mb-1.5">Currency Used</label>
+                    <select
+                      className="w-full border border-slate-200 rounded px-3 py-2 text-sm font-medium focus:border-[#0176D3] outline-none bg-white text-slate-900"
+                      value={invoiceForm.currency}
+                      onChange={e => setInvoiceForm(p => ({ ...p, currency: e.target.value }))}
+                    >
+                      <option value="USD">USD</option>
+                      <option value="EUR">EUR</option>
+                    </select>
+                  </div>
+
+                  {/* Terms of Freight */}
+                  <div>
+                    <label className="block text-xs font-bold text-slate-400 uppercase mb-1.5">Terms of Freight</label>
+                    <select
+                      className="w-full border border-slate-200 rounded px-3 py-2 text-sm font-medium focus:border-[#0176D3] outline-none bg-white text-slate-900"
+                      value={invoiceForm.termsOfFreight}
+                      onChange={e => setInvoiceForm(p => ({ ...p, termsOfFreight: e.target.value }))}
+                    >
+                      <option value="DAP">DAP</option>
+                      <option value="DDP">DDP</option>
+                      <option value="CIF">CIF</option>
+                    </select>
+                  </div>
+
+                  {/* No of Packages */}
+                  <div>
+                    <label className="block text-xs font-bold text-slate-400 uppercase mb-1.5">No of Packages</label>
+                    <select
+                      className="w-full border border-slate-200 rounded px-3 py-2 text-sm font-medium focus:border-[#0176D3] outline-none bg-white text-slate-900"
+                      value={invoiceForm.packages}
+                      onChange={e => setInvoiceForm(p => ({ ...p, packages: Number(e.target.value) }))}
+                    >
+                      {[1,2,3,4,5,6,7,8,9].map(n => <option key={n} value={n}>{n}</option>)}
+                    </select>
+                  </div>
+
+                  {/* Address */}
+                  <div>
+                    <label className="block text-xs font-bold text-slate-400 uppercase mb-1.5">Receiver Address</label>
+                    <div className="flex gap-2">
+                      <select
+                        className="flex-1 border border-slate-200 rounded px-3 py-2 text-sm font-medium focus:border-[#0176D3] outline-none bg-white text-slate-900"
+                        value={invoiceForm.addressId}
+                        onChange={e => setInvoiceForm(p => ({ ...p, addressId: e.target.value }))}
+                      >
+                        <option value="">Select address...</option>
+                        {addresses.map(a => (
+                          <option key={a.id} value={a.id}>{a.company_name}{a.pic ? ` — ${a.pic}` : ''}</option>
+                        ))}
+                      </select>
+                      <button
+                        onClick={() => setShowAddressCreate(true)}
+                        className="px-3 py-2 border border-slate-300 rounded text-xs font-bold text-slate-600 hover:bg-slate-50 whitespace-nowrap"
+                      >
+                        + New
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="px-6 py-4 border-t border-slate-100 flex gap-3">
+                  <button
+                    onClick={() => setShowInvoiceModal(false)}
+                    disabled={generatingInvoice}
+                    className="flex-1 px-4 py-2.5 border border-slate-300 rounded-lg text-sm font-bold text-slate-700 hover:bg-slate-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={generateCommercialInvoice}
+                    disabled={generatingInvoice}
+                    className="flex-1 px-4 py-2.5 bg-emerald-600 text-white rounded-lg text-sm font-bold hover:bg-emerald-700 shadow-sm"
+                  >
+                    {generatingInvoice ? 'Generating...' : 'Generate & Attach'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ADDRESS CREATE POPUP */}
+          {showAddressCreate && (
+            <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+              <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm border border-slate-200">
+                <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+                  <h3 className="text-base font-bold text-slate-900">New Address</h3>
+                  <button onClick={() => setShowAddressCreate(false)} className="text-slate-400 hover:text-slate-600 text-xl leading-none">&times;</button>
+                </div>
+
+                <div className="p-6 space-y-3">
+                  <input
+                    className="w-full border border-slate-200 rounded px-3 py-2 text-sm focus:border-[#0176D3] outline-none"
+                    placeholder="Company name *"
+                    value={newAddress.company_name}
+                    onChange={e => setNewAddress(p => ({ ...p, company_name: e.target.value }))}
+                  />
+                  <textarea
+                    className="w-full border border-slate-200 rounded px-3 py-2 text-sm focus:border-[#0176D3] outline-none resize-none"
+                    placeholder="Address *"
+                    rows={3}
+                    value={newAddress.address}
+                    onChange={e => setNewAddress(p => ({ ...p, address: e.target.value }))}
+                  />
+                  <div className="flex gap-2">
+                    <span className="text-sm font-bold text-slate-500 self-center w-14 shrink-0">Phone</span>
+                    <input
+                      className="flex-1 border border-slate-200 rounded px-3 py-2 text-sm focus:border-[#0176D3] outline-none"
+                      placeholder="+1 234 567 8900"
+                      value={newAddress.phone}
+                      onChange={e => setNewAddress(p => ({ ...p, phone: e.target.value }))}
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <span className="text-sm font-bold text-slate-500 self-center w-14 shrink-0">Email</span>
+                    <input
+                      className="flex-1 border border-slate-200 rounded px-3 py-2 text-sm focus:border-[#0176D3] outline-none"
+                      placeholder="contact@company.com"
+                      value={newAddress.email}
+                      onChange={e => setNewAddress(p => ({ ...p, email: e.target.value }))}
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <span className="text-sm font-bold text-slate-500 self-center w-14 shrink-0">PIC</span>
+                    <input
+                      className="flex-1 border border-slate-200 rounded px-3 py-2 text-sm focus:border-[#0176D3] outline-none"
+                      placeholder="Point of contact name"
+                      value={newAddress.pic}
+                      onChange={e => setNewAddress(p => ({ ...p, pic: e.target.value }))}
+                    />
+                  </div>
+                </div>
+
+                <div className="px-6 py-4 border-t border-slate-100 flex gap-3">
+                  <button
+                    onClick={() => setShowAddressCreate(false)}
+                    className="flex-1 px-4 py-2.5 border border-slate-300 rounded-lg text-sm font-bold text-slate-700 hover:bg-slate-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={createNewAddress}
+                    className="flex-1 px-4 py-2.5 bg-[#0176D3] text-white rounded-lg text-sm font-bold hover:bg-blue-700 shadow-sm"
+                  >
+                    Save Address
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
       </div>
     </div>
   );
