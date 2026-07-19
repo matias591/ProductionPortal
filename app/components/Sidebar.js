@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { usePathname, useRouter } from 'next/navigation';
-import { LayoutDashboard, Package, Users, LogOut, Tag, Cpu, Factory, List, ChevronLeft, ChevronRight } from 'lucide-react';
+import { LayoutDashboard, Package, Users, LogOut, Tag, Cpu, Factory, List, ChevronLeft, ChevronRight, MapPin } from 'lucide-react';
 import { useSidebar } from '../context/SidebarContext';
 
 export default function Sidebar() {
@@ -87,6 +87,12 @@ export default function Sidebar() {
           <Factory size={20} />
           {!isCollapsed && <span>Seapod Production</span>}
         </div>
+
+        {(role === 'admin' || role === 'operation') && (
+            <div onClick={() => router.push('/admin/addresses')} className={getLinkClass('/admin/addresses')} title={isCollapsed ? "Addresses" : ""}>
+                <MapPin size={20} />{!isCollapsed && <span>Addresses</span>}
+            </div>
+        )}
 
         {/* Admin Section */}
         {isAdmin && (

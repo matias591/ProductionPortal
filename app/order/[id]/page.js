@@ -49,6 +49,8 @@ export default function OrderDetails({ params }) {
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
   const [invoiceForm, setInvoiceForm] = useState({ currency: 'USD', termsOfFreight: 'DDP', packages: 1, addressId: '' });
   const [addresses, setAddresses] = useState([]);
+  const [addressSearch, setAddressSearch] = useState('');
+  const [showAddressList, setShowAddressList] = useState(false);
   const [showAddressCreate, setShowAddressCreate] = useState(false);
   const [newAddress, setNewAddress] = useState({ company_name: '', address: '', phone: '', email: '', pic: '' });
   const [generatingInvoice, setGeneratingInvoice] = useState(false);
@@ -810,6 +812,10 @@ export default function OrderDetails({ params }) {
                             <input type="date" className="w-full text-sm font-medium border border-slate-200 rounded px-3 py-2 focus:border-[#0176D3] outline-none text-slate-700" value={order.pickup_date || ''} disabled={isLocked} onChange={(e) => updateOrder('pickup_date', e.target.value)} />
                         </div>
                         <div>
+                            <label className="block text-xs font-bold text-slate-400 uppercase mb-1.5">Shipping Tracking Code</label>
+                            <input className="w-full text-sm font-medium border border-slate-200 rounded px-3 py-2 focus:border-[#0176D3] outline-none text-slate-900" placeholder="Enter tracking code" value={order.shipping_tracking_code || ''} disabled={isLocked} onChange={(e) => updateOrder('shipping_tracking_code', e.target.value)} />
+                        </div>
+                        <div>
                             <label className="block text-xs font-bold text-slate-400 uppercase mb-1.5">Kit Type</label>
                             <select className="w-full text-sm font-medium border border-slate-200 rounded px-3 py-2 focus:border-[#0176D3] outline-none bg-white" value={order.type || ''} disabled={isLocked} onChange={(e) => updateOrder('type', e.target.value)} >
                                 <option>Full system</option><option>Upgrade</option><option>Replacement</option><option>Spare Parts</option><option>Partial System</option>
@@ -1109,16 +1115,45 @@ export default function OrderDetails({ params }) {
                   <div>
                     <label className="block text-xs font-bold text-slate-400 uppercase mb-1.5">Receiver Address</label>
                     <div className="flex gap-2">
-                      <select
-                        className="flex-1 border border-slate-200 rounded px-3 py-2 text-sm font-medium focus:border-[#0176D3] outline-none bg-white text-slate-900"
-                        value={invoiceForm.addressId}
-                        onChange={e => setInvoiceForm(p => ({ ...p, addressId: e.target.value }))}
-                      >
-                        <option value="">Select address...</option>
-                        {addresses.map(a => (
-                          <option key={a.id} value={a.id}>{a.company_name}{a.pic ? ` — ${a.pic}` : ''}</option>
-                        ))}
-                      </select>
+                      <div className="relative flex-1">
+                        <input
+                          className="w-full border border-slate-200 rounded px-3 py-2 text-sm font-medium focus:border-[#0176D3] outline-none text-slate-900"
+                          placeholder="Search address..."
+                          value={addressSearch}
+                          onChange={e => {
+                            setAddressSearch(e.target.value);
+                            setInvoiceForm(p => ({ ...p, addressId: '' }));
+                            setShowAddressList(true);
+                          }}
+                          onFocus={() => setShowAddressList(true)}
+                          onBlur={() => setTimeout(() => setShowAddressList(false), 150)}
+                        />
+                        {showAddressList && (
+                          <div className="absolute z-10 left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                            {addresses
+                              .filter(a => !addressSearch || a.company_name.toLowerCase().includes(addressSearch.toLowerCase()) || (a.pic || '').toLowerCase().includes(addressSearch.toLowerCase()))
+                              .map(a => (
+                                <div
+                                  key={a.id}
+                                  onMouseDown={e => e.preventDefault()}
+                                  onClick={() => {
+                                    setInvoiceForm(p => ({ ...p, addressId: a.id }));
+                                    setAddressSearch(a.company_name + (a.pic ? ` — ${a.pic}` : ''));
+                                    setShowAddressList(false);
+                                  }}
+                                  className="px-3 py-2 text-sm cursor-pointer hover:bg-blue-50 hover:text-[#0176D3] flex items-center justify-between"
+                                >
+                                  <span className="font-medium">{a.company_name}</span>
+                                  {a.pic && <span className="text-slate-400 text-xs ml-2">{a.pic}</span>}
+                                </div>
+                              ))
+                            }
+                            {addresses.filter(a => !addressSearch || a.company_name.toLowerCase().includes(addressSearch.toLowerCase()) || (a.pic || '').toLowerCase().includes(addressSearch.toLowerCase())).length === 0 && (
+                              <div className="px-3 py-2 text-sm text-slate-400 italic">No matches</div>
+                            )}
+                          </div>
+                        )}
+                      </div>
                       <button
                         onClick={() => setShowAddressCreate(true)}
                         className="px-3 py-2 border border-slate-300 rounded text-xs font-bold text-slate-600 hover:bg-slate-50 whitespace-nowrap"
@@ -1126,6 +1161,9 @@ export default function OrderDetails({ params }) {
                         + New
                       </button>
                     </div>
+                    {invoiceForm.addressId && (
+                      <p className="text-[10px] text-emerald-600 font-bold mt-1">✓ Address selected</p>
+                    )}
                   </div>
                 </div>
 
