@@ -5,6 +5,48 @@ import { useRouter } from 'next/navigation';
 import { ArrowLeft, Plus, Trash2, Box, Calendar, Ship, Upload, FileText, Paperclip, Lock, Download, Building2, Loader2, Warehouse, Cpu, Check, AlertTriangle, XCircle, User, RefreshCcw } from 'lucide-react';
 import Sidebar from '../../components/Sidebar';
 
+const INVOICE_PACKAGES = {
+  full_system: {
+    label: 'Full system',
+    items: [
+      { description: 'ORCA AI SYSTEM', hs: '8525.83', unitValue: '$16000', quantity: '1', weight: '165.34', value: '$16000' }
+    ]
+  },
+  seapod_replacement: {
+    label: 'Seapod replacement',
+    items: [
+      { description: 'ORCA AI CAMERA (Made in Israel)', hs: '8525.83', unitValue: '$1500', quantity: '1', weight: '28.66', value: '$1500' }
+    ]
+  },
+  pu_replacement: {
+    label: 'PU replacement',
+    items: [
+      { description: 'ASUS COMPUTER (Made in China)', hs: '847180', unitValue: '$1000', quantity: '1', weight: '19.84', value: '$1000' }
+    ]
+  },
+  monitor_replacement: {
+    label: 'Monitor replacement',
+    items: [
+      { description: 'Atar El - 23.8 Monitor Set', hs: '8531.20', unitValue: '$1500', quantity: '1', weight: '28.66', value: '$1500' }
+    ]
+  },
+  rut_modem: {
+    label: 'RUT MODEM 241',
+    items: [
+      { description: 'RUT MODEM 241 (Made in Lithuania)', hs: '85176230', unitValue: '$100', quantity: '1', weight: '1.1', value: '$100' }
+    ]
+  },
+  spare_parts: {
+    label: 'SPARE PARTS: Each one individually',
+    items: [
+      { description: 'KVM EXTENDER', hs: '8517.62', unitValue: '$20', quantity: '1', weight: '0.551', value: '$20' },
+      { description: 'HDMI 10 Meter Cable', hs: '8544.42', unitValue: '$10', quantity: '1', weight: '0.551', value: '$10' },
+      { description: 'USB 10 Meter Cable', hs: '8544.42', unitValue: '$10', quantity: '1', weight: '0.551', value: '$10' },
+      { description: 'Power Cable Extender', hs: '85444200', unitValue: '$40', quantity: '1', weight: '0.551', value: '$40' }
+    ]
+  }
+};
+
 export default function OrderDetails({ params }) {
   const router = useRouter();
   const [orderId, setOrderId] = useState(null);
@@ -54,6 +96,9 @@ export default function OrderDetails({ params }) {
   const [showAddressCreate, setShowAddressCreate] = useState(false);
   const [newAddress, setNewAddress] = useState({ company_name: '', address: '', phone: '', email: '', pic: '' });
   const [generatingInvoice, setGeneratingInvoice] = useState(false);
+  const [selectedPackage, setSelectedPackage] = useState('');
+  const [packageItems, setPackageItems] = useState([]);
+  const [generatePackingList, setGeneratePackingList] = useState('yes');
 
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -381,7 +426,15 @@ export default function OrderDetails({ params }) {
     });
   }
 
-  async function exportToPdf() {
+  function updatePackageItem(idx, field, value) {
+    setPackageItems(prev => prev.map((item, i) => i === idx ? { ...item, [field]: value } : item));
+  }
+
+  function deletePackageItem(idx) {
+    setPackageItems(prev => prev.filter((_, i) => i !== idx));
+  }
+
+  async function buildPackingListDoc(withPrices) {
     const { jsPDF } = await import('jspdf');
     const jspdfautotable = await import('jspdf-autotable');
     const autoTable = jspdfautotable.default || jspdfautotable;
@@ -391,14 +444,11 @@ export default function OrderDetails({ params }) {
     const logoDataUrl = await getLogoDataUrl();
 
     doc.addImage(logoDataUrl, 'PNG', margin, 8, 48, 9);
-
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(13);
     doc.text(`Master of ${(order.vessel || '').toUpperCase()}`, pageW / 2, 16, { align: 'center' });
-
     doc.setDrawColor(200, 200, 200);
     doc.line(margin, 20, pageW - margin, 20);
-
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8.5);
     doc.text(`Vessel: ${order.vessel || ''}`, margin, 26);
@@ -409,7 +459,7 @@ export default function OrderDetails({ params }) {
         item.piece || '-',
         item.serial || '-',
         masterItems.find(m => m.name === item.piece)?.sku || item.orca_id || '-',
-        isAdmin ? `$${(item.price || 0).toLocaleString()}` : '-',
+        withPrices ? `$${(item.price || 0).toLocaleString()}` : '-',
         String(item.quantity || 1),
         ''
     ]);
@@ -421,10 +471,7 @@ export default function OrderDetails({ params }) {
         body: tableData,
         styles: { fontSize: 9, cellPadding: 3 },
         headStyles: { fillColor: [1, 118, 211], textColor: 255, fontStyle: 'bold' },
-        columnStyles: {
-            4: { halign: 'center', cellWidth: 16 },
-            5: { halign: 'center', cellWidth: 14 }
-        }
+        columnStyles: { 4: { halign: 'center', cellWidth: 16 }, 5: { halign: 'center', cellWidth: 14 } }
     });
 
     const finalY = doc.lastAutoTable.finalY + 8;
@@ -434,13 +481,16 @@ export default function OrderDetails({ params }) {
     if (order.pickup_date) {
         doc.text(new Date(order.pickup_date + 'T00:00:00').toLocaleDateString('en-GB'), margin, finalY + 5.5);
     }
-
-    if (isAdmin) {
+    if (withPrices) {
         const total = items.reduce((sum, i) => sum + (i.quantity || 0) * (i.price || 0), 0);
         doc.setFont('helvetica', 'bold');
         doc.text(`Total cost   $${total.toLocaleString()}`, pageW - margin, finalY, { align: 'right' });
     }
+    return doc;
+  }
 
+  async function exportToPdf() {
+    const doc = await buildPackingListDoc(canShip);
     doc.save(`PackingList_${order.order_number}.pdf`);
   }
 
@@ -465,6 +515,7 @@ export default function OrderDetails({ params }) {
 
   async function generateCommercialInvoice() {
     if (!invoiceForm.addressId) { alert('Please select a receiver address.'); return; }
+    if (packageItems.length === 0) { alert('Please select a package type.'); return; }
     setGeneratingInvoice(true);
     try {
         const { jsPDF } = await import('jspdf');
@@ -594,7 +645,7 @@ export default function OrderDetails({ params }) {
             startY: y2,
             margin: { left: margin, right: margin },
             head: [['Item & Description', 'HS No.', 'Unit Value', 'Quantity', 'Weight: Lbs', 'Value']],
-            body: [['ASUS COMPUTER\n(Made in China)', '847180', '$1000', '1', '19.84', '$1000']],
+            body: packageItems.map(item => [item.description, item.hs, item.unitValue, String(item.quantity), item.weight, item.value]),
             styles: { fontSize: 8.5, cellPadding: 3 },
             headStyles: { fillColor: [255, 255, 255], textColor: 0, fontStyle: 'bold', lineWidth: 0.3, lineColor: [100, 100, 100] },
             bodyStyles: { lineWidth: 0.3, lineColor: [100, 100, 100] },
@@ -626,6 +677,22 @@ export default function OrderDetails({ params }) {
         }]).select().single();
 
         if (fileRecord) setFiles(prev => [fileRecord, ...prev]);
+
+        // GENERATE AND ATTACH PACKING LIST
+        const withPrices = generatePackingList === 'yes';
+        const plDoc = await buildPackingListDoc(withPrices);
+        const plBlob = plDoc.output('blob');
+        const plLabel = withPrices ? 'withPrices' : 'noPrices';
+        const plFileName = `PackingList_${order.order_number}_${plLabel}.pdf`;
+        const plFilePath = `${orderId}/${Date.now()}_${plFileName}`;
+        const { error: plErr } = await supabase.storage.from('order-attachments').upload(plFilePath, plBlob, { contentType: 'application/pdf' });
+        if (!plErr) {
+            const { data: plRecord } = await supabase.from('order_files').insert([{
+                order_id: orderId, file_name: plFileName, file_path: plFilePath, uploaded_by: 'System'
+            }]).select().single();
+            if (plRecord) setFiles(prev => [plRecord, ...prev]);
+        }
+
         setShowInvoiceModal(false);
     } catch (e) {
         console.error(e);
@@ -734,7 +801,15 @@ export default function OrderDetails({ params }) {
 
                     {canShip && (
                         <button
-                            onClick={() => { loadAddresses(); setShowInvoiceModal(true); }}
+                            onClick={() => {
+                            loadAddresses();
+                            setSelectedPackage('');
+                            setPackageItems([]);
+                            setGeneratePackingList('yes');
+                            setAddressSearch('');
+                            setInvoiceForm({ currency: 'USD', termsOfFreight: 'DDP', packages: 1, addressId: '' });
+                            setShowInvoiceModal(true);
+                        }}
                             className="bg-white border border-emerald-300 text-emerald-700 font-bold px-3 py-2 rounded-md text-sm shadow-sm hover:bg-emerald-50 flex items-center gap-2"
                         >
                             <FileText size={16}/> Generate Commercial Invoice
@@ -861,7 +936,7 @@ export default function OrderDetails({ params }) {
                    <div className="bg-slate-50 px-6 py-4 border-b border-slate-200 flex justify-between items-center">
                       <h3 className="font-bold text-sm text-slate-800 uppercase tracking-wide">Line Items</h3>
                       <div className="flex items-center gap-4">
-                          {isAdmin && (
+                          {canShip && (
                               <div className="text-sm font-bold text-slate-700">Total: <span className="text-[#0176D3]">${totalCost.toFixed(2)}</span></div>
                           )}
                           <span className="bg-white border border-slate-200 text-slate-500 text-xs font-bold px-2 py-1 rounded">{items.length} Items</span>
@@ -875,7 +950,7 @@ export default function OrderDetails({ params }) {
                             <th className="px-6 py-3 w-20">Qty</th>
                             <th className="px-6 py-3 w-32">Serial #</th>
                             <th className="px-6 py-3 w-32">Orca ID</th>
-                            {isAdmin && <th className="px-6 py-3 w-24 text-right">Price</th>}
+                            {canShip && <th className="px-6 py-3 w-28 text-right">Unit Price</th>}
                             <th className="w-10"></th>
                         </tr>
                      </thead>
@@ -919,8 +994,18 @@ export default function OrderDetails({ params }) {
                                 <input className="w-full bg-transparent border-none outline-none text-slate-600 placeholder-slate-300" value={item.orca_id || ''} disabled={isLocked} onChange={(e) => updateItem(item.id, 'orca_id', e.target.value)} placeholder="---" />
                             </td>
                             
-                            {isAdmin && (
-                                <td className="px-6 py-3 text-right text-xs font-mono text-slate-600">${(item.price * item.quantity).toFixed(2)}</td>
+                            {canShip && (
+                                <td className="px-6 py-3 text-right">
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        step="0.01"
+                                        className="w-24 text-right bg-transparent border-b border-transparent hover:border-slate-300 focus:border-[#0176D3] outline-none text-xs font-mono text-slate-600"
+                                        value={item.price || 0}
+                                        disabled={isLocked}
+                                        onChange={(e) => updateItem(item.id, 'price', parseFloat(e.target.value) || 0)}
+                                    />
+                                </td>
                             )}
                             
                             <td className="px-4 py-3 text-right">
@@ -1065,13 +1150,13 @@ export default function OrderDetails({ params }) {
           {/* COMMERCIAL INVOICE MODAL */}
           {showInvoiceModal && (
             <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-              <div className="bg-white rounded-xl shadow-2xl w-full max-w-md border border-slate-200 flex flex-col">
+              <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl border border-slate-200 flex flex-col max-h-[90vh]">
                 <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
                   <h3 className="text-base font-bold text-slate-900">Generate Commercial Invoice</h3>
                   <button onClick={() => setShowInvoiceModal(false)} className="text-slate-400 hover:text-slate-600 text-xl leading-none">&times;</button>
                 </div>
 
-                <div className="p-6 space-y-4 overflow-y-auto">
+                <div className="p-6 space-y-4 overflow-y-auto flex-1">
                   {/* Currency */}
                   <div>
                     <label className="block text-xs font-bold text-slate-400 uppercase mb-1.5">Currency Used</label>
@@ -1164,6 +1249,90 @@ export default function OrderDetails({ params }) {
                     {invoiceForm.addressId && (
                       <p className="text-[10px] text-emerald-600 font-bold mt-1">✓ Address selected</p>
                     )}
+                  </div>
+
+                  {/* Package Type */}
+                  <div>
+                    <label className="block text-xs font-bold text-slate-400 uppercase mb-1.5">Package Type</label>
+                    <select
+                      className="w-full border border-slate-200 rounded px-3 py-2 text-sm font-medium focus:border-[#0176D3] outline-none bg-white text-slate-900"
+                      value={selectedPackage}
+                      onChange={e => {
+                        setSelectedPackage(e.target.value);
+                        if (e.target.value && INVOICE_PACKAGES[e.target.value]) {
+                          setPackageItems(INVOICE_PACKAGES[e.target.value].items.map(item => ({ ...item })));
+                        } else {
+                          setPackageItems([]);
+                        }
+                      }}
+                    >
+                      <option value="">Select package...</option>
+                      {Object.entries(INVOICE_PACKAGES).map(([key, pkg]) => (
+                        <option key={key} value={key}>{pkg.label}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Editable package items */}
+                  {packageItems.length > 0 && (
+                    <div>
+                      <label className="block text-xs font-bold text-slate-400 uppercase mb-1.5">Items — edit or remove as needed</label>
+                      <div className="border border-slate-200 rounded-lg overflow-x-auto">
+                        <table className="w-full text-xs min-w-[520px]">
+                          <thead className="bg-slate-50 border-b border-slate-100">
+                            <tr>
+                              <th className="px-2 py-1.5 text-left font-bold text-slate-400">Description</th>
+                              <th className="px-2 py-1.5 text-left font-bold text-slate-400 w-16">HS No.</th>
+                              <th className="px-2 py-1.5 text-left font-bold text-slate-400 w-16">Unit Val</th>
+                              <th className="px-2 py-1.5 text-center font-bold text-slate-400 w-10">Qty</th>
+                              <th className="px-2 py-1.5 text-left font-bold text-slate-400 w-14">Lbs</th>
+                              <th className="px-2 py-1.5 text-left font-bold text-slate-400 w-14">Value</th>
+                              <th className="w-6"></th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-50">
+                            {packageItems.map((item, idx) => (
+                              <tr key={idx} className="hover:bg-slate-50">
+                                <td className="px-2 py-1.5">
+                                  <input className="w-full bg-transparent outline-none text-slate-900 text-xs border-b border-transparent focus:border-[#0176D3]" value={item.description} onChange={e => updatePackageItem(idx, 'description', e.target.value)} />
+                                </td>
+                                <td className="px-2 py-1.5">
+                                  <input className="w-full bg-transparent outline-none text-slate-600 text-xs border-b border-transparent focus:border-[#0176D3]" value={item.hs} onChange={e => updatePackageItem(idx, 'hs', e.target.value)} />
+                                </td>
+                                <td className="px-2 py-1.5">
+                                  <input className="w-full bg-transparent outline-none text-slate-600 text-xs border-b border-transparent focus:border-[#0176D3]" value={item.unitValue} onChange={e => updatePackageItem(idx, 'unitValue', e.target.value)} />
+                                </td>
+                                <td className="px-2 py-1.5 text-center">
+                                  <input className="w-full bg-transparent outline-none text-slate-600 text-xs text-center border-b border-transparent focus:border-[#0176D3]" value={item.quantity} onChange={e => updatePackageItem(idx, 'quantity', e.target.value)} />
+                                </td>
+                                <td className="px-2 py-1.5">
+                                  <input className="w-full bg-transparent outline-none text-slate-600 text-xs border-b border-transparent focus:border-[#0176D3]" value={item.weight} onChange={e => updatePackageItem(idx, 'weight', e.target.value)} />
+                                </td>
+                                <td className="px-2 py-1.5">
+                                  <input className="w-full bg-transparent outline-none text-slate-600 text-xs border-b border-transparent focus:border-[#0176D3]" value={item.value} onChange={e => updatePackageItem(idx, 'value', e.target.value)} />
+                                </td>
+                                <td className="px-2 py-1.5">
+                                  <button onClick={() => deletePackageItem(idx)} className="text-slate-300 hover:text-red-500"><Trash2 size={12} /></button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Generate packing list with prices */}
+                  <div>
+                    <label className="block text-xs font-bold text-slate-400 uppercase mb-1.5">Generate Packing List with Prices</label>
+                    <select
+                      className="w-full border border-slate-200 rounded px-3 py-2 text-sm font-medium focus:border-[#0176D3] outline-none bg-white text-slate-900"
+                      value={generatePackingList}
+                      onChange={e => setGeneratePackingList(e.target.value)}
+                    >
+                      <option value="yes">Yes — attach with prices</option>
+                      <option value="no">No — attach without prices</option>
+                    </select>
                   </div>
                 </div>
 
