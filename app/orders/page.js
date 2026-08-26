@@ -6,6 +6,12 @@ import { Plus, Search, Ship, ChevronRight, Filter, LayoutGrid, Trash2, Download,
 import * as XLSX from 'xlsx';
 import Sidebar from '../components/Sidebar';
 
+const SUB_TYPE_OPTIONS = {
+  'Full system': ['O3', '360 System'],
+  'Upgrade': ['O3', '360 System'],
+  'Replacement': ['Monitor', 'PU', 'Seapod', 'Mini 360'],
+};
+
 export default function OrderList() {
   // --- STATE ---
   const [orders, setOrders] = useState([]);
@@ -16,8 +22,9 @@ export default function OrderList() {
   const [kitOptions, setKitOptions] = useState([]);
   const [loadingKits, setLoadingKits] = useState(true);
   
-  const [selectedType, setSelectedType] = useState('Full system'); 
-  const [selectedKitId, setSelectedKitId] = useState(''); 
+  const [selectedType, setSelectedType] = useState('Full system');
+  const [selectedSubType, setSelectedSubType] = useState('');
+  const [selectedKitId, setSelectedKitId] = useState('');
   const [warehouse, setWarehouse] = useState('Orca');
 
   const [userEmail, setUserEmail] = useState('');
@@ -54,8 +61,9 @@ export default function OrderList() {
     const targetKit = kitOptions.find(k => k.name === targetKitName);
     
     if (targetKit) setSelectedKitId(targetKit.id);
-    else setSelectedKitId(''); 
+    else setSelectedKitId('');
   }, [selectedType, kitOptions]);
+  useEffect(() => { setSelectedSubType(''); }, [selectedType]);
 
   // --- FETCHING ---
   async function fetchKitsFromDB() {
@@ -116,7 +124,8 @@ export default function OrderList() {
     const newOrder = {
       vessel: formData.get('vessel') || 'Unknown Vessel',
       type: selectedType,
-      kit: selectedKitId ? selectedKitName : 'Custom', 
+      sub_type: SUB_TYPE_OPTIONS[selectedType] ? (selectedSubType || null) : null,
+      kit: selectedKitId ? selectedKitName : 'Custom',
       warehouse: isAdmin ? formData.get('warehouse') : 'Baz', 
       status: 'New',
       created_by: userEmail // Saves the current user's email
@@ -320,6 +329,9 @@ export default function OrderList() {
               <div className="grid grid-cols-2 gap-4">
                 <div><label className="block text-xs font-bold text-slate-500 mb-1">Type</label><select name="type" value={selectedType} onChange={(e) => setSelectedType(e.target.value)} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-[#0176D3] outline-none bg-white"><option value="Full system">Full system</option><option value="Upgrade">Upgrade</option><option value="Replacement">Replacement</option><option value="Spare Parts">Spare Parts</option><option value="Partial System">Partial System</option></select></div>
                 <div><label className="block text-xs font-bold text-slate-500 mb-1">Kit Preset</label><select name="kit" className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-[#0176D3] outline-none bg-white" disabled={loadingKits} value={selectedKitId} onChange={(e) => setSelectedKitId(e.target.value)}><option value="">- Custom (Empty) -</option>{loadingKits ? <option>Loading...</option> : (kitOptions.map((kit) => (<option key={kit.id} value={kit.id}>{kit.name}</option>)))}</select></div>
+                {SUB_TYPE_OPTIONS[selectedType] && (
+                  <div className="col-span-2"><label className="block text-xs font-bold text-slate-500 mb-1">Sub Type</label><select name="sub_type" value={selectedSubType} onChange={(e) => setSelectedSubType(e.target.value)} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-[#0176D3] outline-none bg-white"><option value="">- Select -</option>{SUB_TYPE_OPTIONS[selectedType].map((opt) => (<option key={opt} value={opt}>{opt}</option>))}</select></div>
+                )}
               </div>
               {isAdmin && (<div><label className="block text-xs font-bold text-slate-500 mb-1">Warehouse</label><select name="warehouse" value={warehouse} onChange={(e) => setWarehouse(e.target.value)} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-[#0176D3] outline-none bg-white"><option value="Orca">Orca</option><option value="Baz">Baz</option></select></div>)}
               <div className="pt-4 flex justify-end gap-2 border-t border-slate-100 mt-4"><button type="button" onClick={() => setShowCreateModal(false)} className="px-4 py-2 border border-slate-300 rounded text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-all">Cancel</button><button type="submit" className="px-4 py-2 bg-[#0176D3] text-white rounded text-sm font-semibold hover:bg-blue-700 shadow-sm transition-all">Save & Create</button></div>
