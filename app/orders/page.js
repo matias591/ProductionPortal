@@ -100,7 +100,8 @@ export default function OrderList() {
     const dataToExport = orders.map(o => ({
         "Order #": o.order_number, 
         "Vessel": o.vessel, 
-        "Type": o.type, 
+        "Type": o.type,
+        "Sub Type": o.sub_type || '-',
         "Status": o.status, 
         "Warehouse": o.warehouse,
         "Created By": o.created_by || '-',
@@ -281,7 +282,7 @@ export default function OrderList() {
                     </div>
                   </td>
                   
-                  <td className="px-6 py-4 text-sm text-slate-600">{order.type}</td>
+                  <td className="px-6 py-4 text-sm text-slate-600">{order.type}{order.sub_type && <span className="text-slate-400"> · {order.sub_type}</span>}</td>
 
                   <td className="px-6 py-4 text-xs font-mono text-slate-600">{getItemValue(order.order_items, 'Seapod', 'serial')}</td>
                   <td className="px-6 py-4 text-xs font-mono text-slate-600">{getItemValue(order.order_items, 'Modem', 'orca_id')}</td>

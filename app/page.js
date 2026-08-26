@@ -60,7 +60,7 @@ export default function Home() {
 
   async function fetchMetrics() {
     const { data: seapods } = await supabase.from('seapod_production').select('status, completed_at, created_at, order_number');
-    const { data: orders } = await supabase.from('orders').select('status, shipped_at, type, order_number');
+    const { data: orders } = await supabase.from('orders').select('status, shipped_at, type, sub_type, order_number');
     if (!seapods || !orders) return;
 
     const completedSeapods = seapods.filter(s => s.status === 'Completed').length; 
@@ -72,7 +72,7 @@ export default function Home() {
     const activeOrderNumbers = orders.filter(o => o.status !== 'Shipped').map(o => String(o.order_number));
     const assignedUnshippedCount = seapods.filter(s => s.status === 'Assigned to Order' && s.order_number && activeOrderNumbers.includes(String(s.order_number))).length;
 
-    const calcBreakdown = (list) => { const counts = {}; list.forEach(o => { const t = o.type || 'Unknown'; counts[t] = (counts[t] || 0) + 1; }); return counts; };
+    const calcBreakdown = (list) => { const counts = {}; list.forEach(o => { const t = o.type || 'Unknown'; const key = o.sub_type ? `${t} - ${o.sub_type}` : t; counts[key] = (counts[key] || 0) + 1; }); return counts; };
 
     const now = new Date();
     let startDate = new Date();
