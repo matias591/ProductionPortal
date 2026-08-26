@@ -2,16 +2,10 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { useRouter } from 'next/navigation';
-import { LayoutDashboard, TrendingUp, Package, CheckCircle, Clock, RefreshCw, Link, Ship, Cpu, ArrowRight, Plus, Search, ChevronRight, Filter, LayoutGrid, Download } from 'lucide-react';
+import { LayoutDashboard, TrendingUp, Package, CheckCircle, Clock, RefreshCw, Link, Ship, Cpu, ArrowRight, Search, ChevronRight, Filter, LayoutGrid, Download } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import Sidebar from './components/Sidebar';
 import { useSidebar } from './context/SidebarContext';
-
-const SUB_TYPE_OPTIONS = {
-  'Full system': ['O3', '360 System'],
-  'Upgrade': ['O3', '360 System'],
-  'Replacement': ['Monitor', 'PU', 'Seapod', 'Mini 360'],
-};
 
 export default function Home() {
   const { isCollapsed } = useSidebar();
@@ -23,38 +17,15 @@ export default function Home() {
   const [lastUpdated, setLastUpdated] = useState(null);
   const router = useRouter();
 
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [kitOptions, setKitOptions] = useState([]);
-  const [loadingKits, setLoadingKits] = useState(true);
-  const [selectedType, setSelectedType] = useState('Full system');
-  const [selectedSubType, setSelectedSubType] = useState('');
-  const [selectedKitId, setSelectedKitId] = useState('');
-  const [warehouse, setWarehouse] = useState('Orca');
-  const [userEmail, setUserEmail] = useState('');
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [canCreate, setCanCreate] = useState(false);
-
   const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 
-  useEffect(() => { checkPermission(); fetchMetrics(); fetchKitsFromDB(); }, [timeFilter]);
-  useEffect(() => { const i = setInterval(fetchMetrics, 300000); return () => clearInterval(i); }, [timeFilter]); 
-  useEffect(() => {
-    if (kitOptions.length === 0) return;
-    const defaults = { 'Full system': 'MSC002', 'Upgrade': 'UPGRD', 'Replacement': 'REP001' };
-    const targetKit = kitOptions.find(k => k.name === defaults[selectedType]);
-    if (targetKit) setSelectedKitId(targetKit.id); else setSelectedKitId('');
-  }, [selectedType, kitOptions]);
-  useEffect(() => { setSelectedSubType(''); }, [selectedType]);
-
-  async function fetchKitsFromDB() { const { data } = await supabase.from('kits').select('*').order('name'); setKitOptions(data || []); setLoadingKits(false); }
+  useEffect(() => { checkPermission(); fetchMetrics(); }, [timeFilter]);
+  useEffect(() => { const i = setInterval(fetchMetrics, 300000); return () => clearInterval(i); }, [timeFilter]);
 
   async function checkPermission() {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return router.push('/login');
-    setUserEmail(session.user.email);
     const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).single();
-    if (profile?.role === 'admin') setIsAdmin(true);
-    if (['admin', 'operation'].includes(profile?.role)) setCanCreate(true);
     if (!['admin', 'operation'].includes(profile?.role)) { router.push('/orders'); }
   }
 
@@ -106,28 +77,6 @@ export default function Home() {
     return Object.values(dataMap);
   }
 
-  async function handleCreateOrder(e) {
-    e.preventDefault();
-    const formData = new FormData(e.target);
-    const selectedKitName = kitOptions.find(k => k.id === selectedKitId)?.name || 'Custom';
-    const newOrder = { vessel: formData.get('vessel') || 'Unknown Vessel', type: selectedType, sub_type: SUB_TYPE_OPTIONS[selectedType] ? (selectedSubType || null) : null, kit: selectedKitId ? selectedKitName : 'Custom', warehouse: isAdmin ? formData.get('warehouse') : 'Baz', status: 'New', created_by: userEmail };
-    const { data: orderData, error } = await supabase.from('orders').insert([newOrder]).select().single();
-    if (error) { alert("Error: " + error.message); return; }
-    if (selectedKitId) {
-        const { data: templateItems } = await supabase.from('kit_items').select('*').eq('kit_id', selectedKitId).order('sort_order', { ascending: true });
-        if (templateItems && templateItems.length > 0) {
-            const { data: masterList } = await supabase.from('items').select('id, price');
-            const itemsToInsert = templateItems.map((item, index) => {
-                const masterPrice = masterList?.find(m => m.id === item.item_id)?.price || 0;
-                return { order_id: orderData.id, piece: item.piece, quantity: item.quantity, serial: '', is_done: false, price: masterPrice, sort_order: index + 1 };
-            });
-            await supabase.from('order_items').insert(itemsToInsert);
-        }
-    }
-    setShowCreateModal(false);
-    fetchMetrics();
-  }
-
   if (loading) return <div className="flex min-h-screen bg-[#F3F4F6]"><Sidebar /><div className={`ml-64 p-10 text-slate-500`}>Loading Dashboard...</div></div>;
 
   return (
@@ -140,12 +89,6 @@ export default function Home() {
                 {['year', 'quarter', 'month', 'week'].map((t) => (<button key={t} onClick={() => setTimeFilter(t)} className={`px-3 py-1.5 text-xs font-bold rounded-md capitalize transition-all ${timeFilter === t ? 'bg-[#0176D3] text-white shadow-sm' : 'text-slate-500 hover:bg-slate-50'}`}>{t}</button>))}
             </div>
         </div>
-
-        {canCreate && (
-            <div className="mb-6 flex justify-end">
-                <button onClick={() => setShowCreateModal(true)} className="px-4 py-2 bg-[#0176D3] text-white text-sm font-semibold rounded-md hover:bg-blue-700 shadow-md flex items-center gap-2"><Plus size={16} /> New Order</button>
-            </div>
-        )}
 
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 mb-8">
             <div className="space-y-4">
@@ -174,27 +117,6 @@ export default function Home() {
                  <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 h-full flex flex-col justify-center"><h4 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-2">Total Shipments (This {timeFilter})</h4><div className="flex items-end gap-2 mb-1"><span className="text-4xl font-bold text-slate-900">{stats.shippedOrdersCount}</span><span className="text-sm font-bold text-slate-500 mb-1.5">Orders Shipped</span></div><div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden"><div className="bg-green-500 h-full rounded-full" style={{width: '100%'}}></div></div></div>
             </div>
         </div>
-
-      {showCreateModal && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg shadow-2xl max-w-lg w-full overflow-hidden border border-slate-200 animate-in fade-in zoom-in duration-200">
-            <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50"><h3 className="font-bold text-slate-800 text-lg">New Order</h3><button onClick={() => setShowCreateModal(false)} className="text-slate-400 hover:text-slate-700">✕</button></div>
-            <form onSubmit={handleCreateOrder} className="p-6 space-y-5">
-              <div className="p-3 bg-blue-50 border border-blue-100 rounded-md"><p className="text-xs text-blue-800 font-semibold">Order Number will be auto-generated by the system.</p></div>
-              <div><label className="block text-xs font-bold text-slate-500 mb-1">Vessel Name (Optional)</label><input name="vessel" className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-[#0176D3] focus:ring-1 focus:ring-[#0176D3] outline-none" placeholder="e.g. Evergreen A" /></div>
-              <div className="grid grid-cols-2 gap-4">
-                <div><label className="block text-xs font-bold text-slate-500 mb-1">Type</label><select name="type" value={selectedType} onChange={(e) => setSelectedType(e.target.value)} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-[#0176D3] outline-none bg-white"><option value="Full system">Full system</option><option value="Upgrade">Upgrade</option><option value="Replacement">Replacement</option><option value="Spare Parts">Spare Parts</option><option value="Partial System">Partial System</option></select></div>
-                <div><label className="block text-xs font-bold text-slate-500 mb-1">Kit Preset</label><select name="kit" className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-[#0176D3] outline-none bg-white" disabled={loadingKits} value={selectedKitId} onChange={(e) => setSelectedKitId(e.target.value)}><option value="">- Custom (Empty) -</option>{loadingKits ? <option>Loading...</option> : (kitOptions.map((kit) => (<option key={kit.id} value={kit.id}>{kit.name}</option>)))}</select></div>
-                {SUB_TYPE_OPTIONS[selectedType] && (
-                  <div className="col-span-2"><label className="block text-xs font-bold text-slate-500 mb-1">Sub Type</label><select name="sub_type" value={selectedSubType} onChange={(e) => setSelectedSubType(e.target.value)} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-[#0176D3] outline-none bg-white"><option value="">- Select -</option>{SUB_TYPE_OPTIONS[selectedType].map((opt) => (<option key={opt} value={opt}>{opt}</option>))}</select></div>
-                )}
-              </div>
-              {isAdmin && (<div><label className="block text-xs font-bold text-slate-500 mb-1">Warehouse</label><select name="warehouse" value={warehouse} onChange={(e) => setWarehouse(e.target.value)} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-[#0176D3] outline-none bg-white"><option value="Orca">Orca</option><option value="Baz">Baz</option><option value="JNSU">JNSU</option></select></div>)}
-              <div className="pt-4 flex justify-end gap-2 border-t border-slate-100 mt-4"><button type="button" onClick={() => setShowCreateModal(false)} className="px-4 py-2 border border-slate-300 rounded text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-all">Cancel</button><button type="submit" className="px-4 py-2 bg-[#0176D3] text-white rounded text-sm font-semibold hover:bg-blue-700 shadow-sm transition-all">Save & Create</button></div>
-            </form>
-          </div>
-        </div>
-      )}
       </main>
     </div>
   );
