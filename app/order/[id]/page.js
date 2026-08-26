@@ -663,7 +663,7 @@ export default function OrderDetails({ params }) {
 
         // ATTACH TO ORDER
         const pdfBlob = doc.output('blob');
-        const fileName = `CommercialInvoice_${order.order_number}.pdf`;
+        const fileName = `${order.vessel} - CI.pdf`;
         const filePath = `${orderId}/${Date.now()}_${fileName}`;
 
         const { error: uploadError } = await supabase.storage.from('order-attachments').upload(filePath, pdfBlob, { contentType: 'application/pdf' });
@@ -682,8 +682,7 @@ export default function OrderDetails({ params }) {
         const withPrices = generatePackingList === 'yes';
         const plDoc = await buildPackingListDoc(withPrices);
         const plBlob = plDoc.output('blob');
-        const plLabel = withPrices ? 'withPrices' : 'noPrices';
-        const plFileName = `PackingList_${order.order_number}_${plLabel}.pdf`;
+        const plFileName = `${order.vessel} - PL.pdf`;
         const plFilePath = `${orderId}/${Date.now()}_${plFileName}`;
         const { error: plErr } = await supabase.storage.from('order-attachments').upload(plFilePath, plBlob, { contentType: 'application/pdf' });
         if (!plErr) {
