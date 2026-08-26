@@ -47,6 +47,12 @@ const INVOICE_PACKAGES = {
   }
 };
 
+const SUB_TYPE_OPTIONS = {
+  'Full system': ['O3', '360 System'],
+  'Upgrade': ['O3', '360 System'],
+  'Replacement': ['Monitor', 'PU', 'Seapod', 'Mini 360'],
+};
+
 export default function OrderDetails({ params }) {
   const router = useRouter();
   const [orderId, setOrderId] = useState(null);
@@ -290,6 +296,14 @@ export default function OrderDetails({ params }) {
 
     setOrder({ ...order, [field]: value });
     await supabase.from('orders').update({ [field]: value }).eq('id', orderId);
+  }
+
+  async function handleTypeChange(newType) {
+    if (isLocked) return;
+    const patch = { type: newType };
+    if (!SUB_TYPE_OPTIONS[newType]) patch.sub_type = null;
+    setOrder(prev => ({ ...prev, ...patch }));
+    await supabase.from('orders').update(patch).eq('id', orderId);
   }
 
   // --- SEAPOD WIZARD LOGIC ---
@@ -891,10 +905,19 @@ export default function OrderDetails({ params }) {
                         </div>
                         <div>
                             <label className="block text-xs font-bold text-slate-400 uppercase mb-1.5">Kit Type</label>
-                            <select className="w-full text-sm font-medium border border-slate-200 rounded px-3 py-2 focus:border-[#0176D3] outline-none bg-white" value={order.type || ''} disabled={isLocked} onChange={(e) => updateOrder('type', e.target.value)} >
+                            <select className="w-full text-sm font-medium border border-slate-200 rounded px-3 py-2 focus:border-[#0176D3] outline-none bg-white" value={order.type || ''} disabled={isLocked} onChange={(e) => handleTypeChange(e.target.value)} >
                                 <option>Full system</option><option>Upgrade</option><option>Replacement</option><option>Spare Parts</option><option>Partial System</option>
                             </select>
                         </div>
+                        {SUB_TYPE_OPTIONS[order.type] && (
+                            <div>
+                                <label className="block text-xs font-bold text-slate-400 uppercase mb-1.5">Sub Type</label>
+                                <select className="w-full text-sm font-medium border border-slate-200 rounded px-3 py-2 focus:border-[#0176D3] outline-none bg-white" value={order.sub_type || ''} disabled={isLocked} onChange={(e) => updateOrder('sub_type', e.target.value || null)} >
+                                    <option value="">- Select -</option>
+                                    {SUB_TYPE_OPTIONS[order.type].map((opt) => (<option key={opt} value={opt}>{opt}</option>))}
+                                </select>
+                            </div>
+                        )}
                     </div>
                 </div>
 
