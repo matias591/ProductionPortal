@@ -74,7 +74,8 @@ export default function ItemManagement() {
       name: formData.get('name'),
       netsuite_id: formData.get('netsuite_id'),
       price: parseFloat(formData.get('price')) || 0,
-      serial_needed: formData.get('serial_needed') === 'on' 
+      serial_needed: formData.get('serial_needed') === 'on',
+      exclude_from_sync: formData.get('exclude_from_sync') === 'on'
     };
 
     let error;
@@ -175,6 +176,7 @@ export default function ItemManagement() {
                             <th className="px-6 py-4 w-32">NetSuite ID</th>
                             <th className="px-6 py-4">Item Name / Description</th>
                             <th className="px-6 py-4 w-32 text-center">Serial Req.</th>
+                            <th className="px-6 py-4 w-32 text-center">Exclude Sync</th>
                             <th className="px-6 py-4 w-32">Price (Unit)</th>
                             <th className="px-6 py-4 w-32 text-right">Actions</th>
                         </tr>
@@ -188,6 +190,14 @@ export default function ItemManagement() {
                                 
                                 <td className="px-6 py-4 text-center">
                                     {item.serial_needed ? (
+                                        <CheckSquare size={16} className="text-[#0176D3] mx-auto" />
+                                    ) : (
+                                        <Square size={16} className="text-slate-300 mx-auto" />
+                                    )}
+                                </td>
+
+                                <td className="px-6 py-4 text-center">
+                                    {item.exclude_from_sync ? (
                                         <CheckSquare size={16} className="text-[#0176D3] mx-auto" />
                                     ) : (
                                         <Square size={16} className="text-slate-300 mx-auto" />
@@ -215,7 +225,7 @@ export default function ItemManagement() {
                         ))}
                         {filteredItems.length === 0 && (
                             <tr>
-                                <td colSpan={6} className="p-8 text-center text-slate-400">
+                                <td colSpan={7} className="p-8 text-center text-slate-400">
                                     No items found.
                                 </td>
                             </tr>
@@ -291,7 +301,20 @@ export default function ItemManagement() {
                             Requires Serial Number upon fulfillment
                         </label>
                     </div>
-                    
+
+                    <div className="pt-2 pb-2 flex items-center gap-2">
+                        <input
+                            type="checkbox"
+                            name="exclude_from_sync"
+                            id="exclude_from_sync"
+                            defaultChecked={editingItem?.exclude_from_sync || false}
+                            className="w-4 h-4 text-[#0176D3] rounded border-slate-300 focus:ring-[#0176D3] cursor-pointer"
+                        />
+                        <label htmlFor="exclude_from_sync" className="text-sm font-bold text-slate-700 cursor-pointer select-none">
+                            Exclude from Sync (don&apos;t send to NetSuite sales order)
+                        </label>
+                    </div>
+
                     <div className="pt-4 flex justify-end gap-2 border-t border-slate-100 mt-4">
                         <button 
                             type="button" 

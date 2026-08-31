@@ -17,7 +17,7 @@ export async function POST(request) {
     
     // --- NEW: Gather Master Items (To map NetSuite IDs) ---
     // We fetch all items to ensure we can look up the ID by name
-    const { data: masterItems } = await supabase.from('items').select('name, netsuite_id');
+    const { data: masterItems } = await supabase.from('items').select('name, netsuite_id, exclude_from_sync');
 
     // 2. Gather Files AND Generate Download URLs
     const { data: files } = await supabase.from('order_files').select('*').eq('order_id', orderId);
@@ -77,18 +77,20 @@ export async function POST(request) {
         type: order.type,
         status: order.status,
         warehouse: order.warehouse,
-        items: orderItems.map(item => {
-            // Find matching master item to get NetSuite ID
-            const master = masterItems.find(m => m.name === item.piece);
-            return {
-                name: item.piece,
-                quantity: item.quantity,
-                serial_number: item.serial || '',
-                orca_id: item.orca_id || '',
-                price: item.price,
-                netsuite_id: master ? master.netsuite_id : null // <--- NEW FIELD
-            };
-        })
+        items: orderItems
+            .filter(item => !masterItems.find(m => m.name === item.piece)?.exclude_from_sync)
+            .map(item => {
+                // Find matching master item to get NetSuite ID
+                const master = masterItems.find(m => m.name === item.piece);
+                return {
+                    name: item.piece,
+                    quantity: item.quantity,
+                    serial_number: item.serial || '',
+                    orca_id: item.orca_id || '',
+                    price: item.price,
+                    netsuite_id: master ? master.netsuite_id : null // <--- NEW FIELD
+                };
+            })
     };
 
     // --- SEND WEBHOOK 1 (Original) ---
