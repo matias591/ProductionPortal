@@ -57,18 +57,32 @@ export default function SeapodList() {
     const formData = new FormData(e.target);
     const templateId = formData.get('template');
     const serialNumber = formData.get('serial');
-    const tpl = templates.find(t => t.id === templateId);
+    let tpl = templates.find(t => t.id === templateId);
     if(!tpl) return;
 
+    const isRefurbishedTemplate = tpl.name.toLowerCase().includes('refurbished');
+
+    if (!isRefurbishedTemplate) {
+        const { data: existingSeapod } = await supabase.from('seapod_production').select('id').eq('serial_number', serialNumber).single();
+        if (existingSeapod) {
+            const isRefurbished = confirm(`Seapod serial "${serialNumber}" already exists.\n\nIs this a refurbished unit?`);
+            if (!isRefurbished) return;
+
+            const refurbTpl = templates.find(t => t.name === 'Refurbished O3');
+            if (!refurbTpl) { alert("Refurbished O3 template not found."); return; }
+            tpl = refurbTpl;
+        }
+    }
+
     const { data: newSeapod, error } = await supabase.from('seapod_production').insert([{
-        serial_number: serialNumber, template_name: tpl.name, seapod_version: tpl.seapod_version, hw_version: tpl.hw_version, sw_version: tpl.sw_version, 
-        assembly_item_id: tpl.assembly_item_id, bom_id: tpl.bom_id, status: 'In Progress', 
-        created_by: userEmail 
+        serial_number: serialNumber, template_name: tpl.name, seapod_version: tpl.seapod_version, hw_version: tpl.hw_version, sw_version: tpl.sw_version,
+        assembly_item_id: tpl.assembly_item_id, bom_id: tpl.bom_id, status: 'In Progress',
+        created_by: userEmail
     }]).select().single();
 
     if (error) { alert("Error: " + error.message); return; }
 
-    const { data: tItems } = await supabase.from('seapod_template_items').select('*').eq('template_id', templateId);
+    const { data: tItems } = await supabase.from('seapod_template_items').select('*').eq('template_id', tpl.id);
     if (tItems) {
         const itemsToInsert = tItems.map(i => ({ 
             seapod_id: newSeapod.id, 
