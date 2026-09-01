@@ -10,7 +10,7 @@ import { useSidebar } from './context/SidebarContext';
 export default function Home() {
   const { isCollapsed } = useSidebar();
   
-  const [stats, setStats] = useState({ completedSeapods: 0, inProgressSeapods: 0, assignedUnshippedSeapods: 0, inProgressOrders: 0, readyOrders: 0, shippedOrdersCount: 0, builtSeapodsCount: 0, breakdownInProgress: {}, breakdownReady: {}, breakdownShipped: {} });
+  const [stats, setStats] = useState({ completedSeapods: 0, inProgressSeapods: 0, assignedUnshippedSeapods: 0, inProgressOrders: 0, readyOrders: 0, shippedOrdersCount: 0, builtSeapodsCount: 0, breakdownInProgress: {}, breakdownReady: {}, breakdownShipped: {}, breakdownAvailable: {}, breakdownAssigned: {} });
   const [chartData, setChartData] = useState([]);
   const [timeFilter, setTimeFilter] = useState('year'); 
   const [loading, setLoading] = useState(true);
@@ -30,20 +30,23 @@ export default function Home() {
   }
 
   async function fetchMetrics() {
-    const { data: seapods } = await supabase.from('seapod_production').select('status, completed_at, created_at, order_number');
+    const { data: seapods } = await supabase.from('seapod_production').select('status, completed_at, created_at, order_number, template_name');
     const { data: orders } = await supabase.from('orders').select('status, shipped_at, type, sub_type, order_number');
     if (!seapods || !orders) return;
 
-    const completedSeapods = seapods.filter(s => s.status === 'Completed').length; 
+    const completedList = seapods.filter(s => s.status === 'Completed');
+    const completedSeapods = completedList.length;
     const inProgressSeapods = seapods.filter(s => s.status === 'In Progress').length;
     const inProgressList = orders.filter(o => o.status !== 'Shipped' && o.status !== 'Ready for Pickup');
     const readyList = orders.filter(o => o.status === 'Ready for Pickup');
     const shippedList = orders.filter(o => o.status === 'Shipped');
 
     const activeOrderNumbers = orders.filter(o => o.status !== 'Shipped').map(o => String(o.order_number));
-    const assignedUnshippedCount = seapods.filter(s => s.status === 'Assigned to Order' && s.order_number && activeOrderNumbers.includes(String(s.order_number))).length;
+    const assignedUnshippedList = seapods.filter(s => s.status === 'Assigned to Order' && s.order_number && activeOrderNumbers.includes(String(s.order_number)));
+    const assignedUnshippedCount = assignedUnshippedList.length;
 
     const calcBreakdown = (list) => { const counts = {}; list.forEach(o => { const t = o.type || 'Unknown'; const key = o.sub_type ? `${t} - ${o.sub_type}` : t; counts[key] = (counts[key] || 0) + 1; }); return counts; };
+    const calcSeapodBreakdown = (list) => { const counts = {}; list.forEach(s => { const key = s.template_name || 'Unknown'; counts[key] = (counts[key] || 0) + 1; }); return counts; };
 
     const now = new Date();
     let startDate = new Date();
@@ -55,7 +58,7 @@ export default function Home() {
     const relevantSeapods = seapods.filter(s => s.completed_at && new Date(s.completed_at) >= startDate);
     const relevantOrders = orders.filter(o => o.shipped_at && new Date(o.shipped_at) >= startDate);
 
-    setStats({ completedSeapods, inProgressSeapods, assignedUnshippedSeapods: assignedUnshippedCount, inProgressOrders: inProgressList.length, readyOrders: readyList.length, shippedOrdersCount: shippedList.length, builtSeapodsCount: relevantSeapods.length, breakdownInProgress: calcBreakdown(inProgressList), breakdownReady: calcBreakdown(readyList), breakdownShipped: calcBreakdown(shippedList) });
+    setStats({ completedSeapods, inProgressSeapods, assignedUnshippedSeapods: assignedUnshippedCount, inProgressOrders: inProgressList.length, readyOrders: readyList.length, shippedOrdersCount: shippedList.length, builtSeapodsCount: relevantSeapods.length, breakdownInProgress: calcBreakdown(inProgressList), breakdownReady: calcBreakdown(readyList), breakdownShipped: calcBreakdown(shippedList), breakdownAvailable: calcSeapodBreakdown(completedList), breakdownAssigned: calcSeapodBreakdown(assignedUnshippedList) });
     setChartData(processChartData(relevantSeapods, relevantOrders, timeFilter));
     setLastUpdated(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
     setLoading(false);
@@ -94,8 +97,8 @@ export default function Home() {
             <div className="space-y-4">
                 <div className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-wider ml-1"><Cpu size={14}/> Seapod Production</div>
                 <div className="bg-white p-1 rounded-2xl shadow-sm border border-slate-200 grid grid-cols-2 gap-0.5 overflow-hidden">
-                    <MetricCard title="Seapods Available" value={stats.completedSeapods} icon={<CheckCircle/>} color="text-green-600" bg="bg-green-50" />
-                    <MetricCard title="Assigned (Pending)" value={stats.assignedUnshippedSeapods} icon={<Link/>} color="text-indigo-600" bg="bg-indigo-50" />
+                    <DrillDownCard title="Seapods Available" value={stats.completedSeapods} breakdown={stats.breakdownAvailable} icon={<CheckCircle/>} color="text-green-600" bg="bg-green-50" />
+                    <DrillDownCard title="Assigned (Pending)" value={stats.assignedUnshippedSeapods} breakdown={stats.breakdownAssigned} icon={<Link/>} color="text-indigo-600" bg="bg-indigo-50" />
                 </div>
             </div>
             <div className="space-y-4">
@@ -122,5 +125,4 @@ export default function Home() {
   );
 }
 
-function MetricCard({ title, value, icon, color, bg }) { return (<div className="bg-white p-5 flex items-start gap-4 hover:bg-slate-50 transition-colors"><div className={`w-12 h-12 ${bg} ${color} rounded-lg flex items-center justify-center shrink-0`}>{icon}</div><div><p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">{title}</p><p className="text-2xl font-bold text-slate-900">{value}</p></div></div>); }
-function DrillDownCard({ title, value, icon, color, bg, breakdown }) { return (<div className="bg-white p-5 flex flex-col justify-between h-full hover:bg-slate-50 transition-colors"><div className="flex items-start gap-4 mb-3"><div className={`w-12 h-12 ${bg} ${color} rounded-lg flex items-center justify-center shrink-0`}>{icon}</div><div><p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">{title}</p><p className="text-2xl font-bold text-slate-900">{value}</p></div></div><div className="border-t border-slate-100 pt-3 space-y-1">{Object.entries(breakdown).length > 0 ? Object.entries(breakdown).map(([key, count]) => (<div key={key} className="flex justify-between text-[10px] font-medium text-slate-500"><span>{key}</span><span className="text-slate-700 font-bold">{count}</span></div>)) : <div className="text-[10px] text-slate-300 italic">No orders</div>}</div></div>); }
+function DrillDownCard({ title, value, icon, color, bg, breakdown }) { return (<div className="bg-white p-5 flex flex-col justify-between h-full hover:bg-slate-50 transition-colors"><div className="flex items-start gap-4 mb-3"><div className={`w-12 h-12 ${bg} ${color} rounded-lg flex items-center justify-center shrink-0`}>{icon}</div><div><p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">{title}</p><p className="text-2xl font-bold text-slate-900">{value}</p></div></div><div className="border-t border-slate-100 pt-3 space-y-1">{Object.entries(breakdown).length > 0 ? Object.entries(breakdown).map(([key, count]) => (<div key={key} className="flex justify-between text-[10px] font-medium text-slate-500"><span>{key}</span><span className="text-slate-700 font-bold">{count}</span></div>)) : <div className="text-[10px] text-slate-300 italic">No data</div>}</div></div>); }

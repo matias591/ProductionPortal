@@ -17,6 +17,7 @@ export default function SeapodBuildDetails({ params }) {
   const [uploading, setUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [showAck, setShowAck] = useState(false);
+  const [canDeleteFiles, setCanDeleteFiles] = useState(false);
 
   const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 
@@ -24,6 +25,12 @@ export default function SeapodBuildDetails({ params }) {
   useEffect(() => { if (seapodId) fetchData(); }, [seapodId]);
 
   async function fetchData() {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) {
+      const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).single();
+      if (['admin', 'operation'].includes(profile?.role)) setCanDeleteFiles(true);
+    }
+
     const { data: s } = await supabase.from('seapod_production').select('*').eq('id', seapodId).single();
     const { data: i } = await supabase.from('seapod_items').select('*').eq('seapod_id', seapodId).order('sort_order', { ascending: true });
     const { data: f } = await supabase.from('seapod_files').select('*').eq('seapod_id', seapodId).order('created_at', { ascending: false });
@@ -102,9 +109,17 @@ export default function SeapodBuildDetails({ params }) {
     if(data) setItems([...items, data]);
   }
 
-  function openFile(path) { 
-      const { data } = supabase.storage.from('seapod-attachments').getPublicUrl(path); 
-      if (data?.publicUrl) window.open(data.publicUrl, '_blank'); 
+  function openFile(path) {
+      const { data } = supabase.storage.from('seapod-attachments').getPublicUrl(path);
+      if (data?.publicUrl) window.open(data.publicUrl, '_blank');
+  }
+
+  async function deleteFile(file) {
+      if (!canDeleteFiles) { alert("Permission Denied: Only Admins or Operations can delete attachments."); return; }
+      if (!confirm(`Delete "${file.file_name}"?`)) return;
+      await supabase.storage.from('seapod-attachments').remove([file.file_path]);
+      await supabase.from('seapod_files').delete().eq('id', file.id);
+      setFiles(prev => prev.filter(f => f.id !== file.id));
   }
   
   function exportExcel() { 
@@ -177,7 +192,10 @@ export default function SeapodBuildDetails({ params }) {
                         {files.map(file => (
                             <div key={file.id} onClick={() => openFile(file.file_path)} className="px-5 py-3 flex items-center gap-3 hover:bg-blue-50 cursor-pointer transition-colors group">
                                 <div className="bg-blue-100 p-1.5 rounded text-blue-600"><FileText size={16}/></div>
-                                <div className="overflow-hidden"><p className="text-sm font-medium text-slate-700 truncate group-hover:text-[#0176D3] group-hover:underline">{file.file_name}</p><p className="text-[10px] text-slate-400">By {file.uploaded_by}</p></div>
+                                <div className="overflow-hidden flex-1"><p className="text-sm font-medium text-slate-700 truncate group-hover:text-[#0176D3] group-hover:underline">{file.file_name}</p><p className="text-[10px] text-slate-400">By {file.uploaded_by}</p></div>
+                                {canDeleteFiles && (
+                                    <button onClick={(e) => { e.stopPropagation(); deleteFile(file); }} className="text-slate-300 hover:text-red-600 opacity-0 group-hover:opacity-100"><Trash2 size={16}/></button>
+                                )}
                             </div>
                         ))}
                     </div>

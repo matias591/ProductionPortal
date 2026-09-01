@@ -428,6 +428,14 @@ export default function OrderDetails({ params }) {
     if (data?.publicUrl) window.open(data.publicUrl, '_blank');
   }
 
+  async function deleteFile(file) {
+    if (!canShip) { alert("Permission Denied: Only Admins or Operations can delete attachments."); return; }
+    if (!confirm(`Delete "${file.file_name}"?`)) return;
+    await supabase.storage.from('order-attachments').remove([file.file_path]);
+    await supabase.from('order_files').delete().eq('id', file.id);
+    setFiles(prev => prev.filter(f => f.id !== file.id));
+  }
+
   // --- PDF + INVOICE ACTIONS ---
   async function getLogoDataUrl() {
     const res = await fetch('/orca-logo.png');
@@ -940,10 +948,13 @@ export default function OrderDetails({ params }) {
                         {files.map(file => (
                             <div key={file.id} onClick={() => openFile(file.file_path)} className="px-5 py-3 flex items-center gap-3 hover:bg-blue-50 cursor-pointer transition-colors group">
                                 <div className="bg-blue-100 p-1.5 rounded text-blue-600"><FileText size={16}/></div>
-                                <div className="overflow-hidden">
+                                <div className="overflow-hidden flex-1">
                                     <p className="text-sm font-medium text-slate-700 truncate group-hover:text-[#0176D3] group-hover:underline">{file.file_name}</p>
                                     <p className="text-[10px] text-slate-400">Uploaded by {file.uploaded_by}</p>
                                 </div>
+                                {canShip && (
+                                    <button onClick={(e) => { e.stopPropagation(); deleteFile(file); }} className="text-slate-300 hover:text-red-600 opacity-0 group-hover:opacity-100"><Trash2 size={16}/></button>
+                                )}
                             </div>
                         ))}
                         {files.length === 0 && !isDragging && <div className="p-6 text-center text-slate-400 text-xs italic">No files attached. Drag & drop here.</div>}
