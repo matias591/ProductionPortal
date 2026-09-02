@@ -9,7 +9,7 @@ export async function POST(request) {
     
     const { data: seapod } = await supabase.from('seapod_production').select('*').eq('id', seapodId).single();
     const { data: items } = await supabase.from('seapod_items').select('*').eq('seapod_id', seapodId);
-    const { data: masterItems } = await supabase.from('items').select('name, netsuite_id');
+    const { data: masterItems } = await supabase.from('items').select('name, netsuite_id, exclude_from_sync');
 
     // Build the payload
     const payload = {
@@ -17,7 +17,9 @@ export async function POST(request) {
       bom_id: seapod.bom_id || "",
       seapod_serial: seapod.serial_number || "",
       build_date: seapod.completed_at ? seapod.completed_at.split('T')[0] : new Date().toISOString().split('T')[0],
-      components: items.map(item => {
+      components: items
+        .filter(item => !masterItems.find(m => m.name === item.piece)?.exclude_from_sync)
+        .map(item => {
         const master = masterItems.find(m => m.name === item.piece);
         return {
           netsuite_id: master ? master.netsuite_id : "",
