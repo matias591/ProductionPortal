@@ -108,7 +108,8 @@ export default function OrderList() {
         "Created At": new Date(o.created_at).toLocaleString(),
         "Seapod S/N": getItemValue(o.order_items, 'Seapod', 'serial'),
         "Modem ID": getItemValue(o.order_items, 'Modem', 'orca_id'),
-        "PU ID": getItemValue(o.order_items, 'Asus', 'orca_id')
+        "PU ID": getItemValue(o.order_items, 'Asus', 'orca_id'),
+        "NS Sales Order": o.ns_so_number || '-'
     }));
     const ws = XLSX.utils.json_to_sheet(dataToExport);
     const wb = XLSX.utils.book_new();
@@ -258,6 +259,7 @@ export default function OrderList() {
                 <th className="px-6 py-4">Seapod S/N</th>
                 <th className="px-6 py-4">Modem ID</th>
                 <th className="px-6 py-4">PU ID</th>
+                <th className="px-6 py-4">NS Sales Order</th>
                 <th className="px-6 py-4">Status</th>
                 <th className="px-6 py-4 text-right">Action</th>
               </tr>
@@ -287,6 +289,7 @@ export default function OrderList() {
                   <td className="px-6 py-4 text-xs font-mono text-slate-600">{getItemValue(order.order_items, 'Seapod', 'serial')}</td>
                   <td className="px-6 py-4 text-xs font-mono text-slate-600">{getItemValue(order.order_items, 'Modem', 'orca_id')}</td>
                   <td className="px-6 py-4 text-xs font-mono text-slate-600">{getItemValue(order.order_items, 'Asus', 'orca_id')}</td>
+                  <td className="px-6 py-4 text-xs font-mono text-slate-600">{order.ns_so_number || '-'}</td>
                   <td className="px-6 py-4">
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded text-xs font-bold border ${getStatusColor(order.status)}`}>
                       {order.status}
@@ -309,7 +312,7 @@ export default function OrderList() {
                 </tr>
               ))}
               {filteredOrders.length === 0 && (
-                <tr><td colSpan={8} className="p-10 text-center text-slate-400">No orders found.</td></tr>
+                <tr><td colSpan={9} className="p-10 text-center text-slate-400">No orders found.</td></tr>
               )}
             </tbody>
           </table>
