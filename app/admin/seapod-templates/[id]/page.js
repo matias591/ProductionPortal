@@ -40,7 +40,7 @@ export default function SeapodTemplateDetails({ params }) {
   const [templateId, setTemplateId] = useState(null);
   
   // Template Data State
-  const [template, setTemplate] = useState({ name: '', seapod_version: '', hw_version: '', sw_version: '', assembly_item_id: '', bom_id: '' });
+  const [template, setTemplate] = useState({ name: '', seapod_version: '', hw_version: '', sw_version: '', assembly_item_id: '', bom_id: '', bom_revision_id: '' });
   const [items, setItems] = useState([]);
   const [masterItems, setMasterItems] = useState([]);
   
@@ -137,12 +137,19 @@ export default function SeapodTemplateDetails({ params }) {
                         </div>
                         <div className="flex gap-6">
                             <div>
-                                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Assembly Item ID</label>
-                                <input className="text-sm font-medium bg-slate-50 border border-slate-200 rounded px-2 py-1 w-48 focus:border-[#0176D3] outline-none" value={template.assembly_item_id || ''} onChange={(e) => updateHeader('assembly_item_id', e.target.value)} placeholder="e.g. ASM-12345" />
+                                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">NS Assembly Item ID</label>
+                                <input className="text-sm font-medium bg-slate-50 border border-slate-200 rounded px-2 py-1 w-48 focus:border-[#0176D3] outline-none" value={template.assembly_item_id || ''} onChange={(e) => updateHeader('assembly_item_id', e.target.value)} placeholder="e.g. 471" />
+                                <p className="text-[10px] text-slate-400 mt-1">NetSuite internal ID (numeric) — not the item name/SKU</p>
                             </div>
                             <div>
-                                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">BOM ID</label>
-                                <input className="text-sm font-medium bg-slate-50 border border-slate-200 rounded px-2 py-1 w-48 focus:border-[#0176D3] outline-none" value={template.bom_id || ''} onChange={(e) => updateHeader('bom_id', e.target.value)} placeholder="e.g. BOM-67890" />
+                                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">NS BOM ID</label>
+                                <input className="text-sm font-medium bg-slate-50 border border-slate-200 rounded px-2 py-1 w-48 focus:border-[#0176D3] outline-none" value={template.bom_id || ''} onChange={(e) => updateHeader('bom_id', e.target.value)} placeholder="e.g. 26" />
+                                <p className="text-[10px] text-slate-400 mt-1">NetSuite internal ID (numeric) — not the BOM name</p>
+                            </div>
+                            <div>
+                                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">NS BOM Revision ID</label>
+                                <input className="text-sm font-medium bg-slate-50 border border-slate-200 rounded px-2 py-1 w-48 focus:border-[#0176D3] outline-none" value={template.bom_revision_id || ''} onChange={(e) => updateHeader('bom_revision_id', e.target.value)} placeholder="optional — e.g. 22" />
+                                <p className="text-[10px] text-slate-400 mt-1">Only set if this BOM has a new-vs-refurbished (or other) revision split. Leave blank to use NetSuite's current revision.</p>
                             </div>
                         </div>
                     </div>

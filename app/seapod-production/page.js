@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { useRouter } from 'next/navigation';
-import { Plus, Search, Cpu, ChevronRight, Download, Trash2, Box, User, Calendar } from 'lucide-react';
+import { Plus, Search, Cpu, ChevronRight, Download, Trash2, Box, User, Calendar, UploadCloud } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import Sidebar from '../components/Sidebar';
 
@@ -13,6 +13,7 @@ export default function SeapodList() {
   const [searchTerm, setSearchTerm] = useState('');
   const [isAdmin, setIsAdmin] = useState(false);
   const [userEmail, setUserEmail] = useState('');
+  const [pushing, setPushing] = useState(false);
 
   const router = useRouter();
   const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
@@ -76,7 +77,7 @@ export default function SeapodList() {
 
     const { data: newSeapod, error } = await supabase.from('seapod_production').insert([{
         serial_number: serialNumber, template_name: tpl.name, seapod_version: tpl.seapod_version, hw_version: tpl.hw_version, sw_version: tpl.sw_version,
-        assembly_item_id: tpl.assembly_item_id, bom_id: tpl.bom_id, status: 'In Progress',
+        assembly_item_id: tpl.assembly_item_id, bom_id: tpl.bom_id, bom_revision_id: tpl.bom_revision_id, status: 'In Progress',
         created_by: userEmail
     }]).select().single();
 
@@ -98,6 +99,29 @@ export default function SeapodList() {
     router.push(`/seapod-production/${newSeapod.id}`);
   }
 
+  const unsyncedSeapods = seapods.filter(s => ['Completed', 'Assigned to Order'].includes(s.status) && !s.synced_to_netsuite);
+
+  async function pushUnsyncedToNS() {
+    if (unsyncedSeapods.length === 0) { alert("Nothing to push — all Completed / Assigned to Order seapods are already synced to NetSuite."); return; }
+    if (!confirm(`Push ${unsyncedSeapods.length} seapod(s) to NetSuite?\n\n${unsyncedSeapods.map(s => s.serial_number).join(', ')}`)) return;
+
+    setPushing(true);
+    try {
+      const res = await fetch('/api/trigger-seapod-build', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ seapodIds: unsyncedSeapods.map(s => s.id) })
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Push failed');
+      alert(`Sent ${unsyncedSeapods.length} seapod(s) to NetSuite. Sync status will update per record as NetSuite confirms.`);
+    } catch (e) {
+      alert("Push failed: " + e.message);
+    } finally {
+      setPushing(false);
+    }
+  }
+
   async function handleDelete(e, id) {
     e.stopPropagation();
     if(!confirm("Are you sure you want to delete this Seapod record?")) return;
@@ -111,7 +135,7 @@ export default function SeapodList() {
     <div className="flex min-h-screen bg-[#F3F4F6] font-sans">
       <Sidebar />
       <main className="flex-1 ml-64 p-8">
-        <div className="flex justify-between items-center mb-6"><h1 className="text-3xl font-bold text-slate-900">Seapod Production</h1><div className="flex gap-2"><button onClick={exportList} className="px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded font-bold shadow-sm flex items-center gap-2 hover:bg-slate-50"><Download size={16}/> Export List</button><button onClick={() => setShowModal(true)} className="px-4 py-2 bg-[#0176D3] text-white rounded font-bold shadow flex items-center gap-2"><Plus size={16}/> Start Build</button></div></div>
+        <div className="flex justify-between items-center mb-6"><h1 className="text-3xl font-bold text-slate-900">Seapod Production</h1><div className="flex gap-2"><button onClick={exportList} className="px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded font-bold shadow-sm flex items-center gap-2 hover:bg-slate-50"><Download size={16}/> Export List</button><button onClick={pushUnsyncedToNS} disabled={pushing} className="px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded font-bold shadow-sm flex items-center gap-2 hover:bg-slate-50 disabled:opacity-50"><UploadCloud size={16}/> Push to NS{unsyncedSeapods.length > 0 && ` (${unsyncedSeapods.length})`}</button><button onClick={() => setShowModal(true)} className="px-4 py-2 bg-[#0176D3] text-white rounded font-bold shadow flex items-center gap-2"><Plus size={16}/> Start Build</button></div></div>
         <div className="bg-white p-4 rounded-lg shadow-sm border border-slate-200 mb-6"><div className="relative max-w-md"><Search className="absolute left-3 top-2.5 text-slate-400" size={18}/><input className="w-full pl-10 pr-4 py-2 border rounded outline-none focus:border-[#0176D3]" placeholder="Search Serial Number..." onChange={e => setSearchTerm(e.target.value)} /></div></div>
         <div className="bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden">
             <table className="w-full text-left">
