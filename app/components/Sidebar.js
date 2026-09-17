@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { usePathname, useRouter } from 'next/navigation';
-import { LayoutDashboard, Package, Users, LogOut, Tag, Cpu, Factory, List, ChevronLeft, ChevronRight, MapPin } from 'lucide-react';
+import { LayoutDashboard, Package, Users, LogOut, Tag, Cpu, Factory, List, ChevronLeft, ChevronRight, MapPin, Plane } from 'lucide-react';
 import { useSidebar } from '../context/SidebarContext';
 
 export default function Sidebar() {
@@ -70,7 +70,14 @@ export default function Sidebar() {
       <nav className="flex-1 px-3 py-6 space-y-1 overflow-y-auto no-scrollbar">
         
         {!isCollapsed && <div className="pb-2 px-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider animate-in fade-in">Workspace</div>}
-        
+
+        {role === 'management' ? (
+            <div onClick={() => router.push('/travel')} className={getLinkClass('/travel')} title={isCollapsed ? "Travel Manifest" : ""}>
+                <Plane size={20} />
+                {!isCollapsed && <span>Travel Manifest</span>}
+            </div>
+        ) : (
+        <>
         {(role === 'admin' || role === 'operation') && (
             <div onClick={() => router.push('/')} className={getLinkClass('/')} title={isCollapsed ? "Overview" : ""}>
                 <LayoutDashboard size={20} />
@@ -82,7 +89,7 @@ export default function Sidebar() {
           <List size={20} />
           {!isCollapsed && <span>Orders List</span>}
         </div>
-        
+
         <div onClick={() => router.push('/seapod-production')} className={getLinkClass('/seapod-production')} title={isCollapsed ? "Seapod Production" : ""}>
           <Factory size={20} />
           {!isCollapsed && <span>Seapod Production</span>}
@@ -92,6 +99,14 @@ export default function Sidebar() {
             <div onClick={() => router.push('/admin/addresses')} className={getLinkClass('/admin/addresses')} title={isCollapsed ? "Addresses" : ""}>
                 <MapPin size={20} />{!isCollapsed && <span>Addresses</span>}
             </div>
+        )}
+
+        {isAdmin && (
+            <div onClick={() => router.push('/travel')} className={getLinkClass('/travel')} title={isCollapsed ? "Travel Manifest" : ""}>
+                <Plane size={20} />{!isCollapsed && <span>Travel Manifest</span>}
+            </div>
+        )}
+        </>
         )}
 
         {/* Admin Section */}
