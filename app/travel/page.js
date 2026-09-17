@@ -2,7 +2,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { useRouter } from 'next/navigation';
-import { Search, ChevronLeft, ChevronRight, LogOut, Palmtree, PlaneTakeoff, MapPin } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, LogOut, Palmtree, PlaneTakeoff } from 'lucide-react';
 
 const DAY_MS = 86400000;
 const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
@@ -109,6 +109,23 @@ export default function TravelManifest() {
     if (!dateStr) return '-';
     return toUTCDate(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   }
+
+  function cityCode(str) {
+    if (!str) return '';
+    const parts = str.split(',').map(s => s.trim());
+    const code = parts.slice(1).find(p => /^[A-Z]{2,4}$/.test(p));
+    return code || parts[0];
+  }
+
+  const rowsByPerson = useMemo(() => {
+    const map = new Map();
+    monthTrips.forEach(t => {
+      const key = t.email || t.traveler;
+      if (!map.has(key)) map.set(key, { key, traveler: t.traveler, trips: [] });
+      map.get(key).trips.push(t);
+    });
+    return Array.from(map.values()).sort((a, b) => a.traveler.localeCompare(b.traveler));
+  }, [monthTrips]);
 
   function shiftMonth(delta) {
     const d = new Date(Date.UTC(cursor.year, cursor.month + delta, 1));
@@ -217,43 +234,46 @@ export default function TravelManifest() {
             </div>
           </div>
 
-          {/* Timeline rows */}
-          <div className="divide-y divide-slate-50 max-h-[520px] overflow-y-auto">
+          {/* Timeline rows — one per person, so the whole team fits without scrolling */}
+          <div className="divide-y divide-slate-50">
             {!loaded && (
               <div className="py-16 text-center text-sm text-slate-400">Loading manifest&hellip;</div>
             )}
-            {loaded && monthTrips.length === 0 && (
+            {loaded && rowsByPerson.length === 0 && (
               <div className="py-16 text-center text-sm text-slate-400">No trips overlap {MONTH_NAMES[cursor.month]} {cursor.year}.</div>
             )}
-            {monthTrips.map(t => (
-              <div key={t.trip_id} className="flex items-stretch hover:bg-slate-50 group">
-                <div className="w-44 shrink-0 border-r border-slate-100 px-3 py-2.5 flex flex-col justify-center">
-                  <div className="text-xs font-bold text-slate-800 truncate">{t.traveler}</div>
-                  <div className="text-[10px] text-slate-400 truncate flex items-center gap-1">
-                    <MapPin size={9} /> {t.destination?.split(',')[0]}
-                  </div>
+            {rowsByPerson.map(row => (
+              <div key={row.key} className="flex items-stretch hover:bg-slate-50 group">
+                <div className="w-44 shrink-0 border-r border-slate-100 px-3 py-1.5 flex items-center gap-1.5">
+                  <div className="text-xs font-bold text-slate-800 truncate">{row.traveler}</div>
+                  {row.trips.length > 1 && (
+                    <span className="text-[9px] font-bold text-slate-400 bg-slate-100 rounded-full px-1.5 shrink-0">{row.trips.length}</span>
+                  )}
                 </div>
                 <div
-                  className="flex-1 relative grid py-2.5"
-                  style={{ gridTemplateColumns: `repeat(${daysInMonth}, minmax(0, 1fr))` }}
+                  className="flex-1 relative grid py-1.5"
+                  style={{ gridTemplateColumns: `repeat(${daysInMonth}, minmax(0, 1fr))`, gridAutoRows: '20px' }}
                 >
                   {todayCol && (
                     <div
                       className="absolute top-0 bottom-0 w-px bg-[#0176D3]/40 z-0"
-                      style={{ left: `${((todayCol - 0.5) / daysInMonth) * 100}%` }}
+                      style={{ left: `${((todayCol - 0.5) / daysInMonth) * 100}%`, gridRow: '1 / -1' }}
                     />
                   )}
-                  <div
-                    style={barStyle(t)}
-                    title={`${t.traveler}: ${t.origin} → ${t.destination} (${fmt(t.from_date)} – ${fmt(t.to_date)})`}
-                    className={`relative z-10 h-5 rounded-full flex items-center px-2 gap-1 shadow-sm
-                      ${t._phase === 'underway' ? 'bg-emerald-500' : t._phase === 'upcoming' ? 'bg-[#0176D3]' : 'bg-slate-300'}
-                      ${t.vacation ? 'ring-2 ring-amber-400 ring-offset-1' : ''}
-                    `}
-                  >
-                    {t.vacation && <Palmtree size={11} className="text-white shrink-0" />}
-                    <span className="text-[10px] font-bold text-white truncate">{fmt(t.from_date)}&ndash;{fmt(t.to_date)}</span>
-                  </div>
+                  {row.trips.map(t => (
+                    <div
+                      key={t.trip_id}
+                      style={barStyle(t)}
+                      title={`${row.traveler}\n${t.origin} → ${t.destination}\n${fmt(t.from_date)} – ${fmt(t.to_date)}${t.vacation ? ` (includes ${t.pto_days}d PTO)` : ''}`}
+                      className={`relative z-10 h-5 rounded-full flex items-center px-2 gap-1 shadow-sm overflow-hidden
+                        ${t._phase === 'underway' ? 'bg-emerald-500' : t._phase === 'upcoming' ? 'bg-[#0176D3]' : 'bg-slate-300'}
+                        ${t.vacation ? 'ring-2 ring-amber-400 ring-offset-1' : ''}
+                      `}
+                    >
+                      {t.vacation && <Palmtree size={11} className="text-white shrink-0" />}
+                      <span className="text-[10px] font-bold text-white truncate">{cityCode(t.origin)} &rarr; {cityCode(t.destination)}</span>
+                    </div>
+                  ))}
                 </div>
               </div>
             ))}
