@@ -2,22 +2,25 @@
 import { useState, useEffect, useMemo } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { useRouter } from 'next/navigation';
-import { Search, Plane, PlaneTakeoff, Palmtree, Download, MapPin } from 'lucide-react';
-import * as XLSX from 'xlsx';
-import Sidebar from '../components/Sidebar';
+import { Search, ChevronLeft, ChevronRight, LogOut, Palmtree, PlaneTakeoff, MapPin } from 'lucide-react';
 
-const STATUS_STYLES = {
-  underway: 'bg-green-100 text-green-700 border-green-200',
-  upcoming: 'bg-blue-100 text-blue-700 border-blue-200',
-  past: 'bg-slate-100 text-slate-500 border-slate-200',
-};
+const DAY_MS = 86400000;
+const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+function toUTCDate(dateStr) {
+  return dateStr ? new Date(dateStr + 'T00:00:00Z') : null;
+}
 
 export default function TravelManifest() {
   const [trips, setTrips] = useState([]);
   const [loaded, setLoaded] = useState(false);
   const [allowed, setAllowed] = useState(false);
+  const [email, setEmail] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
-  const [filter, setFilter] = useState('active');
+  const [cursor, setCursor] = useState(() => {
+    const now = new Date();
+    return { year: now.getUTCFullYear(), month: now.getUTCMonth() };
+  });
 
   const router = useRouter();
   const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
@@ -34,8 +37,9 @@ export default function TravelManifest() {
       if (!active) return;
       if (!['admin', 'management'].includes(profile?.role)) { router.push('/orders'); return; }
       setAllowed(true);
+      setEmail(session.user.email);
 
-      const { data: rows } = await supabase.from('employee_trips').select('*').order('from_date', { ascending: false });
+      const { data: rows } = await supabase.from('employee_trips').select('*').order('from_date', { ascending: true });
       if (!active) return;
       setTrips(rows || []);
       setLoaded(true);
@@ -45,82 +49,113 @@ export default function TravelManifest() {
     return () => { active = false; };
   }, [router, supabase]);
 
+  async function handleSignOut() {
+    await supabase.auth.signOut();
+    router.push('/login');
+  }
+
   const today = useMemo(() => new Date(new Date().toISOString().slice(0, 10) + 'T00:00:00Z'), []);
-  const weekOut = useMemo(() => new Date(today.getTime() + 7 * 86400000), [today]);
-  const twoWeeksAgo = useMemo(() => new Date(today.getTime() - 14 * 86400000), [today]);
+  const weekOut = useMemo(() => new Date(today.getTime() + 7 * DAY_MS), [today]);
 
   function phaseOf(t) {
-    if (!t.from_date || !t.to_date) return 'past';
-    const from = new Date(t.from_date + 'T00:00:00Z');
-    const to = new Date(t.to_date + 'T00:00:00Z');
+    const from = toUTCDate(t.from_date);
+    const to = toUTCDate(t.to_date);
+    if (!from || !to) return 'past';
     if (from <= today && today <= to) return 'underway';
     if (from > today) return 'upcoming';
     return 'past';
   }
 
   const phased = useMemo(() => trips.map(t => ({ ...t, _phase: phaseOf(t) })), [trips, today]);
-
   const underway = phased.filter(t => t._phase === 'underway');
   const upcoming = phased.filter(t => t._phase === 'upcoming');
-  const departingWeek = upcoming.filter(t => new Date(t.from_date + 'T00:00:00Z') <= weekOut);
+  const departingWeek = upcoming.filter(t => toUTCDate(t.from_date) <= weekOut);
   const onPtoNow = underway.filter(t => t.vacation);
 
-  const filtered = phased.filter(t => {
-    if (filter === 'active' && t._phase === 'past' && new Date(t.to_date + 'T00:00:00Z') < twoWeeksAgo) return false;
-    if (filter === 'underway' && t._phase !== 'underway') return false;
-    if (filter === 'upcoming' && t._phase !== 'upcoming') return false;
-    if (filter === 'past' && t._phase !== 'past') return false;
-    if (searchTerm) {
-      const hay = `${t.traveler} ${t.origin} ${t.destination}`.toLowerCase();
-      if (!hay.includes(searchTerm.toLowerCase())) return false;
-    }
-    return true;
-  });
+  // --- Timeline month math ---
+  const monthStart = useMemo(() => new Date(Date.UTC(cursor.year, cursor.month, 1)), [cursor]);
+  const daysInMonth = useMemo(() => new Date(Date.UTC(cursor.year, cursor.month + 1, 0)).getUTCDate(), [cursor]);
+  const monthEnd = useMemo(() => new Date(Date.UTC(cursor.year, cursor.month, daysInMonth)), [cursor, daysInMonth]);
+  const isCurrentMonth = cursor.year === today.getUTCFullYear() && cursor.month === today.getUTCMonth();
+  const todayCol = isCurrentMonth ? today.getUTCDate() : null;
+
+  const monthTrips = useMemo(() => {
+    return phased
+      .filter(t => {
+        const from = toUTCDate(t.from_date), to = toUTCDate(t.to_date);
+        if (!from || !to) return false;
+        return from <= monthEnd && to >= monthStart;
+      })
+      .filter(t => {
+        if (!searchTerm) return true;
+        const hay = `${t.traveler} ${t.origin} ${t.destination}`.toLowerCase();
+        return hay.includes(searchTerm.toLowerCase());
+      })
+      .sort((a, b) => (a.from_date < b.from_date ? -1 : 1));
+  }, [phased, monthStart, monthEnd, searchTerm]);
+
+  function barStyle(t) {
+    const from = toUTCDate(t.from_date), to = toUTCDate(t.to_date);
+    const clipStart = from < monthStart ? monthStart : from;
+    const clipEnd = to > monthEnd ? monthEnd : to;
+    const startCol = Math.round((clipStart - monthStart) / DAY_MS) + 1;
+    const spanDays = Math.round((clipEnd - clipStart) / DAY_MS) + 1;
+    return {
+      gridColumn: `${startCol} / span ${spanDays}`,
+    };
+  }
 
   function fmt(dateStr) {
     if (!dateStr) return '-';
-    return new Date(dateStr + 'T00:00:00Z').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    return toUTCDate(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   }
 
-  function exportList() {
-    const rows = filtered.map(t => ({
-      Traveler: t.traveler, Status: t._phase, Origin: t.origin, Destination: t.destination,
-      'From Date': t.from_date, 'To Date': t.to_date, 'Net Days': t.net_days,
-      Vacation: t.vacation ? 'Yes' : 'No', 'PTO Days': t.pto_days, 'Trip ID': t.trip_id,
-    }));
-    const ws = XLSX.utils.json_to_sheet(rows);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Travel Manifest');
-    XLSX.writeFile(wb, 'Travel_Manifest.xlsx');
+  function shiftMonth(delta) {
+    const d = new Date(Date.UTC(cursor.year, cursor.month + delta, 1));
+    setCursor({ year: d.getUTCFullYear(), month: d.getUTCMonth() });
+  }
+
+  function goToday() {
+    const now = new Date();
+    setCursor({ year: now.getUTCFullYear(), month: now.getUTCMonth() });
   }
 
   if (!allowed) return null;
 
+  const dayCols = Array.from({ length: daysInMonth }, (_, i) => i + 1);
+
   return (
-    <div className="flex min-h-screen bg-[#F3F4F6] font-sans">
-      <Sidebar />
-      <main className="flex-1 ml-64 p-8">
-        <div className="flex justify-between items-center mb-6">
-          <div>
-            <h1 className="text-3xl font-bold text-slate-900">Travel Manifest</h1>
-            <p className="text-sm text-slate-500 mt-1">Who&apos;s traveling, where, and whether the trip carries paid days off. Synced daily from Mesh.</p>
+    <div className="min-h-screen bg-[#F3F4F6] font-sans">
+      <header className="bg-white border-b border-slate-200 px-8 py-4 flex items-center justify-between sticky top-0 z-20">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-lg bg-[#0176D3] text-white flex items-center justify-center">
+            <PlaneTakeoff size={18} />
           </div>
-          <button onClick={exportList} className="px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded font-bold shadow-sm flex items-center gap-2 hover:bg-slate-50">
-            <Download size={16} /> Export List
+          <div>
+            <h1 className="font-bold text-slate-900 leading-tight">Travel Manifest</h1>
+            <p className="text-[11px] text-slate-500 leading-tight">Orca AI &middot; synced daily from Mesh</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-4">
+          <span className="text-xs text-slate-500 hidden sm:inline">{email}</span>
+          <button onClick={handleSignOut} className="flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-red-600 px-3 py-1.5 rounded border border-slate-200 hover:border-red-200 hover:bg-red-50 transition-colors">
+            <LogOut size={14} /> Sign Out
           </button>
         </div>
+      </header>
 
+      <main className="max-w-[1400px] mx-auto px-8 py-8">
         <div className="grid grid-cols-4 gap-4 mb-6">
           <div className="bg-white p-5 rounded-lg shadow-sm border border-slate-200">
-            <div className="text-2xl font-bold text-[#0176D3]">{loaded ? underway.length : '-'}</div>
+            <div className="text-2xl font-bold text-emerald-600">{loaded ? underway.length : '-'}</div>
             <div className="text-xs text-slate-500 mt-1 font-medium">Underway right now</div>
           </div>
           <div className="bg-white p-5 rounded-lg shadow-sm border border-slate-200">
-            <div className="text-2xl font-bold text-slate-800">{loaded ? departingWeek.length : '-'}</div>
+            <div className="text-2xl font-bold text-[#0176D3]">{loaded ? departingWeek.length : '-'}</div>
             <div className="text-xs text-slate-500 mt-1 font-medium">Departing next 7 days</div>
           </div>
           <div className="bg-white p-5 rounded-lg shadow-sm border border-slate-200">
-            <div className="text-2xl font-bold text-slate-800">{loaded ? onPtoNow.length : '-'}</div>
+            <div className="text-2xl font-bold text-amber-500">{loaded ? onPtoNow.length : '-'}</div>
             <div className="text-xs text-slate-500 mt-1 font-medium">On vacation days, now</div>
           </div>
           <div className="bg-white p-5 rounded-lg shadow-sm border border-slate-200">
@@ -129,89 +164,100 @@ export default function TravelManifest() {
           </div>
         </div>
 
-        {underway.length > 0 && (
-          <div className="bg-white rounded-lg shadow-sm border border-slate-200 mb-6 overflow-hidden">
-            <div className="px-6 py-4 border-b border-slate-100 flex items-center gap-2">
-              <PlaneTakeoff size={16} className="text-[#0176D3]" />
-              <h2 className="font-bold text-slate-800 text-sm">Underway ({underway.length})</h2>
+        <div className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden">
+          {/* Calendar toolbar */}
+          <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-100">
+            <div className="flex items-center gap-1">
+              <button onClick={() => shiftMonth(-1)} className="p-1.5 rounded hover:bg-slate-100 text-slate-500">
+                <ChevronLeft size={18} />
+              </button>
+              <h2 className="font-bold text-slate-800 w-40 text-center">{MONTH_NAMES[cursor.month]} {cursor.year}</h2>
+              <button onClick={() => shiftMonth(1)} className="p-1.5 rounded hover:bg-slate-100 text-slate-500">
+                <ChevronRight size={18} />
+              </button>
+              {!isCurrentMonth && (
+                <button onClick={goToday} className="ml-2 text-xs font-bold text-[#0176D3] px-2 py-1 rounded hover:bg-blue-50">Today</button>
+              )}
             </div>
-            <div className="divide-y divide-slate-100">
-              {underway.map(t => (
-                <div key={t.trip_id} className="px-6 py-3 flex items-center justify-between text-sm">
-                  <div>
-                    <div className="font-bold text-slate-800">{t.traveler}</div>
-                    <div className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
-                      <MapPin size={11} /> {t.origin?.split(',')[0]} &rarr; {t.destination?.split(',')[0]}
-                    </div>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-3 text-[11px] text-slate-500">
+                <span className="flex items-center gap-1"><i className="w-2.5 h-2.5 rounded-sm bg-[#0176D3] inline-block" /> Upcoming</span>
+                <span className="flex items-center gap-1"><i className="w-2.5 h-2.5 rounded-sm bg-emerald-500 inline-block" /> Underway</span>
+                <span className="flex items-center gap-1"><i className="w-2.5 h-2.5 rounded-sm bg-slate-300 inline-block" /> Returned</span>
+                <span className="flex items-center gap-1"><Palmtree size={12} className="text-amber-500" /> PTO</span>
+              </div>
+              <div className="relative">
+                <Search className="absolute left-2.5 top-2 text-slate-400" size={14} />
+                <input
+                  className="pl-8 pr-3 py-1.5 border rounded text-xs outline-none focus:border-[#0176D3] w-44"
+                  placeholder="Search..."
+                  value={searchTerm}
+                  onChange={e => setSearchTerm(e.target.value)}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Day header */}
+          <div className="flex">
+            <div className="w-44 shrink-0 border-r border-slate-100" />
+            <div className="flex-1 grid" style={{ gridTemplateColumns: `repeat(${daysInMonth}, minmax(0, 1fr))` }}>
+              {dayCols.map(day => {
+                const dow = new Date(Date.UTC(cursor.year, cursor.month, day)).getUTCDay();
+                const isWeekend = dow === 0 || dow === 6;
+                return (
+                  <div
+                    key={day}
+                    className={`text-center text-[10px] font-bold py-2 border-r border-slate-50 last:border-r-0 ${day === todayCol ? 'text-[#0176D3]' : isWeekend ? 'text-slate-300' : 'text-slate-400'}`}
+                  >
+                    {day}
                   </div>
-                  <div className="flex items-center gap-3">
-                    {t.vacation && (
-                      <span className="px-2 py-1 rounded text-xs font-bold border bg-amber-100 text-amber-700 border-amber-200 flex items-center gap-1">
-                        <Palmtree size={11} /> PTO &times;{t.pto_days}
-                      </span>
-                    )}
-                    <span className="text-xs font-mono text-slate-500">{fmt(t.from_date)} - {fmt(t.to_date)}</span>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Timeline rows */}
+          <div className="divide-y divide-slate-50 max-h-[520px] overflow-y-auto">
+            {!loaded && (
+              <div className="py-16 text-center text-sm text-slate-400">Loading manifest&hellip;</div>
+            )}
+            {loaded && monthTrips.length === 0 && (
+              <div className="py-16 text-center text-sm text-slate-400">No trips overlap {MONTH_NAMES[cursor.month]} {cursor.year}.</div>
+            )}
+            {monthTrips.map(t => (
+              <div key={t.trip_id} className="flex items-stretch hover:bg-slate-50 group">
+                <div className="w-44 shrink-0 border-r border-slate-100 px-3 py-2.5 flex flex-col justify-center">
+                  <div className="text-xs font-bold text-slate-800 truncate">{t.traveler}</div>
+                  <div className="text-[10px] text-slate-400 truncate flex items-center gap-1">
+                    <MapPin size={9} /> {t.destination?.split(',')[0]}
                   </div>
                 </div>
-              ))}
-            </div>
+                <div
+                  className="flex-1 relative grid py-2.5"
+                  style={{ gridTemplateColumns: `repeat(${daysInMonth}, minmax(0, 1fr))` }}
+                >
+                  {todayCol && (
+                    <div
+                      className="absolute top-0 bottom-0 w-px bg-[#0176D3]/40 z-0"
+                      style={{ left: `${((todayCol - 0.5) / daysInMonth) * 100}%` }}
+                    />
+                  )}
+                  <div
+                    style={barStyle(t)}
+                    title={`${t.traveler}: ${t.origin} → ${t.destination} (${fmt(t.from_date)} – ${fmt(t.to_date)})`}
+                    className={`relative z-10 h-5 rounded-full flex items-center px-2 gap-1 shadow-sm
+                      ${t._phase === 'underway' ? 'bg-emerald-500' : t._phase === 'upcoming' ? 'bg-[#0176D3]' : 'bg-slate-300'}
+                      ${t.vacation ? 'ring-2 ring-amber-400 ring-offset-1' : ''}
+                    `}
+                  >
+                    {t.vacation && <Palmtree size={11} className="text-white shrink-0" />}
+                    <span className="text-[10px] font-bold text-white truncate">{fmt(t.from_date)}&ndash;{fmt(t.to_date)}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
-        )}
-
-        <div className="bg-white p-4 rounded-lg shadow-sm border border-slate-200 mb-6 flex items-center justify-between gap-4 flex-wrap">
-          <div className="relative max-w-md flex-1 min-w-[220px]">
-            <Search className="absolute left-3 top-2.5 text-slate-400" size={18} />
-            <input
-              className="w-full pl-10 pr-4 py-2 border rounded outline-none focus:border-[#0176D3]"
-              placeholder="Search traveler or destination..."
-              value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
-            />
-          </div>
-          <select value={filter} onChange={e => setFilter(e.target.value)} className="border rounded px-3 py-2 text-sm bg-white">
-            <option value="active">Active &amp; upcoming</option>
-            <option value="all">All trips</option>
-            <option value="underway">Underway only</option>
-            <option value="upcoming">Upcoming only</option>
-            <option value="past">Recently returned</option>
-          </select>
-        </div>
-
-        <div className="bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden">
-          <table className="w-full text-left">
-            <thead className="bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase">
-              <tr>
-                <th className="px-6 py-4">Traveler</th>
-                <th className="px-6 py-4">Route</th>
-                <th className="px-6 py-4">Dates</th>
-                <th className="px-6 py-4">Net Days</th>
-                <th className="px-6 py-4">PTO</th>
-                <th className="px-6 py-4">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {!loaded && (
-                <tr><td colSpan={6} className="px-6 py-8 text-center text-slate-400 text-sm">Loading manifest&hellip;</td></tr>
-              )}
-              {loaded && filtered.length === 0 && (
-                <tr><td colSpan={6} className="px-6 py-8 text-center text-slate-400 text-sm">No trips match.</td></tr>
-              )}
-              {filtered.map(t => (
-                <tr key={t.trip_id} className="hover:bg-blue-50">
-                  <td className="px-6 py-4 font-bold text-slate-800">{t.traveler}</td>
-                  <td className="px-6 py-4 text-sm text-slate-600">
-                    {t.origin?.split(',')[0]} <Plane size={11} className="inline mx-1 text-slate-400" /> {t.destination?.split(',')[0]}
-                  </td>
-                  <td className="px-6 py-4 text-xs font-mono text-slate-500">{fmt(t.from_date)} - {fmt(t.to_date)}</td>
-                  <td className="px-6 py-4 text-sm text-slate-600">{t.net_days ?? '-'}</td>
-                  <td className="px-6 py-4 text-sm text-slate-600">{t.vacation ? `${t.pto_days} d` : '-'}</td>
-                  <td className="px-6 py-4">
-                    <span className={`px-2 py-1 rounded text-xs font-bold border capitalize ${STATUS_STYLES[t._phase]}`}>{t._phase}</span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
         </div>
       </main>
     </div>
