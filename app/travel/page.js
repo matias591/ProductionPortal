@@ -17,6 +17,7 @@ export default function TravelManifest() {
   const [allowed, setAllowed] = useState(false);
   const [email, setEmail] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [cityFilter, setCityFilter] = useState('');
   const [cursor, setCursor] = useState(() => {
     const now = new Date();
     return { year: now.getUTCFullYear(), month: now.getUTCMonth() };
@@ -79,20 +80,33 @@ export default function TravelManifest() {
   const isCurrentMonth = cursor.year === today.getUTCFullYear() && cursor.month === today.getUTCMonth();
   const todayCol = isCurrentMonth ? today.getUTCDate() : null;
 
+  const monthTripsUnfiltered = useMemo(() => {
+    return phased.filter(t => {
+      const from = toUTCDate(t.from_date), to = toUTCDate(t.to_date);
+      if (!from || !to) return false;
+      return from <= monthEnd && to >= monthStart;
+    });
+  }, [phased, monthStart, monthEnd]);
+
+  const cityOptions = useMemo(() => {
+    const cities = new Set();
+    monthTripsUnfiltered.forEach(t => {
+      const city = t.destination?.split(',')[0]?.trim();
+      if (city) cities.add(city);
+    });
+    return Array.from(cities).sort();
+  }, [monthTripsUnfiltered]);
+
   const monthTrips = useMemo(() => {
-    return phased
-      .filter(t => {
-        const from = toUTCDate(t.from_date), to = toUTCDate(t.to_date);
-        if (!from || !to) return false;
-        return from <= monthEnd && to >= monthStart;
-      })
+    return monthTripsUnfiltered
       .filter(t => {
         if (!searchTerm) return true;
         const hay = `${t.traveler} ${t.origin} ${t.destination}`.toLowerCase();
         return hay.includes(searchTerm.toLowerCase());
       })
+      .filter(t => !cityFilter || t.destination?.split(',')[0]?.trim() === cityFilter)
       .sort((a, b) => (a.from_date < b.from_date ? -1 : 1));
-  }, [phased, monthStart, monthEnd, searchTerm]);
+  }, [monthTripsUnfiltered, searchTerm, cityFilter]);
 
   function barStyle(t) {
     const from = toUTCDate(t.from_date), to = toUTCDate(t.to_date);
@@ -130,11 +144,13 @@ export default function TravelManifest() {
   function shiftMonth(delta) {
     const d = new Date(Date.UTC(cursor.year, cursor.month + delta, 1));
     setCursor({ year: d.getUTCFullYear(), month: d.getUTCMonth() });
+    setCityFilter('');
   }
 
   function goToday() {
     const now = new Date();
     setCursor({ year: now.getUTCFullYear(), month: now.getUTCMonth() });
+    setCityFilter('');
   }
 
   if (!allowed) return null;
@@ -203,6 +219,16 @@ export default function TravelManifest() {
                 <span className="flex items-center gap-1"><i className="w-2.5 h-2.5 rounded-sm bg-slate-300 inline-block" /> Returned</span>
                 <span className="flex items-center gap-1"><Palmtree size={12} className="text-amber-500" /> PTO</span>
               </div>
+              <select
+                value={cityFilter}
+                onChange={e => setCityFilter(e.target.value)}
+                className="border rounded px-2 py-1.5 text-xs bg-white outline-none focus:border-[#0176D3] max-w-[140px]"
+              >
+                <option value="">All destinations</option>
+                {cityOptions.map(city => (
+                  <option key={city} value={city}>{city}</option>
+                ))}
+              </select>
               <div className="relative">
                 <Search className="absolute left-2.5 top-2 text-slate-400" size={14} />
                 <input
