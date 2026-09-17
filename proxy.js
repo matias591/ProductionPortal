@@ -23,10 +23,14 @@ export async function proxy(request) {
     }
   );
 
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return response;
+  // getSession() reads the cookie locally (no round-trip to Supabase's auth
+  // server) — fine here since this is a UX redirect only, not the real
+  // security boundary (RLS + the existing client-side role checks are).
+  // getUser() would add a network hop on every navigation for every user.
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) return response;
 
-  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).single();
   const isManagement = profile?.role === 'management';
 
   if (isManagement && request.nextUrl.pathname !== MANAGEMENT_ALLOWED_PATH) {
