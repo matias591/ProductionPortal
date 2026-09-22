@@ -11,6 +11,8 @@ function toUTCDate(dateStr) {
   return dateStr ? new Date(dateStr + 'T00:00:00Z') : null;
 }
 
+const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+
 export default function TravelManifest() {
   const [trips, setTrips] = useState([]);
   const [loaded, setLoaded] = useState(false);
@@ -24,7 +26,6 @@ export default function TravelManifest() {
   });
 
   const router = useRouter();
-  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 
   useEffect(() => {
     let active = true;
@@ -48,7 +49,7 @@ export default function TravelManifest() {
 
     load();
     return () => { active = false; };
-  }, [router, supabase]);
+  }, [router]);
 
   async function handleSignOut() {
     await supabase.auth.signOut();
