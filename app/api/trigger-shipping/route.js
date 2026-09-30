@@ -70,27 +70,35 @@ export async function POST(request) {
     };
 
     // --- PAYLOAD 2: NETSUITE (New Requirement) ---
-    // Mapping items to include the new netsuite_id
+    // Match order lines to master items on a normalized name (trim + case-insensitive),
+    // so stray spaces in either name don't drop the NetSuite ID.
+    const norm = (s) => (s || '').trim().toLowerCase();
+    const masterByName = new Map(masterItems.map(m => [norm(m.name), m]));
+
+    const syncLines = orderItems.filter(item => !masterByName.get(norm(item.piece))?.exclude_from_sync);
+    const missingNsId = syncLines.filter(item => !masterByName.get(norm(item.piece))?.netsuite_id);
+    if (missingNsId.length > 0) {
+        const names = [...new Set(missingNsId.map(i => i.piece))];
+        return NextResponse.json(
+            { error: `Missing NetSuite ID for: ${names.join(', ')}. Fix the item in Admin > Items, then ship again.` },
+            { status: 422 }
+        );
+    }
+
     const netsuitePayload = {
         vessel_name: order.vessel,
         order_number: order.order_number,
         type: order.type,
         status: order.status,
         warehouse: order.warehouse,
-        items: orderItems
-            .filter(item => !masterItems.find(m => m.name === item.piece)?.exclude_from_sync)
-            .map(item => {
-                // Find matching master item to get NetSuite ID
-                const master = masterItems.find(m => m.name === item.piece);
-                return {
-                    name: item.piece,
-                    quantity: item.quantity,
-                    serial_number: item.serial || '',
-                    orca_id: item.orca_id || '',
-                    price: item.price,
-                    netsuite_id: master ? master.netsuite_id : null // <--- NEW FIELD
-                };
-            })
+        items: syncLines.map(item => ({
+            name: item.piece,
+            quantity: item.quantity,
+            serial_number: item.serial || '',
+            orca_id: item.orca_id || '',
+            price: item.price,
+            netsuite_id: masterByName.get(norm(item.piece)).netsuite_id
+        }))
     };
 
     // --- SEND WEBHOOK 1 (Original) ---
