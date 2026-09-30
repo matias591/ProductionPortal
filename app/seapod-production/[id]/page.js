@@ -18,6 +18,7 @@ export default function SeapodBuildDetails({ params }) {
   const [isDragging, setIsDragging] = useState(false);
   const [showAck, setShowAck] = useState(false);
   const [canDeleteFiles, setCanDeleteFiles] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 
@@ -29,6 +30,7 @@ export default function SeapodBuildDetails({ params }) {
     if (session) {
       const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).single();
       if (['admin', 'operation'].includes(profile?.role)) setCanDeleteFiles(true);
+      if (profile?.role === 'admin') setIsAdmin(true);
     }
 
     const { data: s } = await supabase.from('seapod_production').select('*').eq('id', seapodId).single();
@@ -58,6 +60,7 @@ export default function SeapodBuildDetails({ params }) {
   const onDragLeave = (e) => { e.preventDefault(); setIsDragging(false); };
 
   async function handleStatusChange(newStatus) {
+    if (!isAdmin && (newStatus === 'Allocated' || seapod.status === 'Allocated')) { alert("Permission Denied: Only Admins can change the Allocated status."); return; }
     if (newStatus === 'Completed') {
         const missing = items.some(i => !i.serial || i.serial.trim() === '');
         if (missing) { alert("⚠️ Cannot complete: All Item Serial Numbers must be filled."); return; }
@@ -171,11 +174,13 @@ export default function SeapodBuildDetails({ params }) {
                         <select 
                             value={seapod.status} 
                             onChange={(e) => handleStatusChange(e.target.value)}
+                            disabled={!isAdmin && seapod.status === 'Allocated'}
                             className="bg-white border border-slate-300 rounded px-3 py-2 text-sm font-bold focus:border-[#0176D3] outline-none"
                         >
                             <option>In Progress</option>
                             <option>Completed</option>
                             <option disabled>Assigned to Order</option>
+                            {(isAdmin || seapod.status === 'Allocated') && <option>Allocated</option>}
                         </select>
                         <button onClick={exportExcel} className="text-xs font-bold text-slate-500 flex items-center gap-1 hover:text-[#0176D3]"><Download size={12}/> Export Details</button>
                     </div>

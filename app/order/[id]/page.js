@@ -263,7 +263,9 @@ export default function OrderDetails({ params }) {
                 
                 if (!isMySeapod) {
                     if (existingSeapod.status !== 'Completed' && existingSeapod.status !== 'Assigned to Order') {
-                        alert(`⚠️ Seapod ${seapodItem.serial} status is '${existingSeapod.status}'. It must be 'Completed' first.`);
+                        alert(existingSeapod.status === 'Allocated'
+                            ? `⚠️ Seapod ${seapodItem.serial} is marked 'Allocated' (reserved outside customer orders) and cannot be assigned.`
+                            : `⚠️ Seapod ${seapodItem.serial} status is '${existingSeapod.status}'. It must be 'Completed' first.`);
                         return;
                     }
                     if (existingSeapod.order_number && String(existingSeapod.order_number) !== String(order.order_number)) {
