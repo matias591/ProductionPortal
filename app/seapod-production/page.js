@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
+import { authedFetch } from '../lib/authedFetch';
 import { useRouter } from 'next/navigation';
 import { Plus, Search, Cpu, ChevronRight, Download, Trash2, Box, User, Calendar, UploadCloud } from 'lucide-react';
 import * as XLSX from 'xlsx';
@@ -107,9 +108,8 @@ export default function SeapodList() {
 
     setPushing(true);
     try {
-      const res = await fetch('/api/trigger-seapod-build', {
+      const res = await authedFetch('/api/trigger-seapod-build', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ seapodIds: unsyncedSeapods.map(s => s.id) })
       });
       const json = await res.json();

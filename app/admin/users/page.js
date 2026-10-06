@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
+import { authedFetch } from '../../lib/authedFetch';
 import { useRouter } from 'next/navigation';
 import { Trash2, UserPlus, Shield, User, CheckCircle, AlertCircle, X, AlertTriangle, Mail } from 'lucide-react';
 import Sidebar from '../../components/Sidebar';
@@ -85,7 +86,7 @@ export default function UserManagement() {
   async function executeDelete() {
     if (!userToDelete) return;
     setProcessing(true);
-    const res = await fetch('/api/admin/delete-user', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: userToDelete.id }) });
+    const res = await authedFetch('/api/admin/delete-user', { method: 'POST', body: JSON.stringify({ userId: userToDelete.id }) });
     const json = await res.json();
     if (json.error) showToast('error', json.error);
     else { showToast('success', 'User removed'); setShowDeleteModal(false); setUserToDelete(null); fetchUsers(); }

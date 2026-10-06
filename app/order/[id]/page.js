@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
+import { authedFetch } from '../../lib/authedFetch';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Plus, Trash2, Box, Calendar, Ship, Upload, FileText, Paperclip, Lock, Download, Building2, Loader2, Warehouse, Cpu, Check, AlertTriangle, XCircle, User, RefreshCcw } from 'lucide-react';
 import Sidebar from '../../components/Sidebar';
@@ -161,9 +162,8 @@ export default function OrderDetails({ params }) {
     if (isLocked || !canShip || !order.vessel || order.vessel.trim() === '') return;
     setCheckingVessel(true);
     try {
-        const res = await fetch('/api/check-vessel', {
+        const res = await authedFetch('/api/check-vessel', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ vessel: order.vessel })
         });
         const data = await res.json();
@@ -187,7 +187,7 @@ export default function OrderDetails({ params }) {
     if (!confirm("Are you sure you want to re-trigger the shipping webhook manually?")) return;
     setShipping(true);
     try {
-        const res = await fetch('/api/trigger-shipping', { method: 'POST', body: JSON.stringify({ orderId: orderId }) });
+        const res = await authedFetch('/api/trigger-shipping', { method: 'POST', body: JSON.stringify({ orderId: orderId }) });
         const json = await res.json();
         if (json.error) alert("Error: " + json.error);
         else alert("Webhook triggered successfully!");
@@ -367,7 +367,7 @@ export default function OrderDetails({ params }) {
     setShowSeapodModal(false);
 
     try {
-        const res = await fetch('/api/trigger-seapod-build', { method: 'POST', body: JSON.stringify({ seapodId: newSeapodId }) });
+        const res = await authedFetch('/api/trigger-seapod-build', { method: 'POST', body: JSON.stringify({ seapodId: newSeapodId }) });
         const json = await res.json();
         if (json.error) console.error("Webhook Error: " + json.error);
     } catch(e) { console.error(e); }
@@ -383,7 +383,7 @@ export default function OrderDetails({ params }) {
   async function confirmShipping() {
     setShipping(true);
     try {
-        const res = await fetch('/api/trigger-shipping', { method: 'POST', body: JSON.stringify({ orderId: orderId }) });
+        const res = await authedFetch('/api/trigger-shipping', { method: 'POST', body: JSON.stringify({ orderId: orderId }) });
         const json = await res.json();
         
         if (json.error) {

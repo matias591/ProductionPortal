@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
+import { authedFetch } from '../../lib/authedFetch';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Plus, Trash2, Cpu, CheckCircle2, Circle, Upload, Paperclip, FileText, Download, AlertTriangle, Box, User, Calendar } from 'lucide-react';
 import * as XLSX from 'xlsx';
@@ -79,7 +80,7 @@ export default function SeapodBuildDetails({ params }) {
     
     // Call Webhook
     try {
-        await fetch('/api/trigger-seapod-build', { method: 'POST', body: JSON.stringify({ seapodId }) });
+        await authedFetch('/api/trigger-seapod-build', { method: 'POST', body: JSON.stringify({ seapodId }) });
     } catch(e) { console.error(e); }
   }
 

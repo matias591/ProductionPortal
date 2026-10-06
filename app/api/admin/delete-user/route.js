@@ -1,7 +1,11 @@
+import { requireRole } from '../../_lib/requireRole';
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 
 export async function POST(request) {
+  const auth = await requireRole(request, ['admin']);
+  if (auth.error) return auth.error;
+
   if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
     return NextResponse.json({ error: 'Server Config Error' }, { status: 500 });
   }

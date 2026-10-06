@@ -1,7 +1,11 @@
+import { requireRole } from '../_lib/requireRole';
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 
 export async function POST(request) {
+  const auth = await requireRole(request, ['admin', 'operation']);
+  if (auth.error) return auth.error;
+
   // Initialize Supabase with Service Role (Admin rights to read all tables)
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,

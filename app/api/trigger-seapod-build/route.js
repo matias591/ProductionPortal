@@ -1,3 +1,4 @@
+import { requireRole } from '../_lib/requireRole';
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 
@@ -24,6 +25,10 @@ function buildRecord(seapod, items, masterItems) {
 }
 
 export async function POST(request) {
+  // Any signed-in portal user (vendors complete seapod builds); blocks anonymous callers.
+  const auth = await requireRole(request);
+  if (auth.error) return auth.error;
+
   const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
   try {

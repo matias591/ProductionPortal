@@ -1,6 +1,10 @@
+import { requireRole } from '../_lib/requireRole';
 import { NextResponse } from 'next/server';
 
 export async function POST(request) {
+  const auth = await requireRole(request, ['admin', 'operation']);
+  if (auth.error) return auth.error;
+
   try {
     const { vessel } = await request.json();
 
