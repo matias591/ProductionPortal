@@ -1,0 +1,2274 @@
+{
+  "directed": false,
+  "multigraph": false,
+  "graph": {},
+  "nodes": [
+    {
+      "label": "proxy.js",
+      "file_type": "code",
+      "source_file": "proxy.js",
+      "source_location": "L1",
+      "id": "proxy_js",
+      "community": 26,
+      "norm_label": "proxy.js"
+    },
+    {
+      "label": "proxy()",
+      "file_type": "code",
+      "source_file": "proxy.js",
+      "source_location": "L6",
+      "id": "production_portal_proxy_proxy",
+      "community": 26,
+      "norm_label": "proxy()"
+    },
+    {
+      "label": "config",
+      "file_type": "code",
+      "source_file": "proxy.js",
+      "source_location": "L43",
+      "id": "production_portal_proxy_config",
+      "community": 26,
+      "norm_label": "config"
+    },
+    {
+      "label": "tailwind.config.js",
+      "file_type": "code",
+      "source_file": "tailwind.config.js",
+      "source_location": "L1",
+      "id": "tailwind_config_js",
+      "community": 20,
+      "norm_label": "tailwind.config.js"
+    },
+    {
+      "label": "postcss.config.mjs",
+      "file_type": "code",
+      "source_file": "postcss.config.mjs",
+      "source_location": "L1",
+      "id": "postcss_config_mjs",
+      "community": 15,
+      "norm_label": "postcss.config.mjs"
+    },
+    {
+      "label": "config",
+      "file_type": "code",
+      "source_file": "postcss.config.mjs",
+      "source_location": "L2",
+      "id": "production_portal_postcss_config_config",
+      "community": 15,
+      "norm_label": "config"
+    },
+    {
+      "label": "next.config.js",
+      "file_type": "code",
+      "source_file": "next.config.js",
+      "source_location": "L1",
+      "id": "next_config_js",
+      "community": 16,
+      "norm_label": "next.config.js"
+    },
+    {
+      "label": "nextConfig",
+      "file_type": "code",
+      "source_file": "next.config.js",
+      "source_location": "L2",
+      "id": "production_portal_next_config_nextconfig",
+      "community": 16,
+      "norm_label": "nextconfig"
+    },
+    {
+      "label": "next-env.d.ts",
+      "file_type": "code",
+      "source_file": "next-env.d.ts",
+      "source_location": "L1",
+      "id": "next_env_d_ts",
+      "community": 21,
+      "norm_label": "next-env.d.ts"
+    },
+    {
+      "label": "eslint.config.mjs",
+      "file_type": "code",
+      "source_file": "eslint.config.mjs",
+      "source_location": "L1",
+      "id": "eslint_config_mjs",
+      "community": 13,
+      "norm_label": "eslint.config.mjs"
+    },
+    {
+      "label": "eslintConfig",
+      "file_type": "code",
+      "source_file": "eslint.config.mjs",
+      "source_location": "L5",
+      "id": "production_portal_eslint_config_eslintconfig",
+      "community": 13,
+      "norm_label": "eslintconfig"
+    },
+    {
+      "label": "layout.js",
+      "file_type": "code",
+      "source_file": "app/layout.js",
+      "source_location": "L1",
+      "id": "app_layout_js",
+      "community": 2,
+      "norm_label": "layout.js"
+    },
+    {
+      "label": "inter",
+      "file_type": "code",
+      "source_file": "app/layout.js",
+      "source_location": "L5",
+      "id": "app_layout_inter",
+      "community": 2,
+      "norm_label": "inter"
+    },
+    {
+      "label": "metadata",
+      "file_type": "code",
+      "source_file": "app/layout.js",
+      "source_location": "L7",
+      "id": "app_layout_metadata",
+      "community": 2,
+      "norm_label": "metadata"
+    },
+    {
+      "label": "RootLayout()",
+      "file_type": "code",
+      "source_file": "app/layout.js",
+      "source_location": "L12",
+      "id": "app_layout_rootlayout",
+      "community": 2,
+      "norm_label": "rootlayout()"
+    },
+    {
+      "label": "page.js",
+      "file_type": "code",
+      "source_file": "app/page.js",
+      "source_location": "L1",
+      "id": "app_page_js",
+      "community": 0,
+      "norm_label": "page.js"
+    },
+    {
+      "label": "Home()",
+      "file_type": "code",
+      "source_file": "app/page.js",
+      "source_location": "L10",
+      "id": "app_page_home",
+      "community": 0,
+      "norm_label": "home()"
+    },
+    {
+      "label": "DrillDownCard()",
+      "file_type": "code",
+      "source_file": "app/page.js",
+      "source_location": "L128",
+      "id": "app_page_drilldowncard",
+      "community": 0,
+      "norm_label": "drilldowncard()"
+    },
+    {
+      "label": "page.js",
+      "file_type": "code",
+      "source_file": "app/order/[id]/page.js",
+      "source_location": "L1",
+      "id": "app_order_id_page_js",
+      "community": 24,
+      "norm_label": "page.js"
+    },
+    {
+      "label": "INVOICE_PACKAGES",
+      "file_type": "code",
+      "source_file": "app/order/[id]/page.js",
+      "source_location": "L9",
+      "id": "id_page_invoice_packages",
+      "community": 24,
+      "norm_label": "invoice_packages"
+    },
+    {
+      "label": "SUB_TYPE_OPTIONS",
+      "file_type": "code",
+      "source_file": "app/order/[id]/page.js",
+      "source_location": "L51",
+      "id": "id_page_sub_type_options",
+      "community": 24,
+      "norm_label": "sub_type_options"
+    },
+    {
+      "label": "OrderDetails()",
+      "file_type": "code",
+      "source_file": "app/order/[id]/page.js",
+      "source_location": "L57",
+      "id": "id_page_orderdetails",
+      "community": 24,
+      "norm_label": "orderdetails()"
+    },
+    {
+      "label": "SidebarContext.js",
+      "file_type": "code",
+      "source_file": "app/context/SidebarContext.js",
+      "source_location": "L1",
+      "id": "app_context_sidebarcontext_js",
+      "community": 0,
+      "norm_label": "sidebarcontext.js"
+    },
+    {
+      "label": "SidebarContext",
+      "file_type": "code",
+      "source_file": "app/context/SidebarContext.js",
+      "source_location": "L4",
+      "id": "context_sidebarcontext_sidebarcontext",
+      "community": 0,
+      "norm_label": "sidebarcontext"
+    },
+    {
+      "label": "SidebarProvider()",
+      "file_type": "code",
+      "source_file": "app/context/SidebarContext.js",
+      "source_location": "L6",
+      "id": "context_sidebarcontext_sidebarprovider",
+      "community": 2,
+      "norm_label": "sidebarprovider()"
+    },
+    {
+      "label": "useSidebar()",
+      "file_type": "code",
+      "source_file": "app/context/SidebarContext.js",
+      "source_location": "L30",
+      "id": "context_sidebarcontext_usesidebar",
+      "community": 0,
+      "norm_label": "usesidebar()"
+    },
+    {
+      "label": "page.js",
+      "file_type": "code",
+      "source_file": "app/auth/confirm/page.js",
+      "source_location": "L1",
+      "id": "app_auth_confirm_page_js",
+      "community": 6,
+      "norm_label": "page.js"
+    },
+    {
+      "label": "ConfirmContent()",
+      "file_type": "code",
+      "source_file": "app/auth/confirm/page.js",
+      "source_location": "L8",
+      "id": "confirm_page_confirmcontent",
+      "community": 6,
+      "norm_label": "confirmcontent()"
+    },
+    {
+      "label": "AuthConfirm()",
+      "file_type": "code",
+      "source_file": "app/auth/confirm/page.js",
+      "source_location": "L56",
+      "id": "confirm_page_authconfirm",
+      "community": 6,
+      "norm_label": "authconfirm()"
+    },
+    {
+      "label": "page.js",
+      "file_type": "code",
+      "source_file": "app/auth/google-callback/page.js",
+      "source_location": "L1",
+      "id": "app_auth_google_callback_page_js",
+      "community": 25,
+      "norm_label": "page.js"
+    },
+    {
+      "label": "GoogleCallbackContent()",
+      "file_type": "code",
+      "source_file": "app/auth/google-callback/page.js",
+      "source_location": "L11",
+      "id": "google_callback_page_googlecallbackcontent",
+      "community": 25,
+      "norm_label": "googlecallbackcontent()"
+    },
+    {
+      "label": "GoogleCallback()",
+      "file_type": "code",
+      "source_file": "app/auth/google-callback/page.js",
+      "source_location": "L47",
+      "id": "google_callback_page_googlecallback",
+      "community": 25,
+      "norm_label": "googlecallback()"
+    },
+    {
+      "label": "page.js",
+      "file_type": "code",
+      "source_file": "app/auth/update-password/page.js",
+      "source_location": "L1",
+      "id": "app_auth_update_password_page_js",
+      "community": 19,
+      "norm_label": "page.js"
+    },
+    {
+      "label": "UpdatePassword()",
+      "file_type": "code",
+      "source_file": "app/auth/update-password/page.js",
+      "source_location": "L7",
+      "id": "update_password_page_updatepassword",
+      "community": 19,
+      "norm_label": "updatepassword()"
+    },
+    {
+      "label": "route.js",
+      "file_type": "code",
+      "source_file": "app/auth/callback/route.js",
+      "source_location": "L1",
+      "id": "app_auth_callback_route_js",
+      "community": 9,
+      "norm_label": "route.js"
+    },
+    {
+      "label": "GET()",
+      "file_type": "code",
+      "source_file": "app/auth/callback/route.js",
+      "source_location": "L4",
+      "id": "callback_route_get",
+      "community": 9,
+      "norm_label": "get()"
+    },
+    {
+      "label": "page.js",
+      "file_type": "code",
+      "source_file": "app/admin/kits/page.js",
+      "source_location": "L1",
+      "id": "app_admin_kits_page_js",
+      "community": 0,
+      "norm_label": "page.js"
+    },
+    {
+      "label": "KitManagement()",
+      "file_type": "code",
+      "source_file": "app/admin/kits/page.js",
+      "source_location": "L8",
+      "id": "kits_page_kitmanagement",
+      "community": 0,
+      "norm_label": "kitmanagement()"
+    },
+    {
+      "label": "page.js",
+      "file_type": "code",
+      "source_file": "app/admin/kits/[id]/page.js",
+      "source_location": "L1",
+      "id": "app_admin_kits_id_page_js",
+      "community": 3,
+      "norm_label": "page.js"
+    },
+    {
+      "label": "SortableItem()",
+      "file_type": "code",
+      "source_file": "app/admin/seapod-templates/[id]/page.js",
+      "source_location": "L12",
+      "id": "id_page_sortableitem",
+      "community": 3,
+      "norm_label": "sortableitem()"
+    },
+    {
+      "label": "KitDetails()",
+      "file_type": "code",
+      "source_file": "app/admin/kits/[id]/page.js",
+      "source_location": "L62",
+      "id": "id_page_kitdetails",
+      "community": 3,
+      "norm_label": "kitdetails()"
+    },
+    {
+      "label": "page.js",
+      "file_type": "code",
+      "source_file": "app/admin/seapod-templates/page.js",
+      "source_location": "L1",
+      "id": "app_admin_seapod_templates_page_js",
+      "community": 0,
+      "norm_label": "page.js"
+    },
+    {
+      "label": "SortableTemplateRow()",
+      "file_type": "code",
+      "source_file": "app/admin/seapod-templates/page.js",
+      "source_location": "L12",
+      "id": "seapod_templates_page_sortabletemplaterow",
+      "community": 0,
+      "norm_label": "sortabletemplaterow()"
+    },
+    {
+      "label": "SeapodTemplates()",
+      "file_type": "code",
+      "source_file": "app/admin/seapod-templates/page.js",
+      "source_location": "L41",
+      "id": "seapod_templates_page_seapodtemplates",
+      "community": 0,
+      "norm_label": "seapodtemplates()"
+    },
+    {
+      "label": "page.js",
+      "file_type": "code",
+      "source_file": "app/admin/seapod-templates/[id]/page.js",
+      "source_location": "L1",
+      "id": "app_admin_seapod_templates_id_page_js",
+      "community": 3,
+      "norm_label": "page.js"
+    },
+    {
+      "label": "SeapodTemplateDetails()",
+      "file_type": "code",
+      "source_file": "app/admin/seapod-templates/[id]/page.js",
+      "source_location": "L38",
+      "id": "id_page_seapodtemplatedetails",
+      "community": 3,
+      "norm_label": "seapodtemplatedetails()"
+    },
+    {
+      "label": "page.js",
+      "file_type": "code",
+      "source_file": "app/admin/addresses/page.js",
+      "source_location": "L1",
+      "id": "app_admin_addresses_page_js",
+      "community": 0,
+      "norm_label": "page.js"
+    },
+    {
+      "label": "AddressManagement()",
+      "file_type": "code",
+      "source_file": "app/admin/addresses/page.js",
+      "source_location": "L8",
+      "id": "addresses_page_addressmanagement",
+      "community": 0,
+      "norm_label": "addressmanagement()"
+    },
+    {
+      "label": "page.js",
+      "file_type": "code",
+      "source_file": "app/admin/users/page.js",
+      "source_location": "L1",
+      "id": "app_admin_users_page_js",
+      "community": 24,
+      "norm_label": "page.js"
+    },
+    {
+      "label": "UserManagement()",
+      "file_type": "code",
+      "source_file": "app/admin/users/page.js",
+      "source_location": "L9",
+      "id": "users_page_usermanagement",
+      "community": 24,
+      "norm_label": "usermanagement()"
+    },
+    {
+      "label": "page.js",
+      "file_type": "code",
+      "source_file": "app/admin/items/page.js",
+      "source_location": "L1",
+      "id": "app_admin_items_page_js",
+      "community": 0,
+      "norm_label": "page.js"
+    },
+    {
+      "label": "ItemManagement()",
+      "file_type": "code",
+      "source_file": "app/admin/items/page.js",
+      "source_location": "L8",
+      "id": "items_page_itemmanagement",
+      "community": 0,
+      "norm_label": "itemmanagement()"
+    },
+    {
+      "label": "page.js",
+      "file_type": "code",
+      "source_file": "app/seapod-production/page.js",
+      "source_location": "L1",
+      "id": "app_seapod_production_page_js",
+      "community": 24,
+      "norm_label": "page.js"
+    },
+    {
+      "label": "SeapodList()",
+      "file_type": "code",
+      "source_file": "app/seapod-production/page.js",
+      "source_location": "L10",
+      "id": "seapod_production_page_seapodlist",
+      "community": 24,
+      "norm_label": "seapodlist()"
+    },
+    {
+      "label": "page.js",
+      "file_type": "code",
+      "source_file": "app/seapod-production/[id]/page.js",
+      "source_location": "L1",
+      "id": "app_seapod_production_id_page_js",
+      "community": 24,
+      "norm_label": "page.js"
+    },
+    {
+      "label": "SeapodBuildDetails()",
+      "file_type": "code",
+      "source_file": "app/seapod-production/[id]/page.js",
+      "source_location": "L10",
+      "id": "id_page_seapodbuilddetails",
+      "community": 24,
+      "norm_label": "seapodbuilddetails()"
+    },
+    {
+      "label": "Sidebar.js",
+      "file_type": "code",
+      "source_file": "app/components/Sidebar.js",
+      "source_location": "L1",
+      "id": "app_components_sidebar_js",
+      "community": 0,
+      "norm_label": "sidebar.js"
+    },
+    {
+      "label": "Sidebar()",
+      "file_type": "code",
+      "source_file": "app/components/Sidebar.js",
+      "source_location": "L8",
+      "id": "components_sidebar_sidebar",
+      "community": 0,
+      "norm_label": "sidebar()"
+    },
+    {
+      "label": "authedFetch.js",
+      "file_type": "code",
+      "source_file": "app/lib/authedFetch.js",
+      "source_location": "L1",
+      "id": "app_lib_authedfetch_js",
+      "community": 24,
+      "norm_label": "authedfetch.js"
+    },
+    {
+      "label": "authedFetch()",
+      "file_type": "code",
+      "source_file": "app/lib/authedFetch.js",
+      "source_location": "L6",
+      "id": "lib_authedfetch_authedfetch",
+      "community": 24,
+      "norm_label": "authedfetch()"
+    },
+    {
+      "label": "route.js",
+      "file_type": "code",
+      "source_file": "app/api/trigger-seapod-build/route.js",
+      "source_location": "L1",
+      "id": "app_api_trigger_seapod_build_route_js",
+      "community": 17,
+      "norm_label": "route.js"
+    },
+    {
+      "label": "buildRecord()",
+      "file_type": "code",
+      "source_file": "app/api/trigger-seapod-build/route.js",
+      "source_location": "L5",
+      "id": "trigger_seapod_build_route_buildrecord",
+      "community": 17,
+      "norm_label": "buildrecord()"
+    },
+    {
+      "label": "POST()",
+      "file_type": "code",
+      "source_file": "app/api/trigger-seapod-build/route.js",
+      "source_location": "L27",
+      "id": "trigger_seapod_build_route_post",
+      "community": 17,
+      "norm_label": "post()"
+    },
+    {
+      "label": "route.js",
+      "file_type": "code",
+      "source_file": "app/api/seapod-sync-callback/route.js",
+      "source_location": "L1",
+      "id": "app_api_seapod_sync_callback_route_js",
+      "community": 27,
+      "norm_label": "route.js"
+    },
+    {
+      "label": "POST()",
+      "file_type": "code",
+      "source_file": "app/api/seapod-sync-callback/route.js",
+      "source_location": "L4",
+      "id": "seapod_sync_callback_route_post",
+      "community": 27,
+      "norm_label": "post()"
+    },
+    {
+      "label": "route.js",
+      "file_type": "code",
+      "source_file": "app/api/admin/create-user/route.js",
+      "source_location": "L1",
+      "id": "app_api_admin_create_user_route_js",
+      "community": 17,
+      "norm_label": "route.js"
+    },
+    {
+      "label": "POST()",
+      "file_type": "code",
+      "source_file": "app/api/admin/create-user/route.js",
+      "source_location": "L5",
+      "id": "create_user_route_post",
+      "community": 17,
+      "norm_label": "post()"
+    },
+    {
+      "label": "route.js",
+      "file_type": "code",
+      "source_file": "app/api/admin/delete-user/route.js",
+      "source_location": "L1",
+      "id": "app_api_admin_delete_user_route_js",
+      "community": 17,
+      "norm_label": "route.js"
+    },
+    {
+      "label": "POST()",
+      "file_type": "code",
+      "source_file": "app/api/admin/delete-user/route.js",
+      "source_location": "L5",
+      "id": "delete_user_route_post",
+      "community": 17,
+      "norm_label": "post()"
+    },
+    {
+      "label": "requireRole.js",
+      "file_type": "code",
+      "source_file": "app/api/_lib/requireRole.js",
+      "source_location": "L1",
+      "id": "app_api_lib_requirerole_js",
+      "community": 17,
+      "norm_label": "requirerole.js"
+    },
+    {
+      "label": "requireRole()",
+      "file_type": "code",
+      "source_file": "app/api/_lib/requireRole.js",
+      "source_location": "L6",
+      "id": "lib_requirerole_requirerole",
+      "community": 17,
+      "norm_label": "requirerole()"
+    },
+    {
+      "label": "route.js",
+      "file_type": "code",
+      "source_file": "app/api/update-ns-so/route.js",
+      "source_location": "L1",
+      "id": "app_api_update_ns_so_route_js",
+      "community": 18,
+      "norm_label": "route.js"
+    },
+    {
+      "label": "POST()",
+      "file_type": "code",
+      "source_file": "app/api/update-ns-so/route.js",
+      "source_location": "L4",
+      "id": "update_ns_so_route_post",
+      "community": 18,
+      "norm_label": "post()"
+    },
+    {
+      "label": "route.js",
+      "file_type": "code",
+      "source_file": "app/api/trigger-shipping/route.js",
+      "source_location": "L1",
+      "id": "app_api_trigger_shipping_route_js",
+      "community": 17,
+      "norm_label": "route.js"
+    },
+    {
+      "label": "POST()",
+      "file_type": "code",
+      "source_file": "app/api/trigger-shipping/route.js",
+      "source_location": "L5",
+      "id": "trigger_shipping_route_post",
+      "community": 17,
+      "norm_label": "post()"
+    },
+    {
+      "label": "route.js",
+      "file_type": "code",
+      "source_file": "app/api/check-vessel/route.js",
+      "source_location": "L1",
+      "id": "app_api_check_vessel_route_js",
+      "community": 17,
+      "norm_label": "route.js"
+    },
+    {
+      "label": "POST()",
+      "file_type": "code",
+      "source_file": "app/api/check-vessel/route.js",
+      "source_location": "L4",
+      "id": "check_vessel_route_post",
+      "community": 17,
+      "norm_label": "post()"
+    },
+    {
+      "label": "page.js",
+      "file_type": "code",
+      "source_file": "app/orders/page.js",
+      "source_location": "L1",
+      "id": "app_orders_page_js",
+      "community": 4,
+      "norm_label": "page.js"
+    },
+    {
+      "label": "SUB_TYPE_OPTIONS",
+      "file_type": "code",
+      "source_file": "app/orders/page.js",
+      "source_location": "L9",
+      "id": "orders_page_sub_type_options",
+      "community": 4,
+      "norm_label": "sub_type_options"
+    },
+    {
+      "label": "OrderList()",
+      "file_type": "code",
+      "source_file": "app/orders/page.js",
+      "source_location": "L15",
+      "id": "orders_page_orderlist",
+      "community": 4,
+      "norm_label": "orderlist()"
+    },
+    {
+      "label": "page.js",
+      "file_type": "code",
+      "source_file": "app/travel/page.js",
+      "source_location": "L1",
+      "id": "app_travel_page_js",
+      "community": 22,
+      "norm_label": "page.js"
+    },
+    {
+      "label": "MONTH_NAMES",
+      "file_type": "code",
+      "source_file": "app/travel/page.js",
+      "source_location": "L8",
+      "id": "travel_page_month_names",
+      "community": 22,
+      "norm_label": "month_names"
+    },
+    {
+      "label": "toUTCDate()",
+      "file_type": "code",
+      "source_file": "app/travel/page.js",
+      "source_location": "L10",
+      "id": "travel_page_toutcdate",
+      "community": 22,
+      "norm_label": "toutcdate()"
+    },
+    {
+      "label": "supabase",
+      "file_type": "code",
+      "source_file": "app/travel/page.js",
+      "source_location": "L14",
+      "id": "travel_page_supabase",
+      "community": 22,
+      "norm_label": "supabase"
+    },
+    {
+      "label": "TravelManifest()",
+      "file_type": "code",
+      "source_file": "app/travel/page.js",
+      "source_location": "L16",
+      "id": "travel_page_travelmanifest",
+      "community": 22,
+      "norm_label": "travelmanifest()"
+    },
+    {
+      "label": "page.js",
+      "file_type": "code",
+      "source_file": "app/login/page.js",
+      "source_location": "L1",
+      "id": "app_login_page_js",
+      "community": 14,
+      "norm_label": "page.js"
+    },
+    {
+      "label": "Login()",
+      "file_type": "code",
+      "source_file": "app/login/page.js",
+      "source_location": "L6",
+      "id": "login_page_login",
+      "community": 14,
+      "norm_label": "login()"
+    },
+    {
+      "label": "page.js",
+      "file_type": "code",
+      "source_file": "app/login/forgot-password/page.js",
+      "source_location": "L1",
+      "id": "app_login_forgot_password_page_js",
+      "community": 10,
+      "norm_label": "page.js"
+    },
+    {
+      "label": "ForgotPassword()",
+      "file_type": "code",
+      "source_file": "app/login/forgot-password/page.js",
+      "source_location": "L7",
+      "id": "forgot_password_page_forgotpassword",
+      "community": 10,
+      "norm_label": "forgotpassword()"
+    },
+    {
+      "label": "README.md",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": "L1",
+      "id": "readme_md",
+      "community": 23,
+      "norm_label": "readme.md"
+    },
+    {
+      "label": "Getting Started",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": "L3",
+      "id": "production_portal_readme_getting_started",
+      "community": 23,
+      "norm_label": "getting started"
+    },
+    {
+      "label": "code:bash (npm run dev)",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": "L7",
+      "id": "production_portal_readme_codeblock_1",
+      "community": 23,
+      "norm_label": "code:bash (npm run dev)"
+    },
+    {
+      "label": "Learn More",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": "L23",
+      "id": "production_portal_readme_learn_more",
+      "community": 23,
+      "norm_label": "learn more"
+    },
+    {
+      "label": "Deploy on Vercel",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": "L32",
+      "id": "production_portal_readme_deploy_on_vercel",
+      "community": 23,
+      "norm_label": "deploy on vercel"
+    },
+    {
+      "label": "route.js",
+      "file_type": "code",
+      "source_file": "app/api/sync/route.js",
+      "source_location": "L1",
+      "community": 5,
+      "norm_label": "route.js",
+      "id": "app_api_sync_route_js"
+    },
+    {
+      "label": "supabase",
+      "file_type": "code",
+      "source_file": "app/api/sync/route.js",
+      "source_location": "L6",
+      "community": 5,
+      "norm_label": "supabase",
+      "id": "sync_route_supabase"
+    },
+    {
+      "label": "GET()",
+      "file_type": "code",
+      "source_file": "app/api/sync/route.js",
+      "source_location": "L12",
+      "community": 5,
+      "norm_label": "get()",
+      "id": "sync_route_get"
+    },
+    {
+      "label": "MetricCard()",
+      "file_type": "code",
+      "source_file": "app/page.js",
+      "source_location": "L192",
+      "community": 0,
+      "norm_label": "metriccard()",
+      "id": "app_page_metriccard"
+    },
+    {
+      "label": "Production Portal Project (Next.js)",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "community": 1,
+      "norm_label": "production portal project (next.js)",
+      "id": "readme_project"
+    },
+    {
+      "label": "Next.js Framework",
+      "file_type": "concept",
+      "source_file": "README.md",
+      "source_location": "line 1",
+      "source_url": "https://nextjs.org",
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "community": 1,
+      "norm_label": "next.js framework",
+      "id": "readme_nextjs"
+    },
+    {
+      "label": "create-next-app CLI",
+      "file_type": "concept",
+      "source_file": "README.md",
+      "source_location": "line 1",
+      "source_url": "https://nextjs.org/docs/app/api-reference/cli/create-next-app",
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "community": 1,
+      "norm_label": "create-next-app cli",
+      "id": "readme_create_next_app"
+    },
+    {
+      "label": "app/page.tsx Entry Point",
+      "file_type": "concept",
+      "source_file": "README.md",
+      "source_location": "line 19",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "community": 1,
+      "norm_label": "app/page.tsx entry point",
+      "id": "readme_app_page_tsx"
+    },
+    {
+      "label": "next/font (Font Optimization)",
+      "file_type": "concept",
+      "source_file": "README.md",
+      "source_location": "line 21",
+      "source_url": "https://nextjs.org/docs/app/building-your-application/optimizing/fonts",
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "community": 1,
+      "norm_label": "next/font (font optimization)",
+      "id": "readme_next_font"
+    },
+    {
+      "label": "Geist Font Family",
+      "file_type": "concept",
+      "source_file": "README.md",
+      "source_location": "line 21",
+      "source_url": "https://vercel.com/font",
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "community": 1,
+      "norm_label": "geist font family",
+      "id": "readme_geist_font"
+    },
+    {
+      "label": "Vercel Deployment Platform",
+      "file_type": "concept",
+      "source_file": "README.md",
+      "source_location": "line 33",
+      "source_url": "https://vercel.com",
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "community": 1,
+      "norm_label": "vercel deployment platform",
+      "id": "readme_vercel_platform"
+    },
+    {
+      "label": "Development Server (localhost:3000)",
+      "file_type": "concept",
+      "source_file": "README.md",
+      "source_location": "line 17",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "community": 1,
+      "norm_label": "development server (localhost:3000)",
+      "id": "readme_localhost_3000"
+    },
+    {
+      "label": "File Icon SVG",
+      "file_type": "image",
+      "source_file": "public/file.svg",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "community": 1,
+      "norm_label": "file icon svg",
+      "id": "public_file_svg"
+    },
+    {
+      "label": "Vercel Logo SVG (Triangle Logomark)",
+      "file_type": "image",
+      "source_file": "public/vercel.svg",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "community": 1,
+      "norm_label": "vercel logo svg (triangle logomark)",
+      "id": "public_vercel_svg"
+    },
+    {
+      "label": "Next.js Wordmark SVG",
+      "file_type": "image",
+      "source_file": "public/next.svg",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "community": 1,
+      "norm_label": "next.js wordmark svg",
+      "id": "public_next_svg"
+    },
+    {
+      "label": "Globe / Web Icon SVG",
+      "file_type": "image",
+      "source_file": "public/globe.svg",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "community": 1,
+      "norm_label": "globe / web icon svg",
+      "id": "public_globe_svg"
+    },
+    {
+      "label": "Browser Window Icon SVG",
+      "file_type": "image",
+      "source_file": "public/window.svg",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "community": 1,
+      "norm_label": "browser window icon svg",
+      "id": "public_window_svg"
+    }
+  ],
+  "links": [
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "proxy.js",
+      "source_location": "L6",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "proxy_js",
+      "target": "production_portal_proxy_proxy"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "proxy.js",
+      "source_location": "L43",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "proxy_js",
+      "target": "production_portal_proxy_config"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "postcss.config.mjs",
+      "source_location": "L2",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "postcss_config_mjs",
+      "target": "production_portal_postcss_config_config"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "next.config.js",
+      "source_location": "L2",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "next_config_js",
+      "target": "production_portal_next_config_nextconfig"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "eslint.config.mjs",
+      "source_location": "L5",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "eslint_config_mjs",
+      "target": "production_portal_eslint_config_eslintconfig"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/layout.js",
+      "source_location": "L3",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_layout_js",
+      "target": "app_context_sidebarcontext_js"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/layout.js",
+      "source_location": "L3",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_layout_js",
+      "target": "context_sidebarcontext_sidebarprovider"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/layout.js",
+      "source_location": "L5",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_layout_js",
+      "target": "app_layout_inter"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/layout.js",
+      "source_location": "L7",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_layout_js",
+      "target": "app_layout_metadata"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/layout.js",
+      "source_location": "L12",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_layout_js",
+      "target": "app_layout_rootlayout"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/page.js",
+      "source_location": "L7",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_page_js",
+      "target": "app_components_sidebar_js"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/page.js",
+      "source_location": "L8",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_page_js",
+      "target": "app_context_sidebarcontext_js"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/page.js",
+      "source_location": "L8",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_page_js",
+      "target": "context_sidebarcontext_usesidebar"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/page.js",
+      "source_location": "L10",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_page_js",
+      "target": "app_page_home"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/page.js",
+      "source_location": "L193",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_page_js",
+      "target": "app_page_drilldowncard"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/page.js",
+      "source_location": "L192",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_page_js",
+      "target": "app_page_metriccard"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app/page.js",
+      "source_location": "L11",
+      "weight": 1.0,
+      "source": "app_page_home",
+      "target": "context_sidebarcontext_usesidebar"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/order/[id]/page.js",
+      "source_location": "L4",
+      "weight": 1.0,
+      "source": "app_order_id_page_js",
+      "target": "app_lib_authedfetch_js",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/order/[id]/page.js",
+      "source_location": "L4",
+      "weight": 1.0,
+      "source": "app_order_id_page_js",
+      "target": "lib_authedfetch_authedfetch",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/order/[id]/page.js",
+      "source_location": "L7",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_order_id_page_js",
+      "target": "app_components_sidebar_js"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/order/[id]/page.js",
+      "source_location": "L8",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_order_id_page_js",
+      "target": "id_page_invoice_packages"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/order/[id]/page.js",
+      "source_location": "L50",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_order_id_page_js",
+      "target": "id_page_sub_type_options"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/order/[id]/page.js",
+      "source_location": "L9",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_order_id_page_js",
+      "target": "id_page_orderdetails"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/context/SidebarContext.js",
+      "source_location": "L4",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_context_sidebarcontext_js",
+      "target": "context_sidebarcontext_sidebarcontext"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/context/SidebarContext.js",
+      "source_location": "L6",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_context_sidebarcontext_js",
+      "target": "context_sidebarcontext_sidebarprovider"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/context/SidebarContext.js",
+      "source_location": "L30",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_context_sidebarcontext_js",
+      "target": "context_sidebarcontext_usesidebar"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/components/Sidebar.js",
+      "source_location": "L6",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_components_sidebar_js",
+      "target": "app_context_sidebarcontext_js"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/components/Sidebar.js",
+      "source_location": "L6",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_components_sidebar_js",
+      "target": "context_sidebarcontext_usesidebar"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app/components/Sidebar.js",
+      "source_location": "L11",
+      "weight": 1.0,
+      "source": "components_sidebar_sidebar",
+      "target": "context_sidebarcontext_usesidebar"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/auth/confirm/page.js",
+      "source_location": "L8",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_auth_confirm_page_js",
+      "target": "confirm_page_confirmcontent"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/auth/confirm/page.js",
+      "source_location": "L56",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_auth_confirm_page_js",
+      "target": "confirm_page_authconfirm"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/auth/google-callback/page.js",
+      "source_location": "L11",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_auth_google_callback_page_js",
+      "target": "google_callback_page_googlecallbackcontent"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/auth/google-callback/page.js",
+      "source_location": "L47",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_auth_google_callback_page_js",
+      "target": "google_callback_page_googlecallback"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/auth/update-password/page.js",
+      "source_location": "L7",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_auth_update_password_page_js",
+      "target": "update_password_page_updatepassword"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/auth/callback/route.js",
+      "source_location": "L4",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_auth_callback_route_js",
+      "target": "callback_route_get"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/admin/kits/page.js",
+      "source_location": "L6",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_admin_kits_page_js",
+      "target": "app_components_sidebar_js"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/admin/kits/page.js",
+      "source_location": "L8",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_admin_kits_page_js",
+      "target": "kits_page_kitmanagement"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/admin/kits/[id]/page.js",
+      "source_location": "L11",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_admin_kits_id_page_js",
+      "target": "id_page_sortableitem"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/admin/kits/[id]/page.js",
+      "source_location": "L62",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_admin_kits_id_page_js",
+      "target": "id_page_kitdetails"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/admin/seapod-templates/[id]/page.js",
+      "source_location": "L12",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_admin_seapod_templates_id_page_js",
+      "target": "id_page_sortableitem"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/admin/seapod-templates/page.js",
+      "source_location": "L9",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_admin_seapod_templates_page_js",
+      "target": "app_components_sidebar_js"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/admin/seapod-templates/page.js",
+      "source_location": "L12",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_admin_seapod_templates_page_js",
+      "target": "seapod_templates_page_sortabletemplaterow"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/admin/seapod-templates/page.js",
+      "source_location": "L41",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_admin_seapod_templates_page_js",
+      "target": "seapod_templates_page_seapodtemplates"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/admin/seapod-templates/[id]/page.js",
+      "source_location": "L9",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_admin_seapod_templates_id_page_js",
+      "target": "app_components_sidebar_js"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/admin/seapod-templates/[id]/page.js",
+      "source_location": "L38",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_admin_seapod_templates_id_page_js",
+      "target": "id_page_seapodtemplatedetails"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/admin/addresses/page.js",
+      "source_location": "L6",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_admin_addresses_page_js",
+      "target": "app_components_sidebar_js"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/admin/addresses/page.js",
+      "source_location": "L8",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_admin_addresses_page_js",
+      "target": "addresses_page_addressmanagement"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/admin/users/page.js",
+      "source_location": "L4",
+      "weight": 1.0,
+      "source": "app_admin_users_page_js",
+      "target": "app_lib_authedfetch_js",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/admin/users/page.js",
+      "source_location": "L4",
+      "weight": 1.0,
+      "source": "app_admin_users_page_js",
+      "target": "lib_authedfetch_authedfetch",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/admin/users/page.js",
+      "source_location": "L6",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_admin_users_page_js",
+      "target": "app_components_sidebar_js"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/admin/users/page.js",
+      "source_location": "L8",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_admin_users_page_js",
+      "target": "users_page_usermanagement"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/admin/items/page.js",
+      "source_location": "L6",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_admin_items_page_js",
+      "target": "app_components_sidebar_js"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/admin/items/page.js",
+      "source_location": "L8",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_admin_items_page_js",
+      "target": "items_page_itemmanagement"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/seapod-production/page.js",
+      "source_location": "L4",
+      "weight": 1.0,
+      "source": "app_seapod_production_page_js",
+      "target": "app_lib_authedfetch_js",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/seapod-production/page.js",
+      "source_location": "L4",
+      "weight": 1.0,
+      "source": "app_seapod_production_page_js",
+      "target": "lib_authedfetch_authedfetch",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/seapod-production/page.js",
+      "source_location": "L7",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_seapod_production_page_js",
+      "target": "app_components_sidebar_js"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/seapod-production/page.js",
+      "source_location": "L9",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_seapod_production_page_js",
+      "target": "seapod_production_page_seapodlist"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/seapod-production/[id]/page.js",
+      "source_location": "L4",
+      "weight": 1.0,
+      "source": "app_seapod_production_id_page_js",
+      "target": "app_lib_authedfetch_js",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/seapod-production/[id]/page.js",
+      "source_location": "L4",
+      "weight": 1.0,
+      "source": "app_seapod_production_id_page_js",
+      "target": "lib_authedfetch_authedfetch",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/seapod-production/[id]/page.js",
+      "source_location": "L7",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_seapod_production_id_page_js",
+      "target": "app_components_sidebar_js"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/seapod-production/[id]/page.js",
+      "source_location": "L9",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_seapod_production_id_page_js",
+      "target": "id_page_seapodbuilddetails"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/components/Sidebar.js",
+      "source_location": "L8",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_components_sidebar_js",
+      "target": "components_sidebar_sidebar"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/orders/page.js",
+      "source_location": "L7",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_orders_page_js",
+      "target": "app_components_sidebar_js"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/lib/authedFetch.js",
+      "source_location": "L6",
+      "weight": 1.0,
+      "source": "app_lib_authedfetch_js",
+      "target": "lib_authedfetch_authedfetch",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/api/trigger-seapod-build/route.js",
+      "source_location": "L1",
+      "weight": 1.0,
+      "source": "app_api_trigger_seapod_build_route_js",
+      "target": "app_api_lib_requirerole_js",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/api/trigger-seapod-build/route.js",
+      "source_location": "L1",
+      "weight": 1.0,
+      "source": "app_api_trigger_seapod_build_route_js",
+      "target": "lib_requirerole_requirerole",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/api/trigger-seapod-build/route.js",
+      "source_location": "L4",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_api_trigger_seapod_build_route_js",
+      "target": "trigger_seapod_build_route_buildrecord"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/api/trigger-seapod-build/route.js",
+      "source_location": "L4",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_api_trigger_seapod_build_route_js",
+      "target": "trigger_seapod_build_route_post"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app/api/trigger-seapod-build/route.js",
+      "source_location": "L29",
+      "weight": 1.0,
+      "source": "trigger_seapod_build_route_post",
+      "target": "lib_requirerole_requirerole"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/api/seapod-sync-callback/route.js",
+      "source_location": "L4",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_api_seapod_sync_callback_route_js",
+      "target": "seapod_sync_callback_route_post"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/api/admin/create-user/route.js",
+      "source_location": "L1",
+      "weight": 1.0,
+      "source": "app_api_admin_create_user_route_js",
+      "target": "app_api_lib_requirerole_js",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/api/admin/create-user/route.js",
+      "source_location": "L1",
+      "weight": 1.0,
+      "source": "app_api_admin_create_user_route_js",
+      "target": "lib_requirerole_requirerole",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/api/admin/create-user/route.js",
+      "source_location": "L4",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_api_admin_create_user_route_js",
+      "target": "create_user_route_post"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app/api/admin/create-user/route.js",
+      "source_location": "L6",
+      "weight": 1.0,
+      "source": "create_user_route_post",
+      "target": "lib_requirerole_requirerole"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/api/admin/delete-user/route.js",
+      "source_location": "L1",
+      "weight": 1.0,
+      "source": "app_api_admin_delete_user_route_js",
+      "target": "app_api_lib_requirerole_js",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/api/admin/delete-user/route.js",
+      "source_location": "L1",
+      "weight": 1.0,
+      "source": "app_api_admin_delete_user_route_js",
+      "target": "lib_requirerole_requirerole",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/api/admin/delete-user/route.js",
+      "source_location": "L4",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_api_admin_delete_user_route_js",
+      "target": "delete_user_route_post"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app/api/admin/delete-user/route.js",
+      "source_location": "L6",
+      "weight": 1.0,
+      "source": "delete_user_route_post",
+      "target": "lib_requirerole_requirerole"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/api/_lib/requireRole.js",
+      "source_location": "L6",
+      "weight": 1.0,
+      "source": "app_api_lib_requirerole_js",
+      "target": "lib_requirerole_requirerole",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/api/trigger-shipping/route.js",
+      "source_location": "L1",
+      "weight": 1.0,
+      "source": "app_api_trigger_shipping_route_js",
+      "target": "app_api_lib_requirerole_js",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/api/check-vessel/route.js",
+      "source_location": "L1",
+      "weight": 1.0,
+      "source": "app_api_check_vessel_route_js",
+      "target": "app_api_lib_requirerole_js",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/api/trigger-shipping/route.js",
+      "source_location": "L1",
+      "weight": 1.0,
+      "source": "app_api_trigger_shipping_route_js",
+      "target": "lib_requirerole_requirerole",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/api/check-vessel/route.js",
+      "source_location": "L1",
+      "weight": 1.0,
+      "source": "app_api_check_vessel_route_js",
+      "target": "lib_requirerole_requirerole",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app/api/trigger-shipping/route.js",
+      "source_location": "L6",
+      "weight": 1.0,
+      "source": "trigger_shipping_route_post",
+      "target": "lib_requirerole_requirerole"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app/api/check-vessel/route.js",
+      "source_location": "L5",
+      "weight": 1.0,
+      "source": "check_vessel_route_post",
+      "target": "lib_requirerole_requirerole"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/api/update-ns-so/route.js",
+      "source_location": "L4",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_api_update_ns_so_route_js",
+      "target": "update_ns_so_route_post"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/api/trigger-shipping/route.js",
+      "source_location": "L4",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_api_trigger_shipping_route_js",
+      "target": "trigger_shipping_route_post"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/api/check-vessel/route.js",
+      "source_location": "L3",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_api_check_vessel_route_js",
+      "target": "check_vessel_route_post"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/orders/page.js",
+      "source_location": "L9",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_orders_page_js",
+      "target": "orders_page_sub_type_options"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/orders/page.js",
+      "source_location": "L9",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_orders_page_js",
+      "target": "orders_page_orderlist"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/travel/page.js",
+      "source_location": "L8",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_travel_page_js",
+      "target": "travel_page_month_names"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/travel/page.js",
+      "source_location": "L10",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_travel_page_js",
+      "target": "travel_page_toutcdate"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/travel/page.js",
+      "source_location": "L14",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_travel_page_js",
+      "target": "travel_page_supabase"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/travel/page.js",
+      "source_location": "L16",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_travel_page_js",
+      "target": "travel_page_travelmanifest"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/login/page.js",
+      "source_location": "L6",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_login_page_js",
+      "target": "login_page_login"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/login/forgot-password/page.js",
+      "source_location": "L7",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_login_forgot_password_page_js",
+      "target": "forgot_password_page_forgotpassword"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L3",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "readme_md",
+      "target": "production_portal_readme_getting_started"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L23",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "readme_md",
+      "target": "production_portal_readme_learn_more"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L32",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "readme_md",
+      "target": "production_portal_readme_deploy_on_vercel"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L7",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "production_portal_readme_getting_started",
+      "target": "production_portal_readme_codeblock_1"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/api/sync/route.js",
+      "source_location": "L6",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_api_sync_route_js",
+      "target": "sync_route_supabase"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/api/sync/route.js",
+      "source_location": "L12",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_api_sync_route_js",
+      "target": "sync_route_get"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": "line 1",
+      "weight": 1.0,
+      "source": "readme_project",
+      "target": "readme_nextjs"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": "line 1",
+      "weight": 1.0,
+      "source": "readme_project",
+      "target": "readme_create_next_app"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": "line 19",
+      "weight": 1.0,
+      "source": "readme_project",
+      "target": "readme_app_page_tsx"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": "line 21",
+      "weight": 1.0,
+      "source": "readme_project",
+      "target": "readme_next_font"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": "line 33",
+      "weight": 1.0,
+      "source": "readme_project",
+      "target": "readme_vercel_platform"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": "line 17",
+      "weight": 1.0,
+      "source": "readme_project",
+      "target": "readme_localhost_3000"
+    },
+    {
+      "relation": "references",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "public/file.svg",
+      "source_location": null,
+      "weight": 0.9,
+      "source": "public_file_svg",
+      "target": "readme_project"
+    },
+    {
+      "relation": "references",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "public/globe.svg",
+      "source_location": null,
+      "weight": 0.7,
+      "source": "public_globe_svg",
+      "target": "readme_project"
+    },
+    {
+      "relation": "references",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "public/window.svg",
+      "source_location": null,
+      "weight": 0.7,
+      "source": "public_window_svg",
+      "target": "readme_project"
+    },
+    {
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": "line 1",
+      "weight": 1.0,
+      "source": "readme_create_next_app",
+      "target": "readme_nextjs"
+    },
+    {
+      "relation": "references",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "public/next.svg",
+      "source_location": null,
+      "weight": 0.9,
+      "source": "public_next_svg",
+      "target": "readme_nextjs"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": "line 21",
+      "weight": 1.0,
+      "source": "readme_next_font",
+      "target": "readme_geist_font"
+    },
+    {
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": "line 21",
+      "weight": 0.8,
+      "source": "readme_geist_font",
+      "target": "readme_vercel_platform"
+    },
+    {
+      "relation": "references",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "public/vercel.svg",
+      "source_location": null,
+      "weight": 0.9,
+      "source": "public_vercel_svg",
+      "target": "readme_vercel_platform"
+    },
+    {
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "public/vercel.svg",
+      "source_location": null,
+      "weight": 0.8,
+      "source": "public_vercel_svg",
+      "target": "public_next_svg"
+    }
+  ],
+  "hyperedges": [],
+  "built_at_commit": "58720965f6995d5f04ac6cd87c7d89290b60f6ea"
+}

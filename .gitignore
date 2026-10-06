@@ -39,3 +39,13 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Supabase CLI local state
+supabase/.temp/
+
+# graphify cache (graph.json / GRAPH_REPORT.md / graph.html are tracked)
+graphify-out/cache/
+graphify-out/.graphify_*
+graphify-out/.rebuild.lock
+graphify-out/cost.json
+graphify-out/manifest.json
