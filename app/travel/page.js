@@ -2,7 +2,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { useRouter } from 'next/navigation';
-import { Search, ChevronLeft, ChevronRight, LogOut, Palmtree, PlaneTakeoff } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, LogOut, Palmtree, PlaneTakeoff, Download } from 'lucide-react';
+import * as XLSX from 'xlsx';
 
 const DAY_MS = 86400000;
 const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
@@ -20,6 +21,9 @@ export default function TravelManifest() {
   const [email, setEmail] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [cityFilter, setCityFilter] = useState('');
+  const [exportOpen, setExportOpen] = useState(false);
+  const [exportFrom, setExportFrom] = useState('');
+  const [exportTo, setExportTo] = useState('');
   const [cursor, setCursor] = useState(() => {
     const now = new Date();
     return { year: now.getUTCFullYear(), month: now.getUTCMonth() };
@@ -142,6 +146,38 @@ export default function TravelManifest() {
     return Array.from(map.values()).sort((a, b) => a.traveler.localeCompare(b.traveler));
   }, [monthTrips]);
 
+  function openExport() {
+    const pad = n => String(n).padStart(2, '0');
+    const last = new Date(Date.UTC(cursor.year, cursor.month + 1, 0)).getUTCDate();
+    setExportFrom(`${cursor.year}-${pad(cursor.month + 1)}-01`);
+    setExportTo(`${cursor.year}-${pad(cursor.month + 1)}-${pad(last)}`);
+    setExportOpen(o => !o);
+  }
+
+  // Trips overlapping [exportFrom, exportTo] (ISO date strings compare correctly as text)
+  const exportTrips = useMemo(() => {
+    if (!exportFrom || !exportTo || exportFrom > exportTo) return [];
+    return trips
+      .filter(t => t.from_date <= exportTo && t.to_date >= exportFrom)
+      .sort((a, b) => a.traveler.localeCompare(b.traveler) || (a.from_date < b.from_date ? -1 : 1));
+  }, [trips, exportFrom, exportTo]);
+
+  function handleExport() {
+    const data = exportTrips.map(t => ({
+      Traveler: t.traveler,
+      From: t.origin || '',
+      To: t.destination || '',
+      'From Date': t.from_date,
+      'To Date': t.to_date,
+    }));
+    const ws = XLSX.utils.json_to_sheet(data, { header: ['Traveler', 'From', 'To', 'From Date', 'To Date'] });
+    ws['!cols'] = [{ wch: 28 }, { wch: 28 }, { wch: 28 }, { wch: 12 }, { wch: 12 }];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Travel');
+    XLSX.writeFile(wb, `Travel_${exportFrom}_to_${exportTo}.xlsx`);
+    setExportOpen(false);
+  }
+
   function shiftMonth(delta) {
     const d = new Date(Date.UTC(cursor.year, cursor.month + delta, 1));
     setCursor({ year: d.getUTCFullYear(), month: d.getUTCMonth() });
@@ -230,6 +266,41 @@ export default function TravelManifest() {
                   <option key={city} value={city}>{city}</option>
                 ))}
               </select>
+              <div className="relative">
+                <button
+                  onClick={openExport}
+                  className="flex items-center gap-1.5 text-xs font-bold text-slate-600 px-3 py-1.5 rounded border border-slate-200 hover:border-[#0176D3] hover:text-[#0176D3] transition-colors"
+                >
+                  <Download size={14} /> Export
+                </button>
+                {exportOpen && (
+                  <div className="absolute right-0 top-10 z-30 w-72 bg-white border border-slate-200 rounded-lg shadow-lg p-4">
+                    <div className="text-xs font-bold text-slate-800 mb-3">Export to Excel</div>
+                    <div className="grid grid-cols-2 gap-3 mb-3">
+                      <label className="text-[11px] text-slate-500 font-medium">
+                        From date
+                        <input type="date" value={exportFrom} onChange={e => setExportFrom(e.target.value)}
+                          className="mt-1 w-full border rounded px-2 py-1.5 text-xs text-slate-800 outline-none focus:border-[#0176D3]" />
+                      </label>
+                      <label className="text-[11px] text-slate-500 font-medium">
+                        To date
+                        <input type="date" value={exportTo} onChange={e => setExportTo(e.target.value)}
+                          className="mt-1 w-full border rounded px-2 py-1.5 text-xs text-slate-800 outline-none focus:border-[#0176D3]" />
+                      </label>
+                    </div>
+                    <p className="text-[11px] text-slate-500 mb-3">
+                      {exportFrom > exportTo ? 'From date must be before To date.' : `${exportTrips.length} trip${exportTrips.length === 1 ? '' : 's'} overlap this period.`}
+                    </p>
+                    <div className="flex justify-end gap-2">
+                      <button onClick={() => setExportOpen(false)} className="text-xs font-bold text-slate-500 px-3 py-1.5 rounded hover:bg-slate-100">Cancel</button>
+                      <button onClick={handleExport} disabled={!exportTrips.length}
+                        className="text-xs font-bold text-white bg-[#0176D3] px-3 py-1.5 rounded hover:bg-[#0160ac] disabled:opacity-40 disabled:cursor-not-allowed">
+                        Download
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
               <div className="relative">
                 <Search className="absolute left-2.5 top-2 text-slate-400" size={14} />
                 <input
