@@ -162,16 +162,55 @@ export default function TravelManifest() {
       .sort((a, b) => a.traveler.localeCompare(b.traveler) || (a.from_date < b.from_date ? -1 : 1));
   }, [trips, exportFrom, exportTo]);
 
+  // Collapse a trip's flight segments into journeys: a segment continues the previous one
+  // (connection) when it departs from where that one landed within 24h. Only the first
+  // departure and last arrival of each journey are exported.
+  function toJourneys(flights) {
+    const segs = (Array.isArray(flights) ? flights : [])
+      .filter(f => f.departure && f.arrival)
+      .sort((a, b) => (a.departure < b.departure ? -1 : 1));
+    const journeys = [];
+    for (const f of segs) {
+      const cur = journeys[journeys.length - 1];
+      const last = cur && cur[cur.length - 1];
+      const gap = last ? new Date(f.departure) - new Date(last.arrival) : Infinity;
+      if (last && last.to === f.from && gap >= 0 && gap <= 24 * 3600 * 1000) cur.push(f);
+      else journeys.push([f]);
+    }
+    return journeys;
+  }
+
+  // UTC -> Israel time, "YYYY-MM-DD HH:mm"
+  const ilFmt = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Asia/Jerusalem', year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+  });
+  function fmtIL(iso) {
+    const d = iso ? new Date(iso) : null;
+    if (!d || isNaN(d.getTime())) return '';
+    const p = Object.fromEntries(ilFmt.formatToParts(d).map(x => [x.type, x.value]));
+    return `${p.year}-${p.month}-${p.day} ${p.hour}:${p.minute}`;
+  }
+
   function handleExport() {
-    const data = exportTrips.map(t => ({
-      Traveler: t.traveler,
-      From: t.origin || '',
-      To: t.destination || '',
-      'From Date': t.from_date,
-      'To Date': t.to_date,
-    }));
-    const ws = XLSX.utils.json_to_sheet(data, { header: ['Traveler', 'From', 'To', 'From Date', 'To Date'] });
-    ws['!cols'] = [{ wch: 28 }, { wch: 28 }, { wch: 28 }, { wch: 12 }, { wch: 12 }];
+    const header = ['Traveler', 'From', 'To', 'From Date', 'To Date', 'Airline', 'Flight', 'Departure Airport', 'Departure (Israel time)', 'Arrival Airport', 'Arrival (Israel time)'];
+    // One row per flight journey; trips with no booked flights keep a single row with blank flight columns
+    const data = exportTrips.flatMap(t => {
+      const base = { Traveler: t.traveler, From: t.origin || '', To: t.destination || '', 'From Date': t.from_date, 'To Date': t.to_date };
+      const journeys = toJourneys(t.flights);
+      if (!journeys.length) return [base];
+      return journeys.map(j => ({
+        ...base,
+        Airline: [...new Set(j.map(f => f.airline).filter(Boolean))].join(' / '),
+        Flight: j.map(f => `${f.airline || ''}${f.flight_number || ''}`).join(' + '),
+        'Departure Airport': j[0].from || '',
+        'Departure (Israel time)': fmtIL(j[0].departure),
+        'Arrival Airport': j[j.length - 1].to || '',
+        'Arrival (Israel time)': fmtIL(j[j.length - 1].arrival),
+      }));
+    });
+    const ws = XLSX.utils.json_to_sheet(data, { header });
+    ws['!cols'] = [{ wch: 28 }, { wch: 28 }, { wch: 28 }, { wch: 12 }, { wch: 12 }, { wch: 10 }, { wch: 16 }, { wch: 10 }, { wch: 22 }, { wch: 10 }, { wch: 22 }];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Travel');
     XLSX.writeFile(wb, `Travel_${exportFrom}_to_${exportTo}.xlsx`);
