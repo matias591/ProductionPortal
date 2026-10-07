@@ -232,73 +232,90 @@ export default function TravelManifest() {
   if (!allowed) return null;
 
   const dayCols = Array.from({ length: daysInMonth }, (_, i) => i + 1);
+  const isWeekendDay = d => {
+    const dow = new Date(Date.UTC(cursor.year, cursor.month, d)).getUTCDay();
+    return dow === 0 || dow === 6;
+  };
+  const gridCols = { gridTemplateColumns: `repeat(${daysInMonth}, minmax(0, 1fr))` };
+
+  const stats = [
+    { label: 'Underway now', value: underway.length, dot: 'bg-[#17915f]' },
+    { label: 'Departing in 7 days', value: departingWeek.length, dot: 'bg-[#2f7cf6]' },
+    { label: 'On vacation days now', value: onPtoNow.length, dot: 'bg-[#b97a0a]' },
+    { label: 'Active and upcoming', value: underway.length + upcoming.length, dot: 'bg-[#0c1f4b]' },
+  ];
+
+  const control = 'h-8 rounded-lg border border-[#e4e9f2] bg-white text-xs text-[#0c1f4b] outline-none transition-colors hover:bg-[#f5f7fb] focus-visible:ring-2 focus-visible:ring-[#2f7cf6]/40 motion-reduce:transition-none';
 
   return (
-    <div className="min-h-screen bg-[#F3F4F6] font-sans">
-      <header className="bg-white border-b border-slate-200 px-8 py-4 flex items-center justify-between sticky top-0 z-20">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-[#0176D3] text-white flex items-center justify-center">
-            <PlaneTakeoff size={18} />
+    <div className="min-h-screen bg-[#f5f7fb] text-[#0c1f4b] antialiased font-sans">
+      <header className="sticky top-0 z-20 border-b border-[#e4e9f2] bg-white/70 backdrop-blur-xl backdrop-saturate-150">
+        <div className="mx-auto flex max-w-[1400px] items-center justify-between px-5 py-3 sm:px-8">
+          <div className="flex items-center gap-3">
+            <img src="/bizzapps-symbol.svg" alt="BizzApps" className="h-8 w-auto" />
+            <div>
+              <h1 className="text-[15px] font-semibold leading-tight tracking-tight text-[#0c1f4b]">Travel Overview</h1>
+              <p className="text-[11px] leading-tight text-[#6b7a99]">by BizzApps</p>
+            </div>
           </div>
-          <div>
-            <h1 className="font-bold text-slate-900 leading-tight">Travel Manifest</h1>
-            <p className="text-[11px] text-slate-500 leading-tight">Orca AI &middot; synced daily from Mesh</p>
+          <div className="flex items-center gap-3">
+            <span className="hidden text-xs text-[#6b7a99] sm:inline">{email}</span>
+            <button
+              onClick={handleSignOut}
+              className="flex h-8 items-center gap-1.5 rounded-lg px-3 text-xs font-medium text-[#41507a] transition-colors hover:bg-[#f5f7fb] focus-visible:ring-2 focus-visible:ring-[#2f7cf6]/40 outline-none motion-reduce:transition-none"
+            >
+              <LogOut size={14} /> Sign out
+            </button>
           </div>
-        </div>
-        <div className="flex items-center gap-4">
-          <span className="text-xs text-slate-500 hidden sm:inline">{email}</span>
-          <button onClick={handleSignOut} className="flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-red-600 px-3 py-1.5 rounded border border-slate-200 hover:border-red-200 hover:bg-red-50 transition-colors">
-            <LogOut size={14} /> Sign Out
-          </button>
         </div>
       </header>
 
-      <main className="max-w-[1400px] mx-auto px-8 py-8">
-        <div className="grid grid-cols-4 gap-4 mb-6">
-          <div className="bg-white p-5 rounded-lg shadow-sm border border-slate-200">
-            <div className="text-2xl font-bold text-emerald-600">{loaded ? underway.length : '-'}</div>
-            <div className="text-xs text-slate-500 mt-1 font-medium">Underway right now</div>
-          </div>
-          <div className="bg-white p-5 rounded-lg shadow-sm border border-slate-200">
-            <div className="text-2xl font-bold text-[#0176D3]">{loaded ? departingWeek.length : '-'}</div>
-            <div className="text-xs text-slate-500 mt-1 font-medium">Departing next 7 days</div>
-          </div>
-          <div className="bg-white p-5 rounded-lg shadow-sm border border-slate-200">
-            <div className="text-2xl font-bold text-amber-500">{loaded ? onPtoNow.length : '-'}</div>
-            <div className="text-xs text-slate-500 mt-1 font-medium">On vacation days, now</div>
-          </div>
-          <div className="bg-white p-5 rounded-lg shadow-sm border border-slate-200">
-            <div className="text-2xl font-bold text-slate-800">{loaded ? underway.length + upcoming.length : '-'}</div>
-            <div className="text-xs text-slate-500 mt-1 font-medium">Active + upcoming trips</div>
-          </div>
+      <main className="mx-auto max-w-[1400px] px-5 py-6 sm:px-8 sm:py-8">
+        <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
+          {stats.map(s => (
+            <div key={s.label} className="rounded-xl border border-[#e4e9f2] bg-white px-5 py-4 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
+              <div className="flex items-center gap-2 text-xs font-medium text-[#6b7a99]">
+                <span className={`h-2 w-2 rounded-full ${s.dot}`} />
+                {s.label}
+              </div>
+              <div className="mt-2 text-[32px] font-semibold leading-none tracking-tight tabular-nums text-[#0c1f4b]">
+                {loaded ? s.value : <span className="text-[#cfd8e8]">&ndash;</span>}
+              </div>
+            </div>
+          ))}
         </div>
 
-        <div className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden">
-          {/* Calendar toolbar */}
-          <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-100">
+        <div className="overflow-hidden rounded-xl border border-[#e4e9f2] bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
+          {/* Toolbar */}
+          <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
             <div className="flex items-center gap-1">
-              <button onClick={() => shiftMonth(-1)} className="p-1.5 rounded hover:bg-slate-100 text-slate-500">
-                <ChevronLeft size={18} />
+              <h2 className="mr-2 min-w-[11rem] text-xl font-semibold tracking-tight text-[#0c1f4b]">{MONTH_NAMES[cursor.month]} {cursor.year}</h2>
+              <button onClick={() => shiftMonth(-1)} aria-label="Previous month" className={`${control} flex w-8 items-center justify-center`}>
+                <ChevronLeft size={16} />
               </button>
-              <h2 className="font-bold text-slate-800 w-40 text-center">{MONTH_NAMES[cursor.month]} {cursor.year}</h2>
-              <button onClick={() => shiftMonth(1)} className="p-1.5 rounded hover:bg-slate-100 text-slate-500">
-                <ChevronRight size={18} />
+              <button onClick={() => shiftMonth(1)} aria-label="Next month" className={`${control} flex w-8 items-center justify-center`}>
+                <ChevronRight size={16} />
               </button>
               {!isCurrentMonth && (
-                <button onClick={goToday} className="ml-2 text-xs font-bold text-[#0176D3] px-2 py-1 rounded hover:bg-blue-50">Today</button>
+                <button onClick={goToday} className={`${control} ml-1 px-3 font-medium text-[#2f7cf6]`}>Today</button>
               )}
             </div>
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-3 text-[11px] text-slate-500">
-                <span className="flex items-center gap-1"><i className="w-2.5 h-2.5 rounded-sm bg-[#0176D3] inline-block" /> Upcoming</span>
-                <span className="flex items-center gap-1"><i className="w-2.5 h-2.5 rounded-sm bg-emerald-500 inline-block" /> Underway</span>
-                <span className="flex items-center gap-1"><i className="w-2.5 h-2.5 rounded-sm bg-slate-300 inline-block" /> Returned</span>
-                <span className="flex items-center gap-1"><Palmtree size={12} className="text-amber-500" /> PTO</span>
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-2.5 top-2.5 text-[#9aa7c2]" size={14} />
+                <input
+                  className={`${control} w-44 pl-8 pr-3 placeholder:text-[#9aa7c2] focus:bg-white focus:ring-2`}
+                  placeholder="Search"
+                  aria-label="Search trips"
+                  value={searchTerm}
+                  onChange={e => setSearchTerm(e.target.value)}
+                />
               </div>
               <select
                 value={cityFilter}
                 onChange={e => setCityFilter(e.target.value)}
-                className="border rounded px-2 py-1.5 text-xs bg-white outline-none focus:border-[#0176D3] max-w-[140px]"
+                aria-label="Filter by destination"
+                className={`${control} max-w-[160px] px-2.5`}
               >
                 <option value="">All destinations</option>
                 {cityOptions.map(city => (
@@ -306,116 +323,114 @@ export default function TravelManifest() {
                 ))}
               </select>
               <div className="relative">
-                <button
-                  onClick={openExport}
-                  className="flex items-center gap-1.5 text-xs font-bold text-slate-600 px-3 py-1.5 rounded border border-slate-200 hover:border-[#0176D3] hover:text-[#0176D3] transition-colors"
-                >
+                <button onClick={openExport} className={`${control} flex items-center gap-1.5 px-3 font-medium`}>
                   <Download size={14} /> Export
                 </button>
                 {exportOpen && (
-                  <div className="absolute right-0 top-10 z-30 w-72 bg-white border border-slate-200 rounded-lg shadow-lg p-4">
-                    <div className="text-xs font-bold text-slate-800 mb-3">Export to Excel</div>
-                    <div className="grid grid-cols-2 gap-3 mb-3">
-                      <label className="text-[11px] text-slate-500 font-medium">
-                        From date
+                  <div className="absolute right-0 top-10 z-30 w-72 rounded-2xl border border-[#e4e9f2] bg-white/90 p-4 shadow-[0_12px_40px_rgba(0,0,0,0.12)] backdrop-blur-xl">
+                    <div className="mb-3 text-sm font-semibold tracking-tight">Export to Excel</div>
+                    <div className="mb-3 grid grid-cols-2 gap-3">
+                      <label className="text-[11px] font-medium text-[#6b7a99]">
+                        From
                         <input type="date" value={exportFrom} onChange={e => setExportFrom(e.target.value)}
-                          className="mt-1 w-full border rounded px-2 py-1.5 text-xs text-slate-800 outline-none focus:border-[#0176D3]" />
+                          className="mt-1 h-8 w-full rounded-lg border border-[#e4e9f2] bg-white px-2 text-xs text-[#0c1f4b] outline-none focus:ring-2 focus:ring-[#2f7cf6]/40" />
                       </label>
-                      <label className="text-[11px] text-slate-500 font-medium">
-                        To date
+                      <label className="text-[11px] font-medium text-[#6b7a99]">
+                        To
                         <input type="date" value={exportTo} onChange={e => setExportTo(e.target.value)}
-                          className="mt-1 w-full border rounded px-2 py-1.5 text-xs text-slate-800 outline-none focus:border-[#0176D3]" />
+                          className="mt-1 h-8 w-full rounded-lg border border-[#e4e9f2] bg-white px-2 text-xs text-[#0c1f4b] outline-none focus:ring-2 focus:ring-[#2f7cf6]/40" />
                       </label>
                     </div>
-                    <p className="text-[11px] text-slate-500 mb-3">
-                      {exportFrom > exportTo ? 'From date must be before To date.' : `${exportTrips.length} trip${exportTrips.length === 1 ? '' : 's'} overlap this period.`}
+                    <p className="mb-4 text-xs text-[#6b7a99]">
+                      {exportFrom > exportTo ? 'From date must be before To date.' : `${exportTrips.length} trip${exportTrips.length === 1 ? '' : 's'} in this period.`}
                     </p>
                     <div className="flex justify-end gap-2">
-                      <button onClick={() => setExportOpen(false)} className="text-xs font-bold text-slate-500 px-3 py-1.5 rounded hover:bg-slate-100">Cancel</button>
+                      <button onClick={() => setExportOpen(false)} className="h-8 rounded-lg px-3 text-xs font-medium text-[#41507a] transition-colors hover:bg-[#f5f7fb] motion-reduce:transition-none">Cancel</button>
                       <button onClick={handleExport} disabled={!exportTrips.length}
-                        className="text-xs font-bold text-white bg-[#0176D3] px-3 py-1.5 rounded hover:bg-[#0160ac] disabled:opacity-40 disabled:cursor-not-allowed">
+                        className="h-8 rounded-lg bg-[#0c1f4b] px-4 text-xs font-semibold text-white transition-colors hover:bg-[#142a5e] disabled:cursor-not-allowed disabled:opacity-40 motion-reduce:transition-none">
                         Download
                       </button>
                     </div>
                   </div>
                 )}
               </div>
-              <div className="relative">
-                <Search className="absolute left-2.5 top-2 text-slate-400" size={14} />
-                <input
-                  className="pl-8 pr-3 py-1.5 border rounded text-xs outline-none focus:border-[#0176D3] w-44"
-                  placeholder="Search..."
-                  value={searchTerm}
-                  onChange={e => setSearchTerm(e.target.value)}
-                />
-              </div>
             </div>
           </div>
 
-          {/* Day header */}
-          <div className="flex">
-            <div className="w-44 shrink-0 border-r border-slate-100" />
-            <div className="flex-1 grid" style={{ gridTemplateColumns: `repeat(${daysInMonth}, minmax(0, 1fr))` }}>
-              {dayCols.map(day => {
-                const dow = new Date(Date.UTC(cursor.year, cursor.month, day)).getUTCDay();
-                const isWeekend = dow === 0 || dow === 6;
-                return (
-                  <div
-                    key={day}
-                    className={`text-center text-[10px] font-bold py-2 border-r border-slate-50 last:border-r-0 ${day === todayCol ? 'text-[#0176D3]' : isWeekend ? 'text-slate-300' : 'text-slate-400'}`}
-                  >
-                    {day}
-                  </div>
-                );
-              })}
-            </div>
+          {/* Legend */}
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-1 px-5 pb-3 text-[11px] text-[#6b7a99]">
+            <span className="flex items-center gap-1.5"><i className="inline-block h-2.5 w-2.5 rounded-full bg-[#2f7cf6]" /> Upcoming</span>
+            <span className="flex items-center gap-1.5"><i className="inline-block h-2.5 w-2.5 rounded-full bg-[#17915f]" /> Underway</span>
+            <span className="flex items-center gap-1.5"><i className="inline-block h-2.5 w-2.5 rounded-full bg-[#cfd8e8]" /> Returned</span>
+            <span className="flex items-center gap-1.5"><Palmtree size={12} className="text-[#b97a0a]" /> Includes vacation days</span>
           </div>
 
-          {/* Timeline rows — one per person, so the whole team fits without scrolling */}
-          <div className="divide-y divide-slate-50">
-            {!loaded && (
-              <div className="py-16 text-center text-sm text-slate-400">Loading manifest&hellip;</div>
-            )}
-            {loaded && rowsByPerson.length === 0 && (
-              <div className="py-16 text-center text-sm text-slate-400">No trips overlap {MONTH_NAMES[cursor.month]} {cursor.year}.</div>
-            )}
-            {rowsByPerson.map(row => (
-              <div key={row.key} className="flex items-stretch hover:bg-slate-50 group">
-                <div className="w-44 shrink-0 border-r border-slate-100 px-3 py-1.5 flex items-center gap-1.5">
-                  <div className="text-xs font-bold text-slate-800 truncate">{row.traveler}</div>
-                  {row.trips.length > 1 && (
-                    <span className="text-[9px] font-bold text-slate-400 bg-slate-100 rounded-full px-1.5 shrink-0">{row.trips.length}</span>
-                  )}
-                </div>
-                <div
-                  className="flex-1 relative grid py-1.5"
-                  style={{ gridTemplateColumns: `repeat(${daysInMonth}, minmax(0, 1fr))`, gridAutoRows: '20px' }}
-                >
-                  {todayCol && (
-                    <div
-                      className="absolute top-0 bottom-0 w-px bg-[#0176D3]/40 z-0"
-                      style={{ left: `${((todayCol - 0.5) / daysInMonth) * 100}%`, gridRow: '1 / -1' }}
-                    />
-                  )}
-                  {row.trips.map(t => (
-                    <div
-                      key={t.trip_id}
-                      style={barStyle(t)}
-                      title={`${row.traveler}\n${t.origin} → ${t.destination}\n${fmt(t.from_date)} – ${fmt(t.to_date)}${t.vacation ? ` (includes ${t.pto_days}d PTO)` : ''}`}
-                      className={`relative z-10 h-5 rounded-full flex items-center px-2 gap-1 shadow-sm overflow-hidden
-                        ${t._phase === 'underway' ? 'bg-emerald-500' : t._phase === 'upcoming' ? 'bg-[#0176D3]' : 'bg-slate-300'}
-                        ${t.vacation ? 'ring-2 ring-amber-400 ring-offset-1' : ''}
-                      `}
-                    >
-                      {t.vacation && <Palmtree size={11} className="text-white shrink-0" />}
-                      <span className="text-[10px] font-bold text-white truncate">{cityCode(t.origin)} &rarr; {cityCode(t.destination)}</span>
+          <div className="overflow-x-auto border-t border-[#e4e9f2]">
+            <div className="min-w-[860px]">
+              {/* Day header */}
+              <div className="flex">
+                <div className="w-48 shrink-0" />
+                <div className="grid flex-1" style={gridCols}>
+                  {dayCols.map(day => (
+                    <div key={day} className="flex justify-center py-2">
+                      <span
+                        className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] tabular-nums
+                          ${day === todayCol ? 'bg-[#2f7cf6] font-semibold text-white' : isWeekendDay(day) ? 'text-[#cfd8e8]' : 'text-[#6b7a99]'}`}
+                      >
+                        {day}
+                      </span>
                     </div>
                   ))}
                 </div>
               </div>
-            ))}
+
+              {/* One row per person */}
+              <div>
+                {!loaded && (
+                  <div className="py-20 text-center text-sm text-[#9aa7c2]">Loading trips&hellip;</div>
+                )}
+                {loaded && rowsByPerson.length === 0 && (
+                  <div className="py-20 text-center text-sm text-[#9aa7c2]">No trips in {MONTH_NAMES[cursor.month]} {cursor.year}.</div>
+                )}
+                {rowsByPerson.map(row => (
+                  <div key={row.key} className="group flex items-stretch border-t border-[#eef2f9] transition-colors hover:bg-[#f9fafd] motion-reduce:transition-none">
+                    <div className="flex w-48 shrink-0 items-center gap-2 px-5 py-2">
+                      <div className="truncate text-[13px] font-medium text-[#0c1f4b]">{row.traveler}</div>
+                      {row.trips.length > 1 && (
+                        <span className="shrink-0 rounded-full bg-[#eef2f9] px-1.5 text-[10px] font-medium tabular-nums text-[#6b7a99]">{row.trips.length}</span>
+                      )}
+                    </div>
+                    <div className="relative grid flex-1 py-2" style={{ ...gridCols, gridAutoRows: '24px', rowGap: '4px' }}>
+                      <div className="pointer-events-none absolute inset-0 grid" style={gridCols}>
+                        {dayCols.map(d => (
+                          <div key={d} className={d === todayCol ? 'bg-[#e8f0fe]' : isWeekendDay(d) ? 'bg-[#f5f7fb]' : ''} />
+                        ))}
+                      </div>
+                      {row.trips.map(t => (
+                        <div
+                          key={t.trip_id}
+                          style={barStyle(t)}
+                          title={`${row.traveler}\n${t.origin} → ${t.destination}\n${fmt(t.from_date)} – ${fmt(t.to_date)}${t.vacation ? ` (includes ${t.pto_days}d PTO)` : ''}`}
+                          className={`relative z-10 flex h-6 items-center gap-1 overflow-hidden rounded-lg border px-2.5 transition-[filter] hover:brightness-95 motion-reduce:transition-none
+                            ${t._phase === 'underway' ? 'border-[#17915f]/30 bg-[#e4f6ee] text-[#0f6b45]' : t._phase === 'upcoming' ? 'border-[#2f7cf6]/30 bg-[#e8f0fe] text-[#16306b]' : 'border-[#e4e9f2] bg-[#eef2f9] text-[#6b7a99]'}
+                            ${t.vacation ? 'ring-1 ring-[#b97a0a]/70' : ''}
+                          `}
+                        >
+                          {t.vacation && <Palmtree size={11} className="shrink-0 text-[#b97a0a]" />}
+                          <span className="truncate text-[11px] font-medium">{cityCode(t.origin)} &rarr; {cityCode(t.destination)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
+
+        <footer className="mt-6 text-[11px] text-[#9aa7c2]">
+          <span>Times in the Excel export are Israel time</span>
+        </footer>
       </main>
     </div>
   );
