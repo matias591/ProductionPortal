@@ -100,10 +100,10 @@ export default function SeapodList() {
     router.push(`/seapod-production/${newSeapod.id}`);
   }
 
-  const unsyncedSeapods = seapods.filter(s => ['Completed', 'Assigned to Order'].includes(s.status) && !s.synced_to_netsuite);
+  const unsyncedSeapods = seapods.filter(s => ['Completed', 'Ready for ATP', 'Assigned to Order'].includes(s.status) && !s.synced_to_netsuite);
 
   async function pushUnsyncedToNS() {
-    if (unsyncedSeapods.length === 0) { alert("Nothing to push — all Completed / Assigned to Order seapods are already synced to NetSuite."); return; }
+    if (unsyncedSeapods.length === 0) { alert("Nothing to push — all Completed / Ready for ATP / Assigned to Order seapods are already synced to NetSuite."); return; }
     if (!confirm(`Push ${unsyncedSeapods.length} seapod(s) to NetSuite?\n\n${unsyncedSeapods.map(s => s.serial_number).join(', ')}`)) return;
 
     setPushing(true);
@@ -162,7 +162,7 @@ export default function SeapodList() {
                                 {s.created_by && <div className="flex items-center gap-1 mt-1 text-[10px]"><User size={10}/> {s.created_by}</div>}
                             </td>
 
-                            <td className="px-6 py-4"><div className="flex flex-col items-start gap-1.5"><span className={`px-2 py-1 rounded text-xs font-bold border ${s.status === 'Completed' ? 'bg-green-100 text-green-700 border-green-200' : s.status === 'Assigned to Order' ? 'bg-purple-100 text-purple-700 border-purple-200' : s.status === 'Allocated' ? 'bg-amber-100 text-amber-700 border-amber-200' : 'bg-slate-100 text-slate-600'}`}>{s.status}</span>{s.order_number && (<span className="text-[10px] font-bold text-slate-500 flex items-center gap-1"><Box size={10} /> Order #{s.order_number}</span>)}</div></td>
+                            <td className="px-6 py-4"><div className="flex flex-col items-start gap-1.5"><span className={`px-2 py-1 rounded text-xs font-bold border ${s.status === 'Completed' ? 'bg-green-100 text-green-700 border-green-200' : s.status === 'Assigned to Order' ? 'bg-purple-100 text-purple-700 border-purple-200' : s.status === 'Allocated' ? 'bg-amber-100 text-amber-700 border-amber-200' : s.status === 'Ready for ATP' ? 'bg-sky-100 text-sky-700 border-sky-200' : 'bg-slate-100 text-slate-600'}`}>{s.status}</span>{s.order_number && (<span className="text-[10px] font-bold text-slate-500 flex items-center gap-1"><Box size={10} /> Order #{s.order_number}</span>)}</div></td>
                             <td className="px-6 py-4 text-right flex items-center justify-end gap-3"><ChevronRight className="text-slate-400" size={18}/>{isAdmin && (<button onClick={(e) => handleDelete(e, s.id)} className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded transition-all opacity-0 group-hover:opacity-100"><Trash2 size={16}/></button>)}</td>
                         </tr>
                     ))}

@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { useRouter } from 'next/navigation';
-import { LayoutDashboard, TrendingUp, Package, CheckCircle, Clock, RefreshCw, Link, Ship, Cpu, ArrowRight, Search, ChevronRight, Filter, LayoutGrid, Download } from 'lucide-react';
+import { LayoutDashboard, TrendingUp, Package, CheckCircle, Clock, RefreshCw, Link, Ship, Cpu, ArrowRight, Search, ChevronRight, Filter, LayoutGrid, Download, ClipboardCheck } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import Sidebar from './components/Sidebar';
 import { useSidebar } from './context/SidebarContext';
@@ -10,7 +10,7 @@ import { useSidebar } from './context/SidebarContext';
 export default function Home() {
   const { isCollapsed } = useSidebar();
   
-  const [stats, setStats] = useState({ completedSeapods: 0, inProgressSeapods: 0, assignedUnshippedSeapods: 0, inProgressOrders: 0, readyOrders: 0, shippedOrdersCount: 0, builtSeapodsCount: 0, breakdownInProgress: {}, breakdownReady: {}, breakdownShipped: {}, breakdownAvailable: {}, breakdownAssigned: {} });
+  const [stats, setStats] = useState({ completedSeapods: 0, readyForAtpSeapods: 0, inProgressSeapods: 0, assignedUnshippedSeapods: 0, inProgressOrders: 0, readyOrders: 0, shippedOrdersCount: 0, builtSeapodsCount: 0, breakdownInProgress: {}, breakdownReady: {}, breakdownShipped: {}, breakdownAvailable: {}, breakdownAtp: {}, breakdownAssigned: {} });
   const [chartData, setChartData] = useState([]);
   const [timeFilter, setTimeFilter] = useState('year'); 
   const [loading, setLoading] = useState(true);
@@ -36,6 +36,7 @@ export default function Home() {
 
     const completedList = seapods.filter(s => s.status === 'Completed');
     const completedSeapods = completedList.length;
+    const atpList = seapods.filter(s => s.status === 'Ready for ATP');
     const inProgressSeapods = seapods.filter(s => s.status === 'In Progress').length;
     const inProgressList = orders.filter(o => o.status !== 'Shipped' && o.status !== 'Ready for Pickup');
     const readyList = orders.filter(o => o.status === 'Ready for Pickup');
@@ -58,7 +59,7 @@ export default function Home() {
     const relevantSeapods = seapods.filter(s => s.completed_at && new Date(s.completed_at) >= startDate);
     const relevantOrders = orders.filter(o => o.shipped_at && new Date(o.shipped_at) >= startDate);
 
-    setStats({ completedSeapods, inProgressSeapods, assignedUnshippedSeapods: assignedUnshippedCount, inProgressOrders: inProgressList.length, readyOrders: readyList.length, shippedOrdersCount: shippedList.length, builtSeapodsCount: relevantSeapods.length, breakdownInProgress: calcBreakdown(inProgressList), breakdownReady: calcBreakdown(readyList), breakdownShipped: calcBreakdown(shippedList), breakdownAvailable: calcSeapodBreakdown(completedList), breakdownAssigned: calcSeapodBreakdown(assignedUnshippedList) });
+    setStats({ completedSeapods, readyForAtpSeapods: atpList.length, inProgressSeapods, assignedUnshippedSeapods: assignedUnshippedCount, inProgressOrders: inProgressList.length, readyOrders: readyList.length, shippedOrdersCount: shippedList.length, builtSeapodsCount: relevantSeapods.length, breakdownInProgress: calcBreakdown(inProgressList), breakdownReady: calcBreakdown(readyList), breakdownShipped: calcBreakdown(shippedList), breakdownAvailable: calcSeapodBreakdown(completedList), breakdownAtp: calcSeapodBreakdown(atpList), breakdownAssigned: calcSeapodBreakdown(assignedUnshippedList) });
     setChartData(processChartData(relevantSeapods, relevantOrders, timeFilter));
     setLastUpdated(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
     setLoading(false);
@@ -96,8 +97,9 @@ export default function Home() {
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 mb-8">
             <div className="space-y-4">
                 <div className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-wider ml-1"><Cpu size={14}/> Seapod Production</div>
-                <div className="bg-white p-1 rounded-2xl shadow-sm border border-slate-200 grid grid-cols-2 gap-0.5 overflow-hidden">
+                <div className="bg-white p-1 rounded-2xl shadow-sm border border-slate-200 grid grid-cols-1 sm:grid-cols-3 gap-0.5 overflow-hidden">
                     <DrillDownCard title="Seapods Available" value={stats.completedSeapods} breakdown={stats.breakdownAvailable} icon={<CheckCircle/>} color="text-green-600" bg="bg-green-50" />
+                    <DrillDownCard title="Ready for ATP" value={stats.readyForAtpSeapods} breakdown={stats.breakdownAtp} icon={<ClipboardCheck/>} color="text-amber-600" bg="bg-amber-50" />
                     <DrillDownCard title="Assigned (Pending)" value={stats.assignedUnshippedSeapods} breakdown={stats.breakdownAssigned} icon={<Link/>} color="text-indigo-600" bg="bg-indigo-50" />
                 </div>
             </div>
