@@ -1,12 +1,15 @@
 import { requireRole } from '../_lib/requireRole';
 import { NextResponse } from 'next/server';
+import { logSyncFailure, resolveSyncFailures } from '../_lib/syncFailures';
 
 export async function POST(request) {
   const auth = await requireRole(request, ['admin', 'operation']);
   if (auth.error) return auth.error;
 
+  let vesselName;
   try {
     const { vessel } = await request.json();
+    vesselName = vessel;
 
     if (!vessel) {
         return NextResponse.json({ error: 'Vessel name is required' }, { status: 400 });
@@ -27,9 +30,11 @@ export async function POST(request) {
     });
 
     if (!n8nResponse.ok) {
-        // If n8n errors out, treat as not found
+        // If n8n errors out, treat as not found (and record it on Admin > Sync Issues)
+        await logSyncFailure({ source: 'vessel_check', recordType: 'vessel', recordId: vessel, recordLabel: vessel, rawError: `Webhook failed: ${n8nResponse.status} ${n8nResponse.statusText}` });
         return NextResponse.json({ account: null });
     }
+    await resolveSyncFailures('vessel_check', vessel);
 
     // Parse the raw response from n8n (Salesforce format)
     const rawData = await n8nResponse.json();
@@ -54,6 +59,7 @@ export async function POST(request) {
 
   } catch (error) {
     console.error("Vessel Check Error:", error);
+    await logSyncFailure({ source: 'vessel_check', recordType: 'vessel', recordId: String(vesselName || 'unknown'), recordLabel: String(vesselName || ''), rawError: error.message });
     // Return null so the UI handles it gracefully (Not found)
     return NextResponse.json({ account: null });
   }

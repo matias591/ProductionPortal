@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
+import { logSyncFailure, resolveSyncFailures } from '../_lib/syncFailures';
 
 export async function POST(request) {
   const secret = request.headers.get('x-webhook-secret');
@@ -19,16 +20,24 @@ export async function POST(request) {
       return NextResponse.json({ error: 'seapod_id is required' }, { status: 400 });
     }
 
-    const { error } = await supabase
+    const { data: seapod, error } = await supabase
       .from('seapod_production')
       .update({
         synced_to_netsuite: !!success,
         netsuite_synced_at: new Date().toISOString(),
         last_sync_error: success ? null : (syncError || 'Unknown error')
       })
-      .eq('id', seapod_id);
+      .eq('id', seapod_id)
+      .select('serial_number')
+      .maybeSingle();
 
     if (error) throw error;
+
+    if (success) {
+      await resolveSyncFailures('seapod_build', seapod_id);
+    } else {
+      await logSyncFailure({ source: 'seapod_build', recordType: 'seapod', recordId: seapod_id, recordLabel: seapod?.serial_number, rawError: syncError });
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {

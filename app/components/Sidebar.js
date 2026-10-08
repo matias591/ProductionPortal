@@ -3,8 +3,9 @@ import { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { LayoutDashboard, Package, Users, LogOut, Tag, Cpu, Factory, List, ChevronLeft, ChevronRight, MapPin, Plane, Menu, X } from 'lucide-react';
+import { LayoutDashboard, Package, Users, LogOut, Tag, Cpu, Factory, List, ChevronLeft, ChevronRight, MapPin, Plane, Menu, X, RefreshCw } from 'lucide-react';
 import { useSidebar } from '../context/SidebarContext';
+import { authedFetch } from '../lib/authedFetch';
 
 export default function Sidebar() {
   const router = useRouter();
@@ -14,6 +15,7 @@ export default function Sidebar() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [email, setEmail] = useState('');
   const [role, setRole] = useState('');
+  const [openIssues, setOpenIssues] = useState(0);
 
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -33,7 +35,10 @@ export default function Sidebar() {
       const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).single();
       const r = profile?.role || 'vendor';
       setRole(r);
-      if (r === 'admin') setIsAdmin(true);
+      if (r === 'admin') {
+        setIsAdmin(true);
+        authedFetch('/api/admin/sync-failures?count=1').then(res => res.json()).then(j => setOpenIssues(j.open || 0)).catch(() => {});
+      }
     }
   }
 
@@ -43,10 +48,13 @@ export default function Sidebar() {
   }
 
   // Real links: keyboard focusable, announced as links, middle-click / open-in-new-tab work
-  const NavItem = ({ href, icon: Icon, label }) => (
+  const NavItem = ({ href, icon: Icon, label, badge }) => (
     <Link href={href} className={getLinkClass(href)} title={isCollapsed ? label : undefined} aria-current={isActive(href) ? 'page' : undefined}>
       <Icon size={20} aria-hidden="true" />
       {!isCollapsed && <span>{label}</span>}
+      {badge > 0 && (
+        <span className={`rounded-full bg-red-500 text-[10px] font-bold leading-none text-white ${isCollapsed ? 'absolute right-1.5 top-1.5 h-2 w-2' : 'ml-auto px-1.5 py-1'}`} aria-label={`${badge} open`}>{isCollapsed ? '' : badge}</span>
+      )}
     </Link>
   );
 
@@ -131,6 +139,7 @@ export default function Sidebar() {
             <NavItem href="/admin/items" icon={Tag} label="Master Items" />
             <NavItem href="/admin/kits" icon={Package} label="Manage Kits" />
             <NavItem href="/admin/seapod-templates" icon={Cpu} label="Seapod Templates" />
+            <NavItem href="/admin/sync-issues" icon={RefreshCw} label="Sync Issues" badge={openIssues} />
             <NavItem href="/admin/users" icon={Users} label="User Management" />
           </>
         )}
