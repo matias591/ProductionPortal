@@ -222,7 +222,7 @@ export default function OrderList() {
             <p className="text-slate-500 mt-1 text-sm">{orders.length} items • Sorted by Date</p>
           </div>
           <div className="flex gap-2">
-            <button onClick={exportList} className="px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded font-bold shadow-sm flex items-center gap-2 hover:bg-slate-50">
+            <button onClick={exportList} className="px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-lg font-bold shadow-sm flex items-center gap-2 hover:bg-slate-50">
                 <Download size={16}/> Export List
             </button>
             {canCreate && (
@@ -238,7 +238,7 @@ export default function OrderList() {
 
         <div className="bg-white p-3 rounded-t-lg border border-slate-200 border-b-0 flex justify-between items-center">
           <div className="relative max-w-md w-full">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
             <input 
               type="text" 
               placeholder="Search by ID or Vessel..." 
@@ -273,36 +273,36 @@ export default function OrderList() {
                 >
                   <td className="px-6 py-4">
                       <div className="font-semibold text-[#2f7cf6] hover:underline">{order.order_number}</div>
-                      <div className="text-[10px] text-slate-400 mt-1 flex items-center gap-1">
+                      <div className="text-[11px] text-slate-500 mt-1 flex items-center gap-1">
                           <User size={10}/> {order.created_by || 'Unknown'}
                       </div>
                   </td>
                   <td className="px-6 py-4 text-sm text-slate-700 font-medium">
                     <div className="flex items-center gap-2">
-                       {order.vessel ? <Ship size={14} className="text-slate-400"/> : null}
-                       {order.vessel || <span className="text-slate-400 italic">No Vessel Name</span>}
+                       {order.vessel ? <Ship size={14} className="text-slate-500"/> : null}
+                       {order.vessel || <span className="text-slate-500 italic">No Vessel Name</span>}
                     </div>
                   </td>
                   
-                  <td className="px-6 py-4 text-sm text-slate-600">{order.type}{order.sub_type && <span className="text-slate-400"> · {order.sub_type}</span>}</td>
+                  <td className="px-6 py-4 text-sm text-slate-600">{order.type}{order.sub_type && <span className="text-slate-500"> · {order.sub_type}</span>}</td>
 
                   <td className="px-6 py-4 text-xs font-mono text-slate-600">{getItemValue(order.order_items, 'Seapod', 'serial')}</td>
                   <td className="px-6 py-4 text-xs font-mono text-slate-600">{getItemValue(order.order_items, 'Modem', 'orca_id')}</td>
                   <td className="px-6 py-4 text-xs font-mono text-slate-600">{getItemValue(order.order_items, 'Asus', 'orca_id')}</td>
                   <td className="px-6 py-4 text-xs font-mono text-slate-600">{order.ns_so_number || '-'}</td>
                   <td className="px-6 py-4">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded text-xs font-bold border ${getStatusColor(order.status)}`}>
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-lg text-xs font-bold border ${getStatusColor(order.status)}`}>
                       {order.status}
                     </span>
                   </td>
                   <td className="px-6 py-4 text-right flex items-center justify-end gap-3">
-                    <span className="text-slate-400 text-xs group-hover:text-[#2f7cf6] font-bold uppercase flex items-center justify-end gap-1">
+                    <span className="text-slate-500 text-xs group-hover:text-[#2f7cf6] font-bold uppercase flex items-center justify-end gap-1">
                         View <ChevronRight size={14}/>
                     </span>
                     {canDelete && ['New', 'In preparation', 'In Box'].includes(order.status) && (
                         <button 
                             onClick={(e) => clickDeleteOrder(e, order)}
-                            className="p-1.5 text-slate-300 hover:text-red-600 hover:bg-red-50 rounded transition-all"
+                            className="p-1.5 text-slate-300 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
                             title="Delete Order"
                         >
                             <Trash2 size={16} />
@@ -312,7 +312,7 @@ export default function OrderList() {
                 </tr>
               ))}
               {filteredOrders.length === 0 && (
-                <tr><td colSpan={9} className="p-10 text-center text-slate-400">No orders found.</td></tr>
+                <tr><td colSpan={9} className="p-10 text-center text-slate-500">No orders found.</td></tr>
               )}
             </tbody>
           </table>
@@ -325,20 +325,20 @@ export default function OrderList() {
           <div className="bg-white rounded-lg shadow-2xl max-w-lg w-full overflow-hidden border border-slate-200 animate-in fade-in zoom-in duration-200">
             <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
               <h3 className="font-bold text-slate-800 text-lg">New Order</h3>
-              <button onClick={() => setShowCreateModal(false)} className="text-slate-400 hover:text-slate-700">✕</button>
+              <button onClick={() => setShowCreateModal(false)} className="text-slate-500 hover:text-slate-700">✕</button>
             </div>
             <form onSubmit={handleCreateOrder} className="p-6 space-y-5">
               <div className="p-3 bg-blue-50 border border-blue-100 rounded-md"><p className="text-xs text-blue-800 font-semibold">Order Number will be auto-generated by the system.</p></div>
-              <div><label className="block text-xs font-bold text-slate-500 mb-1">Vessel Name (Optional)</label><input name="vessel" className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-[#2f7cf6] focus:ring-1 focus:ring-[#2f7cf6] outline-none" placeholder="e.g. Evergreen A" /></div>
+              <div><label className="block text-xs font-bold text-slate-500 mb-1">Vessel Name (Optional)</label><input name="vessel" className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:border-[#2f7cf6] focus:ring-1 focus:ring-[#2f7cf6] outline-none" placeholder="e.g. Evergreen A" /></div>
               <div className="grid grid-cols-2 gap-4">
-                <div><label className="block text-xs font-bold text-slate-500 mb-1">Type</label><select name="type" value={selectedType} onChange={(e) => setSelectedType(e.target.value)} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-[#2f7cf6] outline-none bg-white"><option value="Full system">Full system</option><option value="Upgrade">Upgrade</option><option value="Replacement">Replacement</option><option value="Spare Parts">Spare Parts</option><option value="Partial System">Partial System</option></select></div>
-                <div><label className="block text-xs font-bold text-slate-500 mb-1">Kit Preset</label><select name="kit" className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-[#2f7cf6] outline-none bg-white" disabled={loadingKits} value={selectedKitId} onChange={(e) => setSelectedKitId(e.target.value)}><option value="">- Custom (Empty) -</option>{loadingKits ? <option>Loading...</option> : (kitOptions.map((kit) => (<option key={kit.id} value={kit.id}>{kit.name}</option>)))}</select></div>
+                <div><label className="block text-xs font-bold text-slate-500 mb-1">Type</label><select name="type" value={selectedType} onChange={(e) => setSelectedType(e.target.value)} className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:border-[#2f7cf6] outline-none bg-white"><option value="Full system">Full system</option><option value="Upgrade">Upgrade</option><option value="Replacement">Replacement</option><option value="Spare Parts">Spare Parts</option><option value="Partial System">Partial System</option></select></div>
+                <div><label className="block text-xs font-bold text-slate-500 mb-1">Kit Preset</label><select name="kit" className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:border-[#2f7cf6] outline-none bg-white" disabled={loadingKits} value={selectedKitId} onChange={(e) => setSelectedKitId(e.target.value)}><option value="">- Custom (Empty) -</option>{loadingKits ? <option>Loading...</option> : (kitOptions.map((kit) => (<option key={kit.id} value={kit.id}>{kit.name}</option>)))}</select></div>
                 {SUB_TYPE_OPTIONS[selectedType] && (
-                  <div className="col-span-2"><label className="block text-xs font-bold text-slate-500 mb-1">Sub Type</label><select name="sub_type" value={selectedSubType} onChange={(e) => setSelectedSubType(e.target.value)} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-[#2f7cf6] outline-none bg-white"><option value="">- Select -</option>{SUB_TYPE_OPTIONS[selectedType].map((opt) => (<option key={opt} value={opt}>{opt}</option>))}</select></div>
+                  <div className="col-span-2"><label className="block text-xs font-bold text-slate-500 mb-1">Sub Type</label><select name="sub_type" value={selectedSubType} onChange={(e) => setSelectedSubType(e.target.value)} className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:border-[#2f7cf6] outline-none bg-white"><option value="">- Select -</option>{SUB_TYPE_OPTIONS[selectedType].map((opt) => (<option key={opt} value={opt}>{opt}</option>))}</select></div>
                 )}
               </div>
-              {isAdmin && (<div><label className="block text-xs font-bold text-slate-500 mb-1">Warehouse</label><select name="warehouse" value={warehouse} onChange={(e) => setWarehouse(e.target.value)} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-[#2f7cf6] outline-none bg-white"><option value="Orca">Orca</option><option value="Baz">Baz</option></select></div>)}
-              <div className="pt-4 flex justify-end gap-2 border-t border-slate-100 mt-4"><button type="button" onClick={() => setShowCreateModal(false)} className="px-4 py-2 border border-slate-300 rounded text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-all">Cancel</button><button type="submit" className="px-4 py-2 bg-[#2f7cf6] text-white rounded text-sm font-semibold hover:bg-blue-700 shadow-sm transition-all">Save & Create</button></div>
+              {isAdmin && (<div><label className="block text-xs font-bold text-slate-500 mb-1">Warehouse</label><select name="warehouse" value={warehouse} onChange={(e) => setWarehouse(e.target.value)} className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:border-[#2f7cf6] outline-none bg-white"><option value="Orca">Orca</option><option value="Baz">Baz</option></select></div>)}
+              <div className="pt-4 flex justify-end gap-2 border-t border-slate-100 mt-4"><button type="button" onClick={() => setShowCreateModal(false)} className="px-4 py-2 border border-slate-300 rounded-lg text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-all">Cancel</button><button type="submit" className="px-4 py-2 bg-[#2f7cf6] text-white rounded-lg text-sm font-semibold hover:bg-blue-700 shadow-sm transition-all">Save & Create</button></div>
             </form>
           </div>
         </div>

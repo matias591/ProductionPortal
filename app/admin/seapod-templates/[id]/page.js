@@ -17,7 +17,7 @@ function SortableItem({ item, onDelete, onUpdate, masterItems }) {
     <div ref={setNodeRef} style={style} className="flex items-center px-4 py-3 bg-white border-b border-slate-100 hover:bg-slate-50 group gap-4">
       <div {...attributes} {...listeners} className="text-slate-300 cursor-grab hover:text-slate-600"><GripVertical size={20} /></div>
       <select 
-        className="flex-1 bg-transparent border border-transparent hover:border-slate-300 rounded px-2 py-1 outline-none focus:border-[#2f7cf6] text-sm"
+        className="flex-1 bg-transparent border border-transparent hover:border-slate-300 rounded-lg px-2 py-1 outline-none focus:border-[#2f7cf6] text-sm"
         value={item.item_id || ''}
         onChange={(e) => onUpdate(item.id, 'item_id', e.target.value)}
       >
@@ -26,7 +26,7 @@ function SortableItem({ item, onDelete, onUpdate, masterItems }) {
       </select>
       <input 
         type="number"
-        className="w-20 bg-transparent border border-transparent hover:border-slate-300 rounded px-2 py-1 outline-none focus:border-[#2f7cf6] text-sm"
+        className="w-20 bg-transparent border border-transparent hover:border-slate-300 rounded-lg px-2 py-1 outline-none focus:border-[#2f7cf6] text-sm"
         value={item.quantity || 1}
         onChange={(e) => onUpdate(item.id, 'quantity', e.target.value)}
       />
@@ -117,39 +117,39 @@ export default function SeapodTemplateDetails({ params }) {
                     <div className="w-12 h-12 bg-blue-50 border border-blue-100 rounded-lg flex items-center justify-center text-[#2f7cf6]"><Cpu size={24}/></div>
                     <div className="flex-1 space-y-4">
                         <div>
-                            <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Template Name</label>
+                            <label className="block text-[11px] font-bold text-slate-500 uppercase mb-1">Template Name</label>
                             <input className="w-full text-2xl font-bold text-slate-900 border-b border-transparent hover:border-slate-300 focus:border-[#2f7cf6] focus:outline-none transition-all placeholder-slate-300" value={template.name || ''} onChange={(e) => updateHeader('name', e.target.value)} placeholder="Template Name" />
                         </div>
                         <div className="flex gap-6">
                             {/* NEW SEAPOD VERSION FIELD */}
                             <div>
-                                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Seapod Version</label>
-                                <input className="text-sm font-medium bg-slate-50 border border-slate-200 rounded px-2 py-1 w-32 focus:border-[#2f7cf6] outline-none" value={template.seapod_version || ''} onChange={(e) => updateHeader('seapod_version', e.target.value)} placeholder="e.g. Gen 3.5" />
+                                <label className="block text-[11px] font-bold text-slate-500 uppercase mb-1">Seapod Version</label>
+                                <input className="text-sm font-medium bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 w-32 focus:border-[#2f7cf6] outline-none" value={template.seapod_version || ''} onChange={(e) => updateHeader('seapod_version', e.target.value)} placeholder="e.g. Gen 3.5" />
                             </div>
                             <div>
-                                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">HW Version</label>
-                                <input className="text-sm font-medium bg-slate-50 border border-slate-200 rounded px-2 py-1 w-32 focus:border-[#2f7cf6] outline-none" value={template.hw_version || ''} onChange={(e) => updateHeader('hw_version', e.target.value)} placeholder="e.g. v1.0" />
+                                <label className="block text-[11px] font-bold text-slate-500 uppercase mb-1">HW Version</label>
+                                <input className="text-sm font-medium bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 w-32 focus:border-[#2f7cf6] outline-none" value={template.hw_version || ''} onChange={(e) => updateHeader('hw_version', e.target.value)} placeholder="e.g. v1.0" />
                             </div>
                             <div>
-                                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">SW Version</label>
-                                <input className="text-sm font-medium bg-slate-50 border border-slate-200 rounded px-2 py-1 w-32 focus:border-[#2f7cf6] outline-none" value={template.sw_version || ''} onChange={(e) => updateHeader('sw_version', e.target.value)} placeholder="e.g. v2.4" />
+                                <label className="block text-[11px] font-bold text-slate-500 uppercase mb-1">SW Version</label>
+                                <input className="text-sm font-medium bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 w-32 focus:border-[#2f7cf6] outline-none" value={template.sw_version || ''} onChange={(e) => updateHeader('sw_version', e.target.value)} placeholder="e.g. v2.4" />
                             </div>
                         </div>
                         <div className="flex gap-6">
                             <div>
-                                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">NS Assembly Item ID</label>
-                                <input className="text-sm font-medium bg-slate-50 border border-slate-200 rounded px-2 py-1 w-48 focus:border-[#2f7cf6] outline-none" value={template.assembly_item_id || ''} onChange={(e) => updateHeader('assembly_item_id', e.target.value)} placeholder="e.g. 471" />
-                                <p className="text-[10px] text-slate-400 mt-1">NetSuite internal ID (numeric) — not the item name/SKU</p>
+                                <label className="block text-[11px] font-bold text-slate-500 uppercase mb-1">NS Assembly Item ID</label>
+                                <input className="text-sm font-medium bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 w-48 focus:border-[#2f7cf6] outline-none" value={template.assembly_item_id || ''} onChange={(e) => updateHeader('assembly_item_id', e.target.value)} placeholder="e.g. 471" />
+                                <p className="text-[11px] text-slate-500 mt-1">NetSuite internal ID (numeric) — not the item name/SKU</p>
                             </div>
                             <div>
-                                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">NS BOM ID</label>
-                                <input className="text-sm font-medium bg-slate-50 border border-slate-200 rounded px-2 py-1 w-48 focus:border-[#2f7cf6] outline-none" value={template.bom_id || ''} onChange={(e) => updateHeader('bom_id', e.target.value)} placeholder="e.g. 26" />
-                                <p className="text-[10px] text-slate-400 mt-1">NetSuite internal ID (numeric) — not the BOM name</p>
+                                <label className="block text-[11px] font-bold text-slate-500 uppercase mb-1">NS BOM ID</label>
+                                <input className="text-sm font-medium bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 w-48 focus:border-[#2f7cf6] outline-none" value={template.bom_id || ''} onChange={(e) => updateHeader('bom_id', e.target.value)} placeholder="e.g. 26" />
+                                <p className="text-[11px] text-slate-500 mt-1">NetSuite internal ID (numeric) — not the BOM name</p>
                             </div>
                             <div>
-                                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">NS BOM Revision ID</label>
-                                <input className="text-sm font-medium bg-slate-50 border border-slate-200 rounded px-2 py-1 w-48 focus:border-[#2f7cf6] outline-none" value={template.bom_revision_id || ''} onChange={(e) => updateHeader('bom_revision_id', e.target.value)} placeholder="optional — e.g. 22" />
-                                <p className="text-[10px] text-slate-400 mt-1">Only set if this BOM has a new-vs-refurbished (or other) revision split. Leave blank to use NetSuite's current revision.</p>
+                                <label className="block text-[11px] font-bold text-slate-500 uppercase mb-1">NS BOM Revision ID</label>
+                                <input className="text-sm font-medium bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 w-48 focus:border-[#2f7cf6] outline-none" value={template.bom_revision_id || ''} onChange={(e) => updateHeader('bom_revision_id', e.target.value)} placeholder="optional — e.g. 22" />
+                                <p className="text-[11px] text-slate-500 mt-1">Only set if this BOM has a new-vs-refurbished (or other) revision split. Leave blank to use NetSuite's current revision.</p>
                             </div>
                         </div>
                     </div>

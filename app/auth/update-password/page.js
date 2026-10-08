@@ -55,7 +55,7 @@ export default function UpdatePassword() {
                         onChange={(e) => setPassword(e.target.value)} 
                         placeholder="••••••••"
                     />
-                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600">
+                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-2.5 text-slate-500 hover:text-slate-600">
                         {showPassword ? <EyeOff size={16}/> : <Eye size={16}/>}
                     </button>
                 </div>

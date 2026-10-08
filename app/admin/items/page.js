@@ -102,7 +102,7 @@ export default function ItemManagement() {
   }
 
   async function deleteItem(id) {
-    if(!confirm("Are you sure you want to delete this item?")) return;
+    if(!await window.bzConfirm("Are you sure you want to delete this item?")) return;
     
     const originalItems = [...items];
     setItems(items.filter(i => i.id !== id));
@@ -157,9 +157,9 @@ export default function ItemManagement() {
             {/* Search */}
             <div className="bg-white p-4 rounded-t-xl border border-slate-200 border-b-0">
                 <div className="relative max-w-md">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16}/>
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={16}/>
                     <input 
-                        className="w-full pl-9 pr-4 py-2 border border-slate-300 rounded text-sm outline-none focus:border-[#2f7cf6] focus:ring-1 focus:ring-[#2f7cf6] transition-all" 
+                        className="w-full pl-9 pr-4 py-2 border border-slate-300 rounded-lg text-sm outline-none focus:border-[#2f7cf6] focus:ring-1 focus:ring-[#2f7cf6] transition-all" 
                         placeholder="Search SKU or Name..." 
                         value={search} 
                         onChange={e => setSearch(e.target.value)} 
@@ -208,14 +208,14 @@ export default function ItemManagement() {
                                 <td className="px-6 py-4 text-right flex justify-end gap-2">
                                     <button 
                                         onClick={() => openEditModal(item)} 
-                                        className="p-2 text-slate-400 hover:text-[#2f7cf6] hover:bg-blue-50 rounded transition-all"
+                                        className="p-2 text-slate-500 hover:text-[#2f7cf6] hover:bg-blue-50 rounded-lg transition-all"
                                         title="Edit Item"
                                     >
                                         <Pencil size={16}/>
                                     </button>
                                     <button 
                                         onClick={() => deleteItem(item.id)} 
-                                        className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-all"
+                                        className="p-2 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
                                         title="Delete Item"
                                     >
                                         <Trash2 size={16}/>
@@ -225,7 +225,7 @@ export default function ItemManagement() {
                         ))}
                         {filteredItems.length === 0 && (
                             <tr>
-                                <td colSpan={7} className="p-8 text-center text-slate-400">
+                                <td colSpan={7} className="p-8 text-center text-slate-500">
                                     No items found.
                                 </td>
                             </tr>
@@ -244,7 +244,7 @@ export default function ItemManagement() {
                     <h3 className="font-bold text-lg text-slate-800">
                         {editingItem ? 'Edit Item' : 'Add Master Item'}
                     </h3>
-                    <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-700">
+                    <button onClick={() => setShowModal(false)} className="text-slate-500 hover:text-slate-700">
                         <X size={20}/>
                     </button>
                 </div>
@@ -254,7 +254,7 @@ export default function ItemManagement() {
                         <label className="block text-xs font-bold text-slate-500 uppercase mb-1">SKU Code</label>
                         <input 
                             name="sku" 
-                            className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-[#2f7cf6] focus:ring-1 focus:ring-[#2f7cf6] outline-none" 
+                            className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:border-[#2f7cf6] focus:ring-1 focus:ring-[#2f7cf6] outline-none" 
                             required 
                             defaultValue={editingItem?.sku || ''}
                         />
@@ -263,7 +263,7 @@ export default function ItemManagement() {
                         <label className="block text-xs font-bold text-slate-500 uppercase mb-1">NetSuite ID (Optional)</label>
                         <input 
                             name="netsuite_id" 
-                            className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-[#2f7cf6] focus:ring-1 focus:ring-[#2f7cf6] outline-none" 
+                            className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:border-[#2f7cf6] focus:ring-1 focus:ring-[#2f7cf6] outline-none" 
                             placeholder="e.g. 4022" 
                             defaultValue={editingItem?.netsuite_id || ''}
                         />
@@ -272,7 +272,7 @@ export default function ItemManagement() {
                         <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Item Description</label>
                         <input 
                             name="name" 
-                            className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-[#2f7cf6] focus:ring-1 focus:ring-[#2f7cf6] outline-none" 
+                            className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:border-[#2f7cf6] focus:ring-1 focus:ring-[#2f7cf6] outline-none" 
                             required 
                             defaultValue={editingItem?.name || ''}
                         />
@@ -283,7 +283,7 @@ export default function ItemManagement() {
                             name="price" 
                             type="number" 
                             step="0.01" 
-                            className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-[#2f7cf6] focus:ring-1 focus:ring-[#2f7cf6] outline-none" 
+                            className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:border-[#2f7cf6] focus:ring-1 focus:ring-[#2f7cf6] outline-none" 
                             required 
                             defaultValue={editingItem?.price || ''}
                         />
@@ -295,7 +295,7 @@ export default function ItemManagement() {
                             name="serial_needed" 
                             id="serial_needed" 
                             defaultChecked={editingItem?.serial_needed || false} 
-                            className="w-4 h-4 text-[#2f7cf6] rounded border-slate-300 focus:ring-[#2f7cf6] cursor-pointer" 
+                            className="w-4 h-4 text-[#2f7cf6] rounded-lg border-slate-300 focus:ring-[#2f7cf6] cursor-pointer" 
                         />
                         <label htmlFor="serial_needed" className="text-sm font-bold text-slate-700 cursor-pointer select-none">
                             Requires Serial Number upon fulfillment
@@ -308,7 +308,7 @@ export default function ItemManagement() {
                             name="exclude_from_sync"
                             id="exclude_from_sync"
                             defaultChecked={editingItem?.exclude_from_sync || false}
-                            className="w-4 h-4 text-[#2f7cf6] rounded border-slate-300 focus:ring-[#2f7cf6] cursor-pointer"
+                            className="w-4 h-4 text-[#2f7cf6] rounded-lg border-slate-300 focus:ring-[#2f7cf6] cursor-pointer"
                         />
                         <label htmlFor="exclude_from_sync" className="text-sm font-bold text-slate-700 cursor-pointer select-none">
                             Exclude from Sync (don&apos;t send to NetSuite sales order)
@@ -319,13 +319,13 @@ export default function ItemManagement() {
                         <button 
                             type="button" 
                             onClick={() => setShowModal(false)} 
-                            className="px-4 py-2 text-sm font-bold text-slate-600 hover:bg-slate-50 rounded border border-slate-200"
+                            className="px-4 py-2 text-sm font-bold text-slate-600 hover:bg-slate-50 rounded-lg border border-slate-200"
                         >
                             Cancel
                         </button>
                         <button 
                             type="submit" 
-                            className="px-4 py-2 text-sm font-bold text-white bg-[#2f7cf6] hover:bg-blue-700 rounded shadow-sm"
+                            className="px-4 py-2 text-sm font-bold text-white bg-[#2f7cf6] hover:bg-blue-700 rounded-lg shadow-sm"
                         >
                             {editingItem ? 'Save Changes' : 'Create Item'}
                         </button>

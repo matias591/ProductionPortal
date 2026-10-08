@@ -60,11 +60,11 @@ export default function Login() {
           </svg>
           Continue with Google
         </button>
-        <p className="text-center text-[11px] text-slate-400 -mt-4">@orca-ai.io accounts only</p>
+        <p className="text-center text-[12px] text-slate-500 -mt-4">@orca-ai.io accounts only</p>
 
         <div className="flex items-center gap-3">
           <div className="h-px bg-slate-200 flex-1" />
-          <span className="text-[11px] text-slate-400 uppercase font-bold">or</span>
+          <span className="text-[12px] text-slate-500 uppercase font-bold">or</span>
           <div className="h-px bg-slate-200 flex-1" />
         </div>
 

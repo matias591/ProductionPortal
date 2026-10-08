@@ -4,6 +4,7 @@ import { createClient } from '@supabase/supabase-js';
 import { useRouter } from 'next/navigation';
 import { Search, ChevronLeft, ChevronRight, LogOut, Palmtree, PlaneTakeoff, Download } from 'lucide-react';
 import * as XLSX from 'xlsx';
+import Sidebar from '../components/Sidebar';
 
 const DAY_MS = 86400000;
 const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
@@ -18,6 +19,7 @@ export default function TravelManifest() {
   const [trips, setTrips] = useState([]);
   const [loaded, setLoaded] = useState(false);
   const [allowed, setAllowed] = useState(false);
+  const [role, setRole] = useState('');
   const [email, setEmail] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [cityFilter, setCityFilter] = useState('');
@@ -43,6 +45,7 @@ export default function TravelManifest() {
       if (!active) return;
       if (!['admin', 'management'].includes(profile?.role)) { router.push('/orders'); return; }
       setAllowed(true);
+      setRole(profile.role);
       setEmail(session.user.email);
 
       const { data: rows } = await supabase.from('employee_trips').select('*').order('from_date', { ascending: true });
@@ -247,19 +250,24 @@ export default function TravelManifest() {
 
   const control = 'h-8 rounded-lg border border-[#e4e9f2] bg-white text-xs text-[#0c1f4b] outline-none transition-colors hover:bg-[#f5f7fb] focus-visible:ring-2 focus-visible:ring-[#2f7cf6]/40 motion-reduce:transition-none';
 
+  // Admins reach Travel from the sidebar, so keep the sidebar for them (management sees Travel only)
+  const withSidebar = role === 'admin';
+
   return (
     <div className="min-h-screen bg-[#f5f7fb] text-[#0c1f4b] antialiased font-sans">
+      {withSidebar && <Sidebar />}
+      <div className={withSidebar ? 'ml-64 bz-has-drawer' : ''}>
       <header className="sticky top-0 z-20 border-b border-[#e4e9f2] bg-white/70 backdrop-blur-xl backdrop-saturate-150">
         <div className="mx-auto flex max-w-[1400px] items-center justify-between px-5 py-3 sm:px-8">
           <div className="flex items-center gap-3">
             <img src="/bizzapps-symbol.svg" alt="BizzApps" className="h-8 w-auto" />
             <div>
               <h1 className="text-[15px] font-semibold leading-tight tracking-tight text-[#0c1f4b]">Travel Overview</h1>
-              <p className="text-[11px] leading-tight text-[#6b7a99]">by BizzApps</p>
+              <p className="text-[12px] leading-tight text-[#5f6e8e]">by BizzApps</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <span className="hidden text-xs text-[#6b7a99] sm:inline">{email}</span>
+            <span className="hidden text-xs text-[#5f6e8e] sm:inline">{email}</span>
             <button
               onClick={handleSignOut}
               className="flex h-8 items-center gap-1.5 rounded-lg px-3 text-xs font-medium text-[#41507a] transition-colors hover:bg-[#f5f7fb] focus-visible:ring-2 focus-visible:ring-[#2f7cf6]/40 outline-none motion-reduce:transition-none"
@@ -274,7 +282,7 @@ export default function TravelManifest() {
         <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
           {stats.map(s => (
             <div key={s.label} className="rounded-xl border border-[#e4e9f2] bg-white px-5 py-4 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
-              <div className="flex items-center gap-2 text-xs font-medium text-[#6b7a99]">
+              <div className="flex items-center gap-2 text-xs font-medium text-[#5f6e8e]">
                 <span className={`h-2 w-2 rounded-full ${s.dot}`} />
                 {s.label}
               </div>
@@ -302,9 +310,9 @@ export default function TravelManifest() {
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <div className="relative">
-                <Search className="pointer-events-none absolute left-2.5 top-2.5 text-[#9aa7c2]" size={14} />
+                <Search className="pointer-events-none absolute left-2.5 top-2.5 text-[#6b7a99]" size={14} />
                 <input
-                  className={`${control} w-44 pl-8 pr-3 placeholder:text-[#9aa7c2] focus:bg-white focus:ring-2`}
+                  className={`${control} w-44 pl-8 pr-3 placeholder:text-[#6b7a99] focus:bg-white focus:ring-2`}
                   placeholder="Search"
                   aria-label="Search trips"
                   value={searchTerm}
@@ -330,18 +338,18 @@ export default function TravelManifest() {
                   <div className="absolute right-0 top-10 z-30 w-72 rounded-2xl border border-[#e4e9f2] bg-white/90 p-4 shadow-[0_12px_40px_rgba(0,0,0,0.12)] backdrop-blur-xl">
                     <div className="mb-3 text-sm font-semibold tracking-tight">Export to Excel</div>
                     <div className="mb-3 grid grid-cols-2 gap-3">
-                      <label className="text-[11px] font-medium text-[#6b7a99]">
+                      <label className="text-[12px] font-medium text-[#5f6e8e]">
                         From
                         <input type="date" value={exportFrom} onChange={e => setExportFrom(e.target.value)}
                           className="mt-1 h-8 w-full rounded-lg border border-[#e4e9f2] bg-white px-2 text-xs text-[#0c1f4b] outline-none focus:ring-2 focus:ring-[#2f7cf6]/40" />
                       </label>
-                      <label className="text-[11px] font-medium text-[#6b7a99]">
+                      <label className="text-[12px] font-medium text-[#5f6e8e]">
                         To
                         <input type="date" value={exportTo} onChange={e => setExportTo(e.target.value)}
                           className="mt-1 h-8 w-full rounded-lg border border-[#e4e9f2] bg-white px-2 text-xs text-[#0c1f4b] outline-none focus:ring-2 focus:ring-[#2f7cf6]/40" />
                       </label>
                     </div>
-                    <p className="mb-4 text-xs text-[#6b7a99]">
+                    <p className="mb-4 text-xs text-[#5f6e8e]">
                       {exportFrom > exportTo ? 'From date must be before To date.' : `${exportTrips.length} trip${exportTrips.length === 1 ? '' : 's'} in this period.`}
                     </p>
                     <div className="flex justify-end gap-2">
@@ -358,7 +366,7 @@ export default function TravelManifest() {
           </div>
 
           {/* Legend */}
-          <div className="flex flex-wrap items-center gap-x-5 gap-y-1 px-5 pb-3 text-[11px] text-[#6b7a99]">
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-1 px-5 pb-3 text-[12px] text-[#5f6e8e]">
             <span className="flex items-center gap-1.5"><i className="inline-block h-2.5 w-2.5 rounded-full bg-[#2f7cf6]" /> Upcoming</span>
             <span className="flex items-center gap-1.5"><i className="inline-block h-2.5 w-2.5 rounded-full bg-[#17915f]" /> Underway</span>
             <span className="flex items-center gap-1.5"><i className="inline-block h-2.5 w-2.5 rounded-full bg-[#cfd8e8]" /> Returned</span>
@@ -374,8 +382,8 @@ export default function TravelManifest() {
                   {dayCols.map(day => (
                     <div key={day} className="flex justify-center py-2">
                       <span
-                        className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] tabular-nums
-                          ${day === todayCol ? 'bg-[#2f7cf6] font-semibold text-white' : isWeekendDay(day) ? 'text-[#cfd8e8]' : 'text-[#6b7a99]'}`}
+                        className={`flex h-5 w-5 items-center justify-center rounded-full text-[11px] tabular-nums
+                          ${day === todayCol ? 'bg-[#2f7cf6] font-semibold text-white' : isWeekendDay(day) ? 'text-[#9aa7c2]' : 'text-[#5f6e8e]'}`}
                       >
                         {day}
                       </span>
@@ -387,17 +395,17 @@ export default function TravelManifest() {
               {/* One row per person */}
               <div>
                 {!loaded && (
-                  <div className="py-20 text-center text-sm text-[#9aa7c2]">Loading trips&hellip;</div>
+                  <div className="py-20 text-center text-sm text-[#6b7a99]">Loading trips&hellip;</div>
                 )}
                 {loaded && rowsByPerson.length === 0 && (
-                  <div className="py-20 text-center text-sm text-[#9aa7c2]">No trips in {MONTH_NAMES[cursor.month]} {cursor.year}.</div>
+                  <div className="py-20 text-center text-sm text-[#6b7a99]">No trips in {MONTH_NAMES[cursor.month]} {cursor.year}.</div>
                 )}
                 {rowsByPerson.map(row => (
                   <div key={row.key} className="group flex items-stretch border-t border-[#eef2f9] transition-colors hover:bg-[#f9fafd] motion-reduce:transition-none">
                     <div className="flex w-48 shrink-0 items-center gap-2 px-5 py-2">
                       <div className="truncate text-[13px] font-medium text-[#0c1f4b]">{row.traveler}</div>
                       {row.trips.length > 1 && (
-                        <span className="shrink-0 rounded-full bg-[#eef2f9] px-1.5 text-[10px] font-medium tabular-nums text-[#6b7a99]">{row.trips.length}</span>
+                        <span className="shrink-0 rounded-full bg-[#eef2f9] px-1.5 text-[11px] font-medium tabular-nums text-[#5f6e8e]">{row.trips.length}</span>
                       )}
                     </div>
                     <div className="relative grid flex-1 py-2" style={{ ...gridCols, gridAutoRows: '24px', rowGap: '4px' }}>
@@ -412,12 +420,12 @@ export default function TravelManifest() {
                           style={barStyle(t)}
                           title={`${row.traveler}\n${t.origin} → ${t.destination}\n${fmt(t.from_date)} – ${fmt(t.to_date)}${t.vacation ? ` (includes ${t.pto_days}d PTO)` : ''}`}
                           className={`relative z-10 flex h-6 items-center gap-1 overflow-hidden rounded-lg border px-2.5 transition-[filter] hover:brightness-95 motion-reduce:transition-none
-                            ${t._phase === 'underway' ? 'border-[#17915f]/30 bg-[#e4f6ee] text-[#0f6b45]' : t._phase === 'upcoming' ? 'border-[#2f7cf6]/30 bg-[#e8f0fe] text-[#16306b]' : 'border-[#e4e9f2] bg-[#eef2f9] text-[#6b7a99]'}
+                            ${t._phase === 'underway' ? 'border-[#17915f]/30 bg-[#e4f6ee] text-[#0f6b45]' : t._phase === 'upcoming' ? 'border-[#2f7cf6]/30 bg-[#e8f0fe] text-[#16306b]' : 'border-[#e4e9f2] bg-[#eef2f9] text-[#5f6e8e]'}
                             ${t.vacation ? 'ring-1 ring-[#b97a0a]/70' : ''}
                           `}
                         >
                           {t.vacation && <Palmtree size={11} className="shrink-0 text-[#b97a0a]" />}
-                          <span className="truncate text-[11px] font-medium">{cityCode(t.origin)} &rarr; {cityCode(t.destination)}</span>
+                          <span className="truncate text-[12px] font-medium">{cityCode(t.origin)} &rarr; {cityCode(t.destination)}</span>
                         </div>
                       ))}
                     </div>
@@ -428,10 +436,11 @@ export default function TravelManifest() {
           </div>
         </div>
 
-        <footer className="mt-6 text-[11px] text-[#9aa7c2]">
+        <footer className="mt-6 text-[12px] text-[#6b7a99]">
           <span>Times in the Excel export are Israel time</span>
         </footer>
       </main>
+      </div>
     </div>
   );
 }

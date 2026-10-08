@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { ArrowLeft, Plus, Trash2, Cpu, CheckCircle2, Circle, Upload, Paperclip, FileText, Download, AlertTriangle, Box, User, Calendar } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import Sidebar from '../../components/Sidebar';
+import PageSkeleton from '../../components/PageSkeleton';
 
 export default function SeapodBuildDetails({ params }) {
   const router = useRouter();
@@ -103,7 +104,7 @@ export default function SeapodBuildDetails({ params }) {
   };
 
   async function deleteItem(itemId) {
-    if(!confirm("Remove item?")) return;
+    if(!await window.bzConfirm("Remove item?")) return;
     setItems(items.filter(i => i.id !== itemId));
     await supabase.from('seapod_items').delete().eq('id', itemId);
   }
@@ -121,7 +122,7 @@ export default function SeapodBuildDetails({ params }) {
 
   async function deleteFile(file) {
       if (!canDeleteFiles) { alert("Permission Denied: Only Admins or Operations can delete attachments."); return; }
-      if (!confirm(`Delete "${file.file_name}"?`)) return;
+      if (!await window.bzConfirm(`Delete "${file.file_name}"?`)) return;
       await supabase.storage.from('seapod-attachments').remove([file.file_path]);
       await supabase.from('seapod_files').delete().eq('id', file.id);
       setFiles(prev => prev.filter(f => f.id !== file.id));
@@ -135,7 +136,7 @@ export default function SeapodBuildDetails({ params }) {
       XLSX.writeFile(wb, `Seapod_${seapod.serial_number}.xlsx`); 
   }
 
-  if (loading) return <div className="flex min-h-screen bg-[#f5f7fb]"><Sidebar /><div className="ml-64 p-10 text-slate-500">Loading...</div></div>;
+  if (loading) return <div className="flex min-h-screen bg-[#f5f7fb]"><Sidebar /><div className="ml-64 flex-1"><PageSkeleton /></div></div>;
 
   return (
     <div className="flex min-h-screen bg-[#f5f7fb] font-sans">
@@ -158,13 +159,13 @@ export default function SeapodBuildDetails({ params }) {
                                 Template: <span className="font-medium text-slate-800">{seapod.template_name}</span>
                             </div>
                             <div className="flex gap-2 mt-2 items-center">
-                                <span className="bg-[#2f7cf6]/10 text-[#2f7cf6] border border-[#2f7cf6]/20 px-2 py-0.5 rounded text-xs font-bold">{seapod.seapod_version || 'No Gen Ver'}</span>
-                                <span className="bg-slate-100 text-slate-600 border border-slate-200 px-2 py-0.5 rounded text-xs font-medium">HW: {seapod.hw_version}</span>
-                                <span className="bg-slate-100 text-slate-600 border border-slate-200 px-2 py-0.5 rounded text-xs font-medium">SW: {seapod.sw_version}</span>
-                                {seapod.order_number && (<span className="bg-purple-100 text-purple-700 border border-purple-200 px-2 py-0.5 rounded text-xs font-bold flex items-center gap-1"><Box size={10} /> Assigned to Order #{seapod.order_number}</span>)}
+                                <span className="bg-[#2f7cf6]/10 text-[#2f7cf6] border border-[#2f7cf6]/20 px-2 py-0.5 rounded-lg text-xs font-bold">{seapod.seapod_version || 'No Gen Ver'}</span>
+                                <span className="bg-slate-100 text-slate-600 border border-slate-200 px-2 py-0.5 rounded-lg text-xs font-medium">HW: {seapod.hw_version}</span>
+                                <span className="bg-slate-100 text-slate-600 border border-slate-200 px-2 py-0.5 rounded-lg text-xs font-medium">SW: {seapod.sw_version}</span>
+                                {seapod.order_number && (<span className="bg-purple-100 text-purple-700 border border-purple-200 px-2 py-0.5 rounded-lg text-xs font-bold flex items-center gap-1"><Box size={10} /> Assigned to Order #{seapod.order_number}</span>)}
                             </div>
                             
-                            <div className="flex gap-4 mt-2 text-[10px] text-slate-400">
+                            <div className="flex gap-4 mt-2 text-[11px] text-slate-500">
                                 {seapod.created_by && <span className="flex items-center gap-1"><User size={10}/> By {seapod.created_by}</span>}
                                 <span>Created: {new Date(seapod.created_at).toLocaleDateString()}</span>
                                 {seapod.completed_at && <span className="text-green-600 font-bold flex items-center gap-1"><Calendar size={10}/> Completed: {new Date(seapod.completed_at).toLocaleDateString()}</span>}
@@ -172,12 +173,12 @@ export default function SeapodBuildDetails({ params }) {
                         </div>
                     </div>
                     <div className="flex items-end flex-col gap-2">
-                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block text-right">Status</label>
+                        <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1 block text-right">Status</label>
                         <select 
                             value={seapod.status} 
                             onChange={(e) => handleStatusChange(e.target.value)}
                             disabled={!isAdmin && seapod.status === 'Allocated'}
-                            className="bg-white border border-slate-300 rounded px-3 py-2 text-sm font-bold focus:border-[#2f7cf6] outline-none"
+                            className="bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-bold focus:border-[#2f7cf6] outline-none"
                         >
                             <option>In Progress</option>
                             <option>Completed</option>
@@ -191,7 +192,7 @@ export default function SeapodBuildDetails({ params }) {
             </div>
         </div>
 
-        <div className="p-8 max-w-5xl mx-auto grid grid-cols-3 gap-8">
+        <div className="p-8 max-w-5xl mx-auto grid grid-cols-1 sm:grid-cols-3 gap-8">
             <div className="col-span-1">
                 <div className={`bg-white border rounded-xl shadow-sm overflow-hidden transition-colors ${isDragging ? 'border-[#2f7cf6] bg-blue-50/50' : 'border-slate-200'}`} onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop}>
                     <div className="px-5 py-3 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center"><h3 className="text-xs font-bold text-slate-500 uppercase tracking-wide flex items-center gap-2"><Paperclip size={14}/> Files ({files.length})</h3><label className="cursor-pointer text-xs font-bold text-[#2f7cf6] hover:underline flex items-center gap-1">{uploading ? '...' : '+ Upload'}<input type="file" className="hidden" onChange={onFileSelect} disabled={uploading} /></label></div>
@@ -199,8 +200,8 @@ export default function SeapodBuildDetails({ params }) {
                     <div className="divide-y divide-slate-50">
                         {files.map(file => (
                             <div key={file.id} onClick={() => openFile(file.file_path)} className="px-5 py-3 flex items-center gap-3 hover:bg-blue-50 cursor-pointer transition-colors group">
-                                <div className="bg-blue-100 p-1.5 rounded text-blue-600"><FileText size={16}/></div>
-                                <div className="overflow-hidden flex-1"><p className="text-sm font-medium text-slate-700 truncate group-hover:text-[#2f7cf6] group-hover:underline">{file.file_name}</p><p className="text-[10px] text-slate-400">By {file.uploaded_by}</p></div>
+                                <div className="bg-blue-100 p-1.5 rounded-lg text-blue-600"><FileText size={16}/></div>
+                                <div className="overflow-hidden flex-1"><p className="text-sm font-medium text-slate-700 truncate group-hover:text-[#2f7cf6] group-hover:underline">{file.file_name}</p><p className="text-[11px] text-slate-500">By {file.uploaded_by}</p></div>
                                 {canDeleteFiles && (
                                     <button onClick={(e) => { e.stopPropagation(); deleteFile(file); }} className="text-slate-300 hover:text-red-600 opacity-0 group-hover:opacity-100"><Trash2 size={16}/></button>
                                 )}
@@ -214,10 +215,10 @@ export default function SeapodBuildDetails({ params }) {
                 <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
                     <div className="bg-slate-50 px-6 py-3 border-b border-slate-200 flex justify-between items-center">
                         <h3 className="font-bold text-sm text-slate-700 uppercase">Components Checklist</h3>
-                        <span className="text-xs font-bold bg-white border border-slate-200 px-2 py-1 rounded text-slate-500">{items.length} Items</span>
+                        <span className="text-xs font-bold bg-white border border-slate-200 px-2 py-1 rounded-lg text-slate-500">{items.length} Items</span>
                     </div>
                     <table className="w-full text-left">
-                        <thead className="text-xs font-bold text-slate-400 uppercase border-b border-slate-200">
+                        <thead className="text-xs font-bold text-slate-500 uppercase border-b border-slate-200">
                             <tr>
                                 <th className="px-6 py-3">Component</th>
                                 <th className="px-6 py-3 w-24">Qty</th>
@@ -232,7 +233,7 @@ export default function SeapodBuildDetails({ params }) {
                                     <td className="px-6 py-3 text-sm">{item.quantity}</td>
                                     <td className="px-6 py-3">
                                         <input 
-                                            className="serial-input w-full border border-slate-200 rounded px-2 py-1.5 text-sm focus:border-[#2f7cf6] outline-none text-[#2f7cf6] font-medium placeholder-slate-300" 
+                                            className="serial-input w-full border border-slate-200 rounded-lg px-2 py-1.5 text-sm focus:border-[#2f7cf6] outline-none text-[#2f7cf6] font-medium placeholder-slate-300" 
                                             placeholder="Scan Serial" 
                                             value={item.serial || ''} 
                                             onChange={(e) => updateItem(item.id, 'serial', e.target.value)} 
@@ -259,12 +260,12 @@ export default function SeapodBuildDetails({ params }) {
                     
                     <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 mb-6 text-left">
                         <div className="mb-4 pb-4 border-b border-slate-200">
-                            <span className="text-[10px] font-bold text-slate-400 uppercase block">Seapod Version</span>
+                            <span className="text-[11px] font-bold text-slate-500 uppercase block">Seapod Version</span>
                             <span className="text-lg font-bold text-[#2f7cf6]">{seapod.seapod_version || 'N/A'}</span>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
-                            <div><span className="text-[10px] font-bold text-slate-400 uppercase block">Hardware Ver.</span><span className="text-lg font-bold text-slate-800">{seapod.hw_version || 'N/A'}</span></div>
-                            <div><span className="text-[10px] font-bold text-slate-400 uppercase block">Software Ver.</span><span className="text-lg font-bold text-slate-800">{seapod.sw_version || 'N/A'}</span></div>
+                            <div><span className="text-[11px] font-bold text-slate-500 uppercase block">Hardware Ver.</span><span className="text-lg font-bold text-slate-800">{seapod.hw_version || 'N/A'}</span></div>
+                            <div><span className="text-[11px] font-bold text-slate-500 uppercase block">Software Ver.</span><span className="text-lg font-bold text-slate-800">{seapod.sw_version || 'N/A'}</span></div>
                         </div>
                     </div>
                     
@@ -272,7 +273,7 @@ export default function SeapodBuildDetails({ params }) {
                         <button onClick={() => setShowAck(false)} className="flex-1 py-3 border border-slate-300 rounded-lg font-bold text-slate-600 hover:bg-slate-50">Cancel</button>
                         <button onClick={confirmCompletion} className="flex-1 py-3 bg-[#2f7cf6] text-white rounded-lg font-bold hover:bg-blue-700 shadow-lg">Confirm & Complete</button>
                     </div>
-                    <p className="text-xs text-slate-400 mt-4">By confirming, you acknowledge the Seapod contains these versions.</p>
+                    <p className="text-xs text-slate-500 mt-4">By confirming, you acknowledge the Seapod contains these versions.</p>
                 </div>
             </div>
         )}

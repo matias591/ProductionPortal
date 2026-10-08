@@ -60,7 +60,7 @@ export default function ForgotPassword() {
                     <div>
                         <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Email Address</label>
                         <div className="relative">
-                            <Mail className="absolute left-3 top-2.5 text-slate-400" size={18} />
+                            <Mail className="absolute left-3 top-2.5 text-slate-500" size={18} />
                             <input 
                                 type="email" 
                                 required 

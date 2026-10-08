@@ -70,3 +70,25 @@ main { animation: bz-page-in 320ms var(--bz-ease) both; }
 @media (prefers-reduced-transparency: reduce) {
   .bz-glass { background: #fff; backdrop-filter: none; }
 }
+
+/* ---- Layout: every page offsets for the sidebar; keep it in step with its state ---- */
+@media (min-width: 1024px) {
+  body[data-sidebar="collapsed"] .ml-64 { margin-left: 5rem; }
+  body[data-sidebar="expanded"] .ml-20 { margin-left: 16rem; }
+}
+@media (max-width: 1023px) {
+  .ml-64, .ml-20 { margin-left: 0; }
+  main { padding: 4rem 1rem 1.5rem !important; }
+  .bz-has-drawer header { padding-left: 3.5rem; }
+  /* wide tables scroll inside themselves instead of the page */
+  table { display: block; max-width: 100%; overflow-x: auto; }
+}
+
+/* ---- Loading skeleton ---- */
+@keyframes bz-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+.bz-skeleton {
+  border-radius: 0.75rem;
+  background: linear-gradient(90deg, #eef2f9 25%, #f7f9fd 50%, #eef2f9 75%);
+  background-size: 200% 100%;
+  animation: bz-shimmer 1.4s linear infinite;
+}

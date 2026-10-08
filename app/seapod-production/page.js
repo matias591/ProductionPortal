@@ -67,7 +67,7 @@ export default function SeapodList() {
     if (!isRefurbishedTemplate) {
         const { data: existingSeapod } = await supabase.from('seapod_production').select('id').eq('serial_number', serialNumber).single();
         if (existingSeapod) {
-            const isRefurbished = confirm(`Seapod serial "${serialNumber}" already exists.\n\nIs this a refurbished unit?`);
+            const isRefurbished = await window.bzConfirm(`Seapod serial "${serialNumber}" already exists.\n\nIs this a refurbished unit?`, { confirmLabel: 'Yes, refurbished', cancelLabel: 'No' });
             if (!isRefurbished) return;
 
             const refurbTpl = templates.find(t => t.name === 'Refurbished O3');
@@ -104,7 +104,7 @@ export default function SeapodList() {
 
   async function pushUnsyncedToNS() {
     if (unsyncedSeapods.length === 0) { alert("Nothing to push — all Completed / Ready for ATP / Assigned to Order seapods are already synced to NetSuite."); return; }
-    if (!confirm(`Push ${unsyncedSeapods.length} seapod(s) to NetSuite?\n\n${unsyncedSeapods.map(s => s.serial_number).join(', ')}`)) return;
+    if (!await window.bzConfirm(`Push ${unsyncedSeapods.length} seapod(s) to NetSuite?\n\n${unsyncedSeapods.map(s => s.serial_number).join(', ')}`)) return;
 
     setPushing(true);
     try {
@@ -124,7 +124,7 @@ export default function SeapodList() {
 
   async function handleDelete(e, id) {
     e.stopPropagation();
-    if(!confirm("Are you sure you want to delete this Seapod record?")) return;
+    if(!await window.bzConfirm("Are you sure you want to delete this Seapod record?")) return;
     const { error } = await supabase.from('seapod_production').delete().eq('id', id);
     if(error) alert("Delete failed: " + error.message); else fetchSeapods();
   }
@@ -135,8 +135,8 @@ export default function SeapodList() {
     <div className="flex min-h-screen bg-[#f5f7fb] font-sans">
       <Sidebar />
       <main className="flex-1 ml-64 p-8">
-        <div className="flex justify-between items-center mb-6"><h1 className="text-3xl font-bold text-slate-900">Seapod Production</h1><div className="flex gap-2"><button onClick={exportList} className="px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded font-bold shadow-sm flex items-center gap-2 hover:bg-slate-50"><Download size={16}/> Export List</button><button onClick={pushUnsyncedToNS} disabled={pushing} className="px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded font-bold shadow-sm flex items-center gap-2 hover:bg-slate-50 disabled:opacity-50"><UploadCloud size={16}/> Push to NS{unsyncedSeapods.length > 0 && ` (${unsyncedSeapods.length})`}</button><button onClick={() => setShowModal(true)} className="px-4 py-2 bg-[#2f7cf6] text-white rounded font-bold shadow flex items-center gap-2"><Plus size={16}/> Start Build</button></div></div>
-        <div className="bg-white p-4 rounded-lg shadow-sm border border-slate-200 mb-6"><div className="relative max-w-md"><Search className="absolute left-3 top-2.5 text-slate-400" size={18}/><input className="w-full pl-10 pr-4 py-2 border rounded outline-none focus:border-[#2f7cf6]" placeholder="Search Serial Number..." onChange={e => setSearchTerm(e.target.value)} /></div></div>
+        <div className="flex justify-between items-center mb-6"><h1 className="text-3xl font-bold text-slate-900">Seapod Production</h1><div className="flex gap-2"><button onClick={exportList} className="px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-lg font-bold shadow-sm flex items-center gap-2 hover:bg-slate-50"><Download size={16}/> Export List</button><button onClick={pushUnsyncedToNS} disabled={pushing} className="px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-lg font-bold shadow-sm flex items-center gap-2 hover:bg-slate-50 disabled:opacity-50"><UploadCloud size={16}/> Push to NS{unsyncedSeapods.length > 0 && ` (${unsyncedSeapods.length})`}</button><button onClick={() => setShowModal(true)} className="px-4 py-2 bg-[#2f7cf6] text-white rounded-lg font-bold shadow flex items-center gap-2"><Plus size={16}/> Start Build</button></div></div>
+        <div className="bg-white p-4 rounded-lg shadow-sm border border-slate-200 mb-6"><div className="relative max-w-md"><Search className="absolute left-3 top-2.5 text-slate-500" size={18}/><input className="w-full pl-10 pr-4 py-2 border rounded-lg outline-none focus:border-[#2f7cf6]" placeholder="Search Serial Number..." onChange={e => setSearchTerm(e.target.value)} /></div></div>
         <div className="bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden">
             <table className="w-full text-left">
                 <thead className="bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase">
@@ -154,16 +154,16 @@ export default function SeapodList() {
                         <tr key={s.id} onClick={() => router.push(`/seapod-production/${s.id}`)} className="hover:bg-blue-50 cursor-pointer group">
                             <td className="px-6 py-4 font-bold text-[#2f7cf6]">{s.serial_number}</td>
                             <td className="px-6 py-4 text-sm">{s.template_name}</td>
-                            <td className="px-6 py-4 text-xs text-slate-500"><div>Ver: {s.seapod_version || '-'}</div><div className="text-[10px]">HW: {s.hw_version} | SW: {s.sw_version}</div></td>
+                            <td className="px-6 py-4 text-xs text-slate-500"><div>Ver: {s.seapod_version || '-'}</div><div className="text-[11px]">HW: {s.hw_version} | SW: {s.sw_version}</div></td>
                             
                             {/* --- NEW CREATED DATE & USER COLUMN --- */}
                             <td className="px-6 py-4 text-xs text-slate-500">
                                 <div className="flex items-center gap-1 font-medium"><Calendar size={12}/> {new Date(s.created_at).toLocaleDateString()}</div>
-                                {s.created_by && <div className="flex items-center gap-1 mt-1 text-[10px]"><User size={10}/> {s.created_by}</div>}
+                                {s.created_by && <div className="flex items-center gap-1 mt-1 text-[11px]"><User size={10}/> {s.created_by}</div>}
                             </td>
 
-                            <td className="px-6 py-4"><div className="flex flex-col items-start gap-1.5"><span className={`px-2 py-1 rounded text-xs font-bold border ${s.status === 'Completed' ? 'bg-green-100 text-green-700 border-green-200' : s.status === 'Assigned to Order' ? 'bg-purple-100 text-purple-700 border-purple-200' : s.status === 'Allocated' ? 'bg-amber-100 text-amber-700 border-amber-200' : s.status === 'Ready for ATP' ? 'bg-sky-100 text-sky-700 border-sky-200' : 'bg-slate-100 text-slate-600'}`}>{s.status}</span>{s.order_number && (<span className="text-[10px] font-bold text-slate-500 flex items-center gap-1"><Box size={10} /> Order #{s.order_number}</span>)}</div></td>
-                            <td className="px-6 py-4 text-right flex items-center justify-end gap-3"><ChevronRight className="text-slate-400" size={18}/>{isAdmin && (<button onClick={(e) => handleDelete(e, s.id)} className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded transition-all opacity-0 group-hover:opacity-100"><Trash2 size={16}/></button>)}</td>
+                            <td className="px-6 py-4"><div className="flex flex-col items-start gap-1.5"><span className={`px-2 py-1 rounded-lg text-xs font-bold border ${s.status === 'Completed' ? 'bg-green-100 text-green-700 border-green-200' : s.status === 'Assigned to Order' ? 'bg-purple-100 text-purple-700 border-purple-200' : s.status === 'Allocated' ? 'bg-amber-100 text-amber-700 border-amber-200' : s.status === 'Ready for ATP' ? 'bg-sky-100 text-sky-700 border-sky-200' : 'bg-slate-100 text-slate-600'}`}>{s.status}</span>{s.order_number && (<span className="text-[11px] font-bold text-slate-500 flex items-center gap-1"><Box size={10} /> Order #{s.order_number}</span>)}</div></td>
+                            <td className="px-6 py-4 text-right flex items-center justify-end gap-3"><ChevronRight className="text-slate-500" size={18}/>{isAdmin && (<button onClick={(e) => handleDelete(e, s.id)} className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"><Trash2 size={16}/></button>)}</td>
                         </tr>
                     ))}
                 </tbody>
@@ -171,7 +171,7 @@ export default function SeapodList() {
         </div>
       </main>
 
-      {showModal && (<div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4"><div className="bg-white rounded-lg shadow-2xl p-6 w-full max-w-md"><h3 className="font-bold text-lg mb-4 text-slate-800">Start Seapod Build</h3><form onSubmit={handleCreate} className="space-y-4"><div><label className="block text-xs font-bold text-slate-500 uppercase mb-1">Seapod Serial #</label><input name="serial" className="w-full border rounded p-2 outline-none focus:border-[#2f7cf6]" required placeholder="e.g. SP-29291" /></div><div><label className="block text-xs font-bold text-slate-500 uppercase mb-1">Select Template</label><select name="template" className="w-full border rounded p-2 bg-white" required>{templates.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}</select></div><div className="flex justify-end gap-2 pt-4"><button type="button" onClick={() => setShowModal(false)} className="px-4 py-2 border rounded font-bold text-slate-600">Cancel</button><button type="submit" className="px-4 py-2 bg-[#2f7cf6] text-white rounded font-bold">Create</button></div></form></div></div>)}
+      {showModal && (<div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4"><div className="bg-white rounded-lg shadow-2xl p-6 w-full max-w-md"><h3 className="font-bold text-lg mb-4 text-slate-800">Start Seapod Build</h3><form onSubmit={handleCreate} className="space-y-4"><div><label className="block text-xs font-bold text-slate-500 uppercase mb-1">Seapod Serial #</label><input name="serial" className="w-full border rounded-lg p-2 outline-none focus:border-[#2f7cf6]" required placeholder="e.g. SP-29291" /></div><div><label className="block text-xs font-bold text-slate-500 uppercase mb-1">Select Template</label><select name="template" className="w-full border rounded-lg p-2 bg-white" required>{templates.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}</select></div><div className="flex justify-end gap-2 pt-4"><button type="button" onClick={() => setShowModal(false)} className="px-4 py-2 border rounded-lg font-bold text-slate-600">Cancel</button><button type="submit" className="px-4 py-2 bg-[#2f7cf6] text-white rounded-lg font-bold">Create</button></div></form></div></div>)}
     </div>
   );
 }

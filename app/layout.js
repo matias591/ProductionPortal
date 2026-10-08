@@ -2,6 +2,7 @@ import './globals.css';
 import { Inter } from 'next/font/google';
 import { SidebarProvider } from './context/SidebarContext';
 import ToastProvider from './components/ToastProvider';
+import A11yEnhancer from './components/A11yEnhancer';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -17,6 +18,7 @@ export default function RootLayout({ children }) {
         <SidebarProvider>
           {children}
           <ToastProvider />
+          <A11yEnhancer />
         </SidebarProvider>
       </body>
     </html>

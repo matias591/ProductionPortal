@@ -116,7 +116,7 @@ export default function UserManagement() {
                                 <select 
                                     value={u.role}
                                     onChange={(e) => handleRoleChange(u.id, e.target.value)}
-                                    className={`text-[10px] px-2 py-1 rounded font-bold uppercase tracking-wider border outline-none cursor-pointer hover:bg-opacity-80 transition-all
+                                    className={`text-[11px] px-2 py-1 rounded-lg font-bold uppercase tracking-wider border outline-none cursor-pointer hover:bg-opacity-80 transition-all
                                     ${u.role === 'admin' ? 'bg-purple-100 text-purple-700 border-purple-200' : 
                                       u.role === 'operation' ? 'bg-blue-100 text-blue-700 border-blue-200' : 
                                       'bg-slate-100 text-slate-500 border-slate-200'}`}
@@ -128,7 +128,7 @@ export default function UserManagement() {
                             </div>
                             
                             <div className="col-span-3 text-sm text-slate-500">{new Date(u.created_at).toLocaleDateString()}</div>
-                            <div className="col-span-1 text-right"><button onClick={() => confirmDelete(u)} className="text-slate-300 hover:text-red-500 hover:bg-red-50 p-2 rounded transition-all opacity-0 group-hover:opacity-100" title="Delete User"><Trash2 size={16} /></button></div>
+                            <div className="col-span-1 text-right"><button onClick={() => confirmDelete(u)} className="text-slate-300 hover:text-red-500 hover:bg-red-50 p-2 rounded-lg transition-all opacity-0 group-hover:opacity-100" title="Delete User"><Trash2 size={16} /></button></div>
                         </div>
                     ))}
                 </div>
@@ -137,19 +137,19 @@ export default function UserManagement() {
          {showCreateModal && (
             <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
                 <div className="bg-white rounded-lg shadow-2xl max-w-md w-full p-6 animate-in fade-in zoom-in duration-200">
-                    <div className="flex justify-between items-center mb-6"><h3 className="font-bold text-lg text-slate-800">Invite User</h3><button onClick={() => setShowCreateModal(false)} className="text-slate-400 hover:text-slate-700"><X size={20}/></button></div>
+                    <div className="flex justify-between items-center mb-6"><h3 className="font-bold text-lg text-slate-800">Invite User</h3><button onClick={() => setShowCreateModal(false)} className="text-slate-500 hover:text-slate-700"><X size={20}/></button></div>
                     <form onSubmit={handleInviteUser} className="space-y-4">
-                        <div className="bg-blue-50 p-3 rounded text-xs text-blue-700 mb-4">User will receive an email to set their own password.</div>
-                        <div><label className="block text-xs font-bold text-slate-500 uppercase mb-1">Email Address</label><input type="email" required className="w-full border border-slate-200 rounded px-3 py-2 text-sm focus:border-[#2f7cf6] outline-none" value={newUserEmail} onChange={e => setNewUserEmail(e.target.value)} /></div>
+                        <div className="bg-blue-50 p-3 rounded-lg text-xs text-blue-700 mb-4">User will receive an email to set their own password.</div>
+                        <div><label className="block text-xs font-bold text-slate-500 uppercase mb-1">Email Address</label><input type="email" required className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:border-[#2f7cf6] outline-none" value={newUserEmail} onChange={e => setNewUserEmail(e.target.value)} /></div>
                         <div>
                             <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Role</label>
-                            <select className="w-full border border-slate-200 rounded px-3 py-2 text-sm bg-white focus:border-[#2f7cf6] outline-none" value={newUserRole} onChange={e => setNewUserRole(e.target.value)}>
+                            <select className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-white focus:border-[#2f7cf6] outline-none" value={newUserRole} onChange={e => setNewUserRole(e.target.value)}>
                                 <option value="vendor">Vendor</option>
                                 <option value="operation">Operation</option>
                                 <option value="admin">Admin</option>
                             </select>
                         </div>
-                        <div className="pt-4 flex gap-3"><button type="button" onClick={() => setShowCreateModal(false)} className="flex-1 py-2 border border-slate-300 rounded text-sm font-bold text-slate-600 hover:bg-slate-50">Cancel</button><button type="submit" disabled={processing} className="flex-1 py-2 bg-[#2f7cf6] text-white rounded text-sm font-bold hover:bg-blue-700 shadow-sm flex justify-center items-center gap-2"><Mail size={16}/> {processing ? 'Sending...' : 'Send Invitation'}</button></div>
+                        <div className="pt-4 flex gap-3"><button type="button" onClick={() => setShowCreateModal(false)} className="flex-1 py-2 border border-slate-300 rounded-lg text-sm font-bold text-slate-600 hover:bg-slate-50">Cancel</button><button type="submit" disabled={processing} className="flex-1 py-2 bg-[#2f7cf6] text-white rounded-lg text-sm font-bold hover:bg-blue-700 shadow-sm flex justify-center items-center gap-2"><Mail size={16}/> {processing ? 'Sending...' : 'Send Invitation'}</button></div>
                     </form>
                 </div>
             </div>

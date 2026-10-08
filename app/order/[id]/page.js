@@ -5,6 +5,7 @@ import { authedFetch } from '../../lib/authedFetch';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Plus, Trash2, Box, Calendar, Ship, Upload, FileText, Paperclip, Lock, Download, Building2, Loader2, Warehouse, Cpu, Check, AlertTriangle, XCircle, User, RefreshCcw } from 'lucide-react';
 import Sidebar from '../../components/Sidebar';
+import PageSkeleton from '../../components/PageSkeleton';
 
 const INVOICE_PACKAGES = {
   full_system: {
@@ -184,7 +185,7 @@ export default function OrderDetails({ params }) {
 
   // --- MANUAL WEBHOOK ---
   async function handleManualWebhook() {
-    if (!confirm("Are you sure you want to re-trigger the shipping webhook manually?")) return;
+    if (!await window.bzConfirm("Are you sure you want to re-trigger the shipping webhook manually?")) return;
     setShipping(true);
     try {
         const res = await authedFetch('/api/trigger-shipping', { method: 'POST', body: JSON.stringify({ orderId: orderId }) });
@@ -432,7 +433,7 @@ export default function OrderDetails({ params }) {
 
   async function deleteFile(file) {
     if (!canShip) { alert("Permission Denied: Only Admins or Operations can delete attachments."); return; }
-    if (!confirm(`Delete "${file.file_name}"?`)) return;
+    if (!await window.bzConfirm(`Delete "${file.file_name}"?`)) return;
     await supabase.storage.from('order-attachments').remove([file.file_path]);
     await supabase.from('order_files').delete().eq('id', file.id);
     setFiles(prev => prev.filter(f => f.id !== file.id));
@@ -761,13 +762,13 @@ export default function OrderDetails({ params }) {
         }
     }
     
-    if(!confirm('Remove this item?')) return;
+    if(!await window.bzConfirm('Remove this item?')) return;
     setItems(items.filter(i => i.id !== itemId));
     await supabase.from('order_items').delete().eq('id', itemId);
   }
 
   // --- RENDER ---
-  if (loading) return <div className="flex min-h-screen bg-[#f5f7fb]"><Sidebar /><div className="ml-64 p-10 text-slate-500">Loading Order...</div></div>;
+  if (loading) return <div className="flex min-h-screen bg-[#f5f7fb]"><Sidebar /><div className="ml-64 flex-1"><PageSkeleton /></div></div>;
   if (!order) return <div className="flex min-h-screen bg-[#f5f7fb]"><Sidebar /><div className="ml-64 p-10 text-red-500">Order not found.</div></div>;
   
   const totalCost = items.reduce((sum, item) => sum + ((item.quantity || 0) * (item.price || 0)), 0);
@@ -792,14 +793,14 @@ export default function OrderDetails({ params }) {
                         {isLocked && <Lock size={18} className="text-red-500" title="Order Locked" />}
                      </div>
                      <div className="flex items-center gap-3 text-sm text-slate-500 mt-1">
-                        <span className="font-mono bg-slate-100 px-2 py-0.5 rounded text-xs border border-slate-200 text-slate-600">
+                        <span className="font-mono bg-slate-100 px-2 py-0.5 rounded-lg text-xs border border-slate-200 text-slate-600">
                             #{order.order_number}
                         </span>
                         <span className="flex items-center gap-1 text-slate-600 font-medium">
                             <Building2 size={12} /> {order.account_name || 'No Account'}
                         </span>
                         {order.created_by && (
-                            <span className="flex items-center gap-1 text-xs text-slate-400 border-l border-slate-200 pl-3">
+                            <span className="flex items-center gap-1 text-xs text-slate-500 border-l border-slate-200 pl-3">
                                 <User size={10}/> By {order.created_by} • {new Date(order.created_at).toLocaleDateString()}
                             </span>
                         )}
@@ -840,7 +841,7 @@ export default function OrderDetails({ params }) {
                     )}
 
                     <div className="flex flex-col items-end">
-                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Status</label>
+                        <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Status</label>
                         <select 
                             value={order.status || 'New'} 
                             onChange={(e) => updateOrder('status', e.target.value)} 
@@ -871,12 +872,12 @@ export default function OrderDetails({ params }) {
                     </div>
                     <div className="p-5 space-y-5">
                         <div>
-                            <label className="flex items-center justify-between text-xs font-bold text-slate-400 uppercase mb-1.5">
+                            <label className="flex items-center justify-between text-xs font-bold text-slate-500 uppercase mb-1.5">
                                 <span className="flex items-center gap-2"><Ship size={14} /> Vessel Name <span className="text-red-500">*</span></span>
                                 {checkingVessel && <span className="text-[#2f7cf6] flex items-center gap-1"><Loader2 size={12} className="animate-spin"/> Checking...</span>}
                             </label>
                             <input 
-                                className="w-full text-sm font-medium border border-slate-200 rounded px-3 py-2 focus:border-[#2f7cf6] focus:ring-1 focus:ring-[#2f7cf6] outline-none text-slate-900" 
+                                className="w-full text-sm font-medium border border-slate-200 rounded-lg px-3 py-2 focus:border-[#2f7cf6] focus:ring-1 focus:ring-[#2f7cf6] outline-none text-slate-900" 
                                 placeholder="Enter Name & Click Away" 
                                 value={order.vessel || ''} 
                                 disabled={!canShip || isLocked || checkingVessel} 
@@ -885,19 +886,19 @@ export default function OrderDetails({ params }) {
                             />
                         </div>
                         <div>
-                            <label className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase mb-1.5"><Building2 size={14} /> Account Name</label>
-                            <input className="w-full text-sm font-medium border border-slate-200 bg-slate-50 rounded px-3 py-2 text-slate-500 cursor-not-allowed" value={order.account_name || ''} readOnly placeholder="Auto-filled" />
+                            <label className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase mb-1.5"><Building2 size={14} /> Account Name</label>
+                            <input className="w-full text-sm font-medium border border-slate-200 bg-slate-50 rounded-lg px-3 py-2 text-slate-500 cursor-not-allowed" value={order.account_name || ''} readOnly placeholder="Auto-filled" />
                         </div>
 
                         <div>
-                            <label className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase mb-1.5"><Box size={14} /> NS Sales Order</label>
-                            <input className="w-full text-sm font-medium border border-slate-200 bg-slate-50 rounded px-3 py-2 text-slate-500 cursor-not-allowed" value={order.ns_so_number || ''} readOnly placeholder="Assigned after shipping" />
+                            <label className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase mb-1.5"><Box size={14} /> NS Sales Order</label>
+                            <input className="w-full text-sm font-medium border border-slate-200 bg-slate-50 rounded-lg px-3 py-2 text-slate-500 cursor-not-allowed" value={order.ns_so_number || ''} readOnly placeholder="Assigned after shipping" />
                         </div>
 
                         {canEditWarehouse && (
                             <div>
-                                <label className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase mb-1.5"><Warehouse size={14} /> Warehouse</label>
-                                <select className="w-full text-sm font-medium border border-slate-200 rounded px-3 py-2 focus:border-[#2f7cf6] outline-none bg-white text-slate-900" value={order.warehouse || 'Orca'} onChange={(e) => updateOrder('warehouse', e.target.value)} disabled={isLocked}>
+                                <label className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase mb-1.5"><Warehouse size={14} /> Warehouse</label>
+                                <select className="w-full text-sm font-medium border border-slate-200 rounded-lg px-3 py-2 focus:border-[#2f7cf6] outline-none bg-white text-slate-900" value={order.warehouse || 'Orca'} onChange={(e) => updateOrder('warehouse', e.target.value)} disabled={isLocked}>
                                     <option value="Orca">Orca</option>
                                     <option value="Baz">Baz</option>
                                     <option value="JNSU">JNSU</option>
@@ -906,23 +907,23 @@ export default function OrderDetails({ params }) {
                         )}
                         
                         <div>
-                            <label className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase mb-1.5"><Calendar size={14} /> Pickup Date</label>
-                            <input type="date" className="w-full text-sm font-medium border border-slate-200 rounded px-3 py-2 focus:border-[#2f7cf6] outline-none text-slate-700" value={order.pickup_date || ''} disabled={isLocked} onChange={(e) => updateOrder('pickup_date', e.target.value)} />
+                            <label className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase mb-1.5"><Calendar size={14} /> Pickup Date</label>
+                            <input type="date" className="w-full text-sm font-medium border border-slate-200 rounded-lg px-3 py-2 focus:border-[#2f7cf6] outline-none text-slate-700" value={order.pickup_date || ''} disabled={isLocked} onChange={(e) => updateOrder('pickup_date', e.target.value)} />
                         </div>
                         <div>
-                            <label className="block text-xs font-bold text-slate-400 uppercase mb-1.5">Shipping Tracking Code</label>
-                            <input className="w-full text-sm font-medium border border-slate-200 rounded px-3 py-2 focus:border-[#2f7cf6] outline-none text-slate-900" placeholder="Enter tracking code" value={order.shipping_tracking_code || ''} disabled={isLocked} onChange={(e) => updateOrder('shipping_tracking_code', e.target.value)} />
+                            <label className="block text-xs font-bold text-slate-500 uppercase mb-1.5">Shipping Tracking Code</label>
+                            <input className="w-full text-sm font-medium border border-slate-200 rounded-lg px-3 py-2 focus:border-[#2f7cf6] outline-none text-slate-900" placeholder="Enter tracking code" value={order.shipping_tracking_code || ''} disabled={isLocked} onChange={(e) => updateOrder('shipping_tracking_code', e.target.value)} />
                         </div>
                         <div>
-                            <label className="block text-xs font-bold text-slate-400 uppercase mb-1.5">Kit Type</label>
-                            <select className="w-full text-sm font-medium border border-slate-200 rounded px-3 py-2 focus:border-[#2f7cf6] outline-none bg-white" value={order.type || ''} disabled={isLocked} onChange={(e) => handleTypeChange(e.target.value)} >
+                            <label className="block text-xs font-bold text-slate-500 uppercase mb-1.5">Kit Type</label>
+                            <select className="w-full text-sm font-medium border border-slate-200 rounded-lg px-3 py-2 focus:border-[#2f7cf6] outline-none bg-white" value={order.type || ''} disabled={isLocked} onChange={(e) => handleTypeChange(e.target.value)} >
                                 <option>Full system</option><option>Upgrade</option><option>Replacement</option><option>Spare Parts</option><option>Partial System</option>
                             </select>
                         </div>
                         {SUB_TYPE_OPTIONS[order.type] && (
                             <div>
-                                <label className="block text-xs font-bold text-slate-400 uppercase mb-1.5">Sub Type</label>
-                                <select className="w-full text-sm font-medium border border-slate-200 rounded px-3 py-2 focus:border-[#2f7cf6] outline-none bg-white" value={order.sub_type || ''} disabled={isLocked} onChange={(e) => updateOrder('sub_type', e.target.value || null)} >
+                                <label className="block text-xs font-bold text-slate-500 uppercase mb-1.5">Sub Type</label>
+                                <select className="w-full text-sm font-medium border border-slate-200 rounded-lg px-3 py-2 focus:border-[#2f7cf6] outline-none bg-white" value={order.sub_type || ''} disabled={isLocked} onChange={(e) => updateOrder('sub_type', e.target.value || null)} >
                                     <option value="">- Select -</option>
                                     {SUB_TYPE_OPTIONS[order.type].map((opt) => (<option key={opt} value={opt}>{opt}</option>))}
                                 </select>
@@ -949,17 +950,17 @@ export default function OrderDetails({ params }) {
                     <div className="divide-y divide-slate-50">
                         {files.map(file => (
                             <div key={file.id} onClick={() => openFile(file.file_path)} className="px-5 py-3 flex items-center gap-3 hover:bg-blue-50 cursor-pointer transition-colors group">
-                                <div className="bg-blue-100 p-1.5 rounded text-blue-600"><FileText size={16}/></div>
+                                <div className="bg-blue-100 p-1.5 rounded-lg text-blue-600"><FileText size={16}/></div>
                                 <div className="overflow-hidden flex-1">
                                     <p className="text-sm font-medium text-slate-700 truncate group-hover:text-[#2f7cf6] group-hover:underline">{file.file_name}</p>
-                                    <p className="text-[10px] text-slate-400">Uploaded by {file.uploaded_by}</p>
+                                    <p className="text-[11px] text-slate-500">Uploaded by {file.uploaded_by}</p>
                                 </div>
                                 {canShip && (
                                     <button onClick={(e) => { e.stopPropagation(); deleteFile(file); }} className="text-slate-300 hover:text-red-600 opacity-0 group-hover:opacity-100"><Trash2 size={16}/></button>
                                 )}
                             </div>
                         ))}
-                        {files.length === 0 && !isDragging && <div className="p-6 text-center text-slate-400 text-xs italic">No files attached. Drag & drop here.</div>}
+                        {files.length === 0 && !isDragging && <div className="p-6 text-center text-slate-500 text-xs italic">No files attached. Drag & drop here.</div>}
                     </div>
                 </div>
             </div>
@@ -974,12 +975,12 @@ export default function OrderDetails({ params }) {
                           {canShip && (
                               <div className="text-sm font-bold text-slate-700">Total: <span className="text-[#2f7cf6]">${totalCost.toFixed(2)}</span></div>
                           )}
-                          <span className="bg-white border border-slate-200 text-slate-500 text-xs font-bold px-2 py-1 rounded">{items.length} Items</span>
+                          <span className="bg-white border border-slate-200 text-slate-500 text-xs font-bold px-2 py-1 rounded-lg">{items.length} Items</span>
                       </div>
                    </div>
                    
                    <table className="w-full text-left border-collapse">
-                     <thead className="bg-white border-b border-slate-200 text-xs uppercase text-slate-400 font-bold">
+                     <thead className="bg-white border-b border-slate-200 text-xs uppercase text-slate-500 font-bold">
                         <tr>
                             <th className="px-6 py-3">Item</th>
                             <th className="px-6 py-3 w-20">Qty</th>
@@ -1113,12 +1114,12 @@ export default function OrderDetails({ params }) {
                     {seapodStep === 1 && (
                         <div className="flex-1 flex flex-col justify-center">
                             <label className="block text-xs font-bold text-slate-500 uppercase mb-2 text-center">Select Template</label>
-                            <select className="w-full max-w-sm mx-auto border border-slate-300 rounded px-3 py-2 text-sm font-medium" value={selectedSeapodTemplate} onChange={(e) => setSelectedSeapodTemplate(e.target.value)}>
+                            <select className="w-full max-w-sm mx-auto border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium" value={selectedSeapodTemplate} onChange={(e) => setSelectedSeapodTemplate(e.target.value)}>
                                 {seapodTemplates.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                             </select>
                             <div className="mt-8 flex gap-3 max-w-sm mx-auto w-full">
-                                <button onClick={() => setShowSeapodModal(false)} className="flex-1 px-4 py-2 border rounded font-bold text-slate-700">Cancel</button>
-                                <button onClick={goToAckStep} className="flex-1 px-4 py-2 bg-[#2f7cf6] text-white rounded font-bold shadow">Start Build</button>
+                                <button onClick={() => setShowSeapodModal(false)} className="flex-1 px-4 py-2 border rounded-lg font-bold text-slate-700">Cancel</button>
+                                <button onClick={goToAckStep} className="flex-1 px-4 py-2 bg-[#2f7cf6] text-white rounded-lg font-bold shadow">Start Build</button>
                             </div>
                         </div>
                     )}
@@ -1138,7 +1139,7 @@ export default function OrderDetails({ params }) {
                                                 <td className="px-4 py-2 text-sm">{item.quantity}</td>
                                                 <td className="px-4 py-2">
                                                     <input 
-                                                        className="serial-input w-full border rounded px-2 py-1 text-sm focus:border-[#2f7cf6] outline-none font-medium text-[#2f7cf6]" 
+                                                        className="serial-input w-full border rounded-lg px-2 py-1 text-sm focus:border-[#2f7cf6] outline-none font-medium text-[#2f7cf6]" 
                                                         value={item.serial || ''} 
                                                         onChange={(e) => updateSeapodItemSerial(item.id, e.target.value)} 
                                                         placeholder="Enter Serial..." 
@@ -1165,17 +1166,17 @@ export default function OrderDetails({ params }) {
                         <div className="flex-1 flex flex-col justify-center text-center px-8">
                             <div className="bg-slate-50 border border-slate-200 rounded-lg p-6 mb-8 text-left">
                                 <div className="mb-4 pb-4 border-b border-slate-200">
-                                    <span className="text-[10px] font-bold text-slate-400 uppercase block">Seapod Version</span>
+                                    <span className="text-[11px] font-bold text-slate-500 uppercase block">Seapod Version</span>
                                     <span className="text-lg font-bold text-[#2f7cf6]">{tplDetails.seapod_version || 'N/A'}</span>
                                 </div>
                                 <div className="grid grid-cols-2 gap-4">
-                                    <div><span className="text-[10px] font-bold text-slate-400 uppercase block">HW Ver</span><span className="text-xl font-bold text-slate-900">{tplDetails.hw_version}</span></div>
-                                    <div><span className="text-[10px] font-bold text-slate-400 uppercase block">SW Ver</span><span className="text-xl font-bold text-slate-900">{tplDetails.sw_version}</span></div>
+                                    <div><span className="text-[11px] font-bold text-slate-500 uppercase block">HW Ver</span><span className="text-xl font-bold text-slate-900">{tplDetails.hw_version}</span></div>
+                                    <div><span className="text-[11px] font-bold text-slate-500 uppercase block">SW Ver</span><span className="text-xl font-bold text-slate-900">{tplDetails.sw_version}</span></div>
                                 </div>
                             </div>
                             <div className="flex gap-3 max-w-sm mx-auto w-full">
-                                <button onClick={() => setSeapodStep(2)} className="flex-1 px-4 py-2 border rounded font-bold text-slate-700">Back</button>
-                                <button onClick={finalWizardSubmit} className="flex-1 px-4 py-2 bg-[#2f7cf6] text-white rounded font-bold shadow">I Acknowledge</button>
+                                <button onClick={() => setSeapodStep(2)} className="flex-1 px-4 py-2 border rounded-lg font-bold text-slate-700">Back</button>
+                                <button onClick={finalWizardSubmit} className="flex-1 px-4 py-2 bg-[#2f7cf6] text-white rounded-lg font-bold shadow">I Acknowledge</button>
                             </div>
                         </div>
                     )}
@@ -1188,15 +1189,15 @@ export default function OrderDetails({ params }) {
               <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl border border-slate-200 flex flex-col max-h-[90vh]">
                 <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
                   <h3 className="text-base font-bold text-slate-900">Generate Commercial Invoice</h3>
-                  <button onClick={() => setShowInvoiceModal(false)} className="text-slate-400 hover:text-slate-600 text-xl leading-none">&times;</button>
+                  <button onClick={() => setShowInvoiceModal(false)} className="text-slate-500 hover:text-slate-600 text-xl leading-none">&times;</button>
                 </div>
 
                 <div className="p-6 space-y-4 overflow-y-auto flex-1">
                   {/* Currency */}
                   <div>
-                    <label className="block text-xs font-bold text-slate-400 uppercase mb-1.5">Currency Used</label>
+                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1.5">Currency Used</label>
                     <select
-                      className="w-full border border-slate-200 rounded px-3 py-2 text-sm font-medium focus:border-[#2f7cf6] outline-none bg-white text-slate-900"
+                      className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm font-medium focus:border-[#2f7cf6] outline-none bg-white text-slate-900"
                       value={invoiceForm.currency}
                       onChange={e => setInvoiceForm(p => ({ ...p, currency: e.target.value }))}
                     >
@@ -1207,9 +1208,9 @@ export default function OrderDetails({ params }) {
 
                   {/* Terms of Freight */}
                   <div>
-                    <label className="block text-xs font-bold text-slate-400 uppercase mb-1.5">Terms of Freight</label>
+                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1.5">Terms of Freight</label>
                     <select
-                      className="w-full border border-slate-200 rounded px-3 py-2 text-sm font-medium focus:border-[#2f7cf6] outline-none bg-white text-slate-900"
+                      className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm font-medium focus:border-[#2f7cf6] outline-none bg-white text-slate-900"
                       value={invoiceForm.termsOfFreight}
                       onChange={e => setInvoiceForm(p => ({ ...p, termsOfFreight: e.target.value }))}
                     >
@@ -1221,9 +1222,9 @@ export default function OrderDetails({ params }) {
 
                   {/* No of Packages */}
                   <div>
-                    <label className="block text-xs font-bold text-slate-400 uppercase mb-1.5">No of Packages</label>
+                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1.5">No of Packages</label>
                     <select
-                      className="w-full border border-slate-200 rounded px-3 py-2 text-sm font-medium focus:border-[#2f7cf6] outline-none bg-white text-slate-900"
+                      className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm font-medium focus:border-[#2f7cf6] outline-none bg-white text-slate-900"
                       value={invoiceForm.packages}
                       onChange={e => setInvoiceForm(p => ({ ...p, packages: Number(e.target.value) }))}
                     >
@@ -1233,11 +1234,11 @@ export default function OrderDetails({ params }) {
 
                   {/* Address */}
                   <div>
-                    <label className="block text-xs font-bold text-slate-400 uppercase mb-1.5">Receiver Address</label>
+                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1.5">Receiver Address</label>
                     <div className="flex gap-2">
                       <div className="relative flex-1">
                         <input
-                          className="w-full border border-slate-200 rounded px-3 py-2 text-sm font-medium focus:border-[#2f7cf6] outline-none text-slate-900"
+                          className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm font-medium focus:border-[#2f7cf6] outline-none text-slate-900"
                           placeholder="Search address..."
                           value={addressSearch}
                           onChange={e => {
@@ -1264,33 +1265,33 @@ export default function OrderDetails({ params }) {
                                   className="px-3 py-2 text-sm cursor-pointer hover:bg-blue-50 hover:text-[#2f7cf6] flex items-center justify-between"
                                 >
                                   <span className="font-medium">{a.company_name}</span>
-                                  {a.pic && <span className="text-slate-400 text-xs ml-2">{a.pic}</span>}
+                                  {a.pic && <span className="text-slate-500 text-xs ml-2">{a.pic}</span>}
                                 </div>
                               ))
                             }
                             {addresses.filter(a => !addressSearch || a.company_name.toLowerCase().includes(addressSearch.toLowerCase()) || (a.pic || '').toLowerCase().includes(addressSearch.toLowerCase())).length === 0 && (
-                              <div className="px-3 py-2 text-sm text-slate-400 italic">No matches</div>
+                              <div className="px-3 py-2 text-sm text-slate-500 italic">No matches</div>
                             )}
                           </div>
                         )}
                       </div>
                       <button
                         onClick={() => setShowAddressCreate(true)}
-                        className="px-3 py-2 border border-slate-300 rounded text-xs font-bold text-slate-600 hover:bg-slate-50 whitespace-nowrap"
+                        className="px-3 py-2 border border-slate-300 rounded-lg text-xs font-bold text-slate-600 hover:bg-slate-50 whitespace-nowrap"
                       >
                         + New
                       </button>
                     </div>
                     {invoiceForm.addressId && (
-                      <p className="text-[10px] text-emerald-600 font-bold mt-1">✓ Address selected</p>
+                      <p className="text-[11px] text-emerald-600 font-bold mt-1">✓ Address selected</p>
                     )}
                   </div>
 
                   {/* Package Type */}
                   <div>
-                    <label className="block text-xs font-bold text-slate-400 uppercase mb-1.5">Package Type</label>
+                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1.5">Package Type</label>
                     <select
-                      className="w-full border border-slate-200 rounded px-3 py-2 text-sm font-medium focus:border-[#2f7cf6] outline-none bg-white text-slate-900"
+                      className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm font-medium focus:border-[#2f7cf6] outline-none bg-white text-slate-900"
                       value={selectedPackage}
                       onChange={e => {
                         setSelectedPackage(e.target.value);
@@ -1311,17 +1312,17 @@ export default function OrderDetails({ params }) {
                   {/* Editable package items */}
                   {packageItems.length > 0 && (
                     <div>
-                      <label className="block text-xs font-bold text-slate-400 uppercase mb-1.5">Items — edit or remove as needed</label>
+                      <label className="block text-xs font-bold text-slate-500 uppercase mb-1.5">Items — edit or remove as needed</label>
                       <div className="border border-slate-200 rounded-lg overflow-x-auto">
                         <table className="w-full text-xs min-w-[520px]">
                           <thead className="bg-slate-50 border-b border-slate-100">
                             <tr>
-                              <th className="px-2 py-1.5 text-left font-bold text-slate-400">Description</th>
-                              <th className="px-2 py-1.5 text-left font-bold text-slate-400 w-16">HS No.</th>
-                              <th className="px-2 py-1.5 text-left font-bold text-slate-400 w-16">Unit Val</th>
-                              <th className="px-2 py-1.5 text-center font-bold text-slate-400 w-10">Qty</th>
-                              <th className="px-2 py-1.5 text-left font-bold text-slate-400 w-14">Lbs</th>
-                              <th className="px-2 py-1.5 text-left font-bold text-slate-400 w-14">Value</th>
+                              <th className="px-2 py-1.5 text-left font-bold text-slate-500">Description</th>
+                              <th className="px-2 py-1.5 text-left font-bold text-slate-500 w-16">HS No.</th>
+                              <th className="px-2 py-1.5 text-left font-bold text-slate-500 w-16">Unit Val</th>
+                              <th className="px-2 py-1.5 text-center font-bold text-slate-500 w-10">Qty</th>
+                              <th className="px-2 py-1.5 text-left font-bold text-slate-500 w-14">Lbs</th>
+                              <th className="px-2 py-1.5 text-left font-bold text-slate-500 w-14">Value</th>
                               <th className="w-6"></th>
                             </tr>
                           </thead>
@@ -1359,9 +1360,9 @@ export default function OrderDetails({ params }) {
 
                   {/* Generate packing list with prices */}
                   <div>
-                    <label className="block text-xs font-bold text-slate-400 uppercase mb-1.5">Generate Packing List with Prices</label>
+                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1.5">Generate Packing List with Prices</label>
                     <select
-                      className="w-full border border-slate-200 rounded px-3 py-2 text-sm font-medium focus:border-[#2f7cf6] outline-none bg-white text-slate-900"
+                      className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm font-medium focus:border-[#2f7cf6] outline-none bg-white text-slate-900"
                       value={generatePackingList}
                       onChange={e => setGeneratePackingList(e.target.value)}
                     >
@@ -1397,18 +1398,18 @@ export default function OrderDetails({ params }) {
               <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm border border-slate-200">
                 <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
                   <h3 className="text-base font-bold text-slate-900">New Address</h3>
-                  <button onClick={() => setShowAddressCreate(false)} className="text-slate-400 hover:text-slate-600 text-xl leading-none">&times;</button>
+                  <button onClick={() => setShowAddressCreate(false)} className="text-slate-500 hover:text-slate-600 text-xl leading-none">&times;</button>
                 </div>
 
                 <div className="p-6 space-y-3">
                   <input
-                    className="w-full border border-slate-200 rounded px-3 py-2 text-sm focus:border-[#2f7cf6] outline-none"
+                    className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:border-[#2f7cf6] outline-none"
                     placeholder="Company name *"
                     value={newAddress.company_name}
                     onChange={e => setNewAddress(p => ({ ...p, company_name: e.target.value }))}
                   />
                   <textarea
-                    className="w-full border border-slate-200 rounded px-3 py-2 text-sm focus:border-[#2f7cf6] outline-none resize-none"
+                    className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:border-[#2f7cf6] outline-none resize-none"
                     placeholder="Address *"
                     rows={3}
                     value={newAddress.address}
@@ -1417,7 +1418,7 @@ export default function OrderDetails({ params }) {
                   <div className="flex gap-2">
                     <span className="text-sm font-bold text-slate-500 self-center w-14 shrink-0">Phone</span>
                     <input
-                      className="flex-1 border border-slate-200 rounded px-3 py-2 text-sm focus:border-[#2f7cf6] outline-none"
+                      className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:border-[#2f7cf6] outline-none"
                       placeholder="+1 234 567 8900"
                       value={newAddress.phone}
                       onChange={e => setNewAddress(p => ({ ...p, phone: e.target.value }))}
@@ -1426,7 +1427,7 @@ export default function OrderDetails({ params }) {
                   <div className="flex gap-2">
                     <span className="text-sm font-bold text-slate-500 self-center w-14 shrink-0">Email</span>
                     <input
-                      className="flex-1 border border-slate-200 rounded px-3 py-2 text-sm focus:border-[#2f7cf6] outline-none"
+                      className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:border-[#2f7cf6] outline-none"
                       placeholder="contact@company.com"
                       value={newAddress.email}
                       onChange={e => setNewAddress(p => ({ ...p, email: e.target.value }))}
@@ -1435,7 +1436,7 @@ export default function OrderDetails({ params }) {
                   <div className="flex gap-2">
                     <span className="text-sm font-bold text-slate-500 self-center w-14 shrink-0">PIC</span>
                     <input
-                      className="flex-1 border border-slate-200 rounded px-3 py-2 text-sm focus:border-[#2f7cf6] outline-none"
+                      className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:border-[#2f7cf6] outline-none"
                       placeholder="Point of contact name"
                       value={newAddress.pic}
                       onChange={e => setNewAddress(p => ({ ...p, pic: e.target.value }))}

@@ -22,9 +22,9 @@ function SortableTemplateRow({ template, onClick, onDelete }) {
             <div onClick={onClick} className="cursor-pointer">
                 <div className="font-bold text-slate-700">{template.name}</div>
                 <div className="text-xs text-slate-500 mt-1 flex gap-3">
-                    <span className="bg-slate-100 px-1.5 rounded border font-medium text-slate-600">Ver: {template.seapod_version || 'N/A'}</span>
-                    <span className="bg-slate-50 px-1.5 rounded border">HW: {template.hw_version || 'N/A'}</span>
-                    <span className="bg-slate-50 px-1.5 rounded border">SW: {template.sw_version || 'N/A'}</span>
+                    <span className="bg-slate-100 px-1.5 rounded-lg border font-medium text-slate-600">Ver: {template.seapod_version || 'N/A'}</span>
+                    <span className="bg-slate-50 px-1.5 rounded-lg border">HW: {template.hw_version || 'N/A'}</span>
+                    <span className="bg-slate-50 px-1.5 rounded-lg border">SW: {template.sw_version || 'N/A'}</span>
                 </div>
             </div>
         </div>
@@ -78,7 +78,7 @@ export default function SeapodTemplates() {
   }
 
   async function deleteTemplate(id) {
-    if(confirm("Delete this template?")) {
+    if(await window.bzConfirm("Delete this template?")) {
       await supabase.from('seapod_templates').delete().eq('id', id);
       fetchTemplates();
     }
@@ -114,7 +114,7 @@ export default function SeapodTemplates() {
                 <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
                     <Cpu className="text-[#2f7cf6]"/> Seapod Templates
                 </h1>
-                <button onClick={() => setShowModal(true)} className="bg-[#2f7cf6] text-white px-4 py-2 rounded font-bold shadow-sm flex items-center gap-2">
+                <button onClick={() => setShowModal(true)} className="bg-[#2f7cf6] text-white px-4 py-2 rounded-lg font-bold shadow-sm flex items-center gap-2">
                     <Plus size={16}/> New Template
                 </button>
             </div>
@@ -132,7 +132,7 @@ export default function SeapodTemplates() {
                                     onDelete={deleteTemplate}
                                 />
                             ))}
-                            {templates.length === 0 && <div className="p-8 text-center text-slate-400">No templates found.</div>}
+                            {templates.length === 0 && <div className="p-8 text-center text-slate-500">No templates found.</div>}
                         </div>
                     </SortableContext>
                 </DndContext>
@@ -147,25 +147,25 @@ export default function SeapodTemplates() {
                 <form onSubmit={createTemplate} className="space-y-4">
                     <div>
                         <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Template Name</label>
-                        <input name="name" className="w-full border border-slate-300 rounded px-3 py-2 text-sm outline-none focus:border-[#2f7cf6]" placeholder="e.g. Standard Seapod V3" required />
+                        <input name="name" className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#2f7cf6]" placeholder="e.g. Standard Seapod V3" required />
                     </div>
                     <div>
                         <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Seapod Version</label>
-                        <input name="seapod_version" className="w-full border border-slate-300 rounded px-3 py-2 text-sm outline-none focus:border-[#2f7cf6]" placeholder="e.g. Generation 3.5" />
+                        <input name="seapod_version" className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#2f7cf6]" placeholder="e.g. Generation 3.5" />
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                         <div>
                             <label className="block text-xs font-bold text-slate-500 uppercase mb-1">HW Version</label>
-                            <input name="hw" className="w-full border border-slate-300 rounded px-3 py-2 text-sm outline-none focus:border-[#2f7cf6]" placeholder="v1.0" />
+                            <input name="hw" className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#2f7cf6]" placeholder="v1.0" />
                         </div>
                         <div>
                             <label className="block text-xs font-bold text-slate-500 uppercase mb-1">SW Version</label>
-                            <input name="sw" className="w-full border border-slate-300 rounded px-3 py-2 text-sm outline-none focus:border-[#2f7cf6]" placeholder="v2.4.1" />
+                            <input name="sw" className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#2f7cf6]" placeholder="v2.4.1" />
                         </div>
                     </div>
                     <div className="flex justify-end gap-2 pt-2">
-                        <button type="button" onClick={() => setShowModal(false)} className="px-4 py-2 border rounded font-bold text-slate-600 hover:bg-slate-50">Cancel</button>
-                        <button type="submit" className="px-4 py-2 bg-[#2f7cf6] text-white rounded font-bold hover:bg-blue-700">Create</button>
+                        <button type="button" onClick={() => setShowModal(false)} className="px-4 py-2 border rounded-lg font-bold text-slate-600 hover:bg-slate-50">Cancel</button>
+                        <button type="submit" className="px-4 py-2 bg-[#2f7cf6] text-white rounded-lg font-bold hover:bg-blue-700">Create</button>
                     </div>
                 </form>
             </div>

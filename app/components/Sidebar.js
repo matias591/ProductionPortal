@@ -1,14 +1,15 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
+import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { LayoutDashboard, Package, Users, LogOut, Tag, Cpu, Factory, List, ChevronLeft, ChevronRight, MapPin, Plane } from 'lucide-react';
+import { LayoutDashboard, Package, Users, LogOut, Tag, Cpu, Factory, List, ChevronLeft, ChevronRight, MapPin, Plane, Menu, X } from 'lucide-react';
 import { useSidebar } from '../context/SidebarContext';
 
 export default function Sidebar() {
   const router = useRouter();
   const pathname = usePathname();
-  const { isCollapsed, toggleSidebar } = useSidebar(); 
+  const { toggleSidebar, mobileOpen, setMobileOpen, compact: isCollapsed } = useSidebar();
   
   const [isAdmin, setIsAdmin] = useState(false);
   const [email, setEmail] = useState('');
@@ -22,6 +23,8 @@ export default function Sidebar() {
   useEffect(() => {
     checkUser();
   }, []);
+
+  useEffect(() => { setMobileOpen(false); }, [pathname]);
 
   async function checkUser() {
     const { data: { session } } = await supabase.auth.getSession();
@@ -39,6 +42,16 @@ export default function Sidebar() {
     router.push('/login');
   }
 
+  // Real links: keyboard focusable, announced as links, middle-click / open-in-new-tab work
+  const NavItem = ({ href, icon: Icon, label }) => (
+    <Link href={href} className={getLinkClass(href)} title={isCollapsed ? label : undefined} aria-current={isActive(href) ? 'page' : undefined}>
+      <Icon size={20} aria-hidden="true" />
+      {!isCollapsed && <span>{label}</span>}
+    </Link>
+  );
+
+  const isActive = (path) => (path === '/' ? pathname === '/' : pathname.startsWith(path));
+
   const getLinkClass = (path) => {
     const isActive = path === '/' ? pathname === '/' : pathname.startsWith(path);
     return `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer mb-1 relative group
@@ -48,11 +61,28 @@ export default function Sidebar() {
   };
 
   return (
-    <aside 
-      className={`bg-white/80 backdrop-blur-xl border-r border-slate-200 h-screen fixed left-0 top-0 flex flex-col z-50 transition-all duration-300 ease-in-out
-        ${isCollapsed ? 'w-20' : 'w-64'}
+    <>
+    {/* Mobile / tablet: hamburger + dimmed backdrop; sidebar slides in as a drawer */}
+    <button
+      onClick={() => setMobileOpen(true)}
+      aria-label="Open menu"
+      className="fixed left-3 top-3 z-40 flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 bg-white/80 text-slate-700 shadow-sm backdrop-blur-xl lg:hidden"
+    >
+      <Menu size={20} aria-hidden="true" />
+    </button>
+    {mobileOpen && <div onClick={() => setMobileOpen(false)} className="fixed inset-0 z-40 bg-[#0c1f4b]/30 backdrop-blur-sm lg:hidden" aria-hidden="true" />}
+    <aside
+      aria-label="Main navigation"
+      className={`bg-white/90 backdrop-blur-xl border-r border-slate-200 h-screen fixed left-0 top-0 flex flex-col z-50 transition-all duration-300 ease-in-out
+        ${isCollapsed ? 'lg:w-20' : 'lg:w-64'} w-64
+        ${mobileOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full'} lg:translate-x-0 lg:shadow-none
       `}
     >
+      {mobileOpen && (
+        <button onClick={() => setMobileOpen(false)} aria-label="Close menu" className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 lg:hidden">
+          <X size={18} aria-hidden="true" />
+        </button>
+      )}
       {/* --- LOGO HEADER --- */}
       <div className={`h-16 flex items-center border-b border-slate-200 ${isCollapsed ? 'justify-center px-0' : 'px-5 gap-3'}`}>
          <img src="/bizzapps-symbol.svg" alt="BizzApps" className="h-8 w-auto shrink-0" />
@@ -70,39 +100,23 @@ export default function Sidebar() {
         {!isCollapsed && <div className="pb-2 px-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider animate-in fade-in">Workspace</div>}
 
         {role === 'management' ? (
-            <div onClick={() => router.push('/travel')} className={getLinkClass('/travel')} title={isCollapsed ? "Travel Manifest" : ""}>
-                <Plane size={20} />
-                {!isCollapsed && <span>Travel Manifest</span>}
-            </div>
+            <NavItem href="/travel" icon={Plane} label="Travel Manifest" />
         ) : (
         <>
         {(role === 'admin' || role === 'operation') && (
-            <div onClick={() => router.push('/')} className={getLinkClass('/')} title={isCollapsed ? "Overview" : ""}>
-                <LayoutDashboard size={20} />
-                {!isCollapsed && <span>Overview</span>}
-            </div>
+            <NavItem href="/" icon={LayoutDashboard} label="Overview" />
         )}
 
-        <div onClick={() => router.push('/orders')} className={getLinkClass('/orders')} title={isCollapsed ? "Orders List" : ""}>
-          <List size={20} />
-          {!isCollapsed && <span>Orders List</span>}
-        </div>
+        <NavItem href="/orders" icon={List} label="Orders List" />
 
-        <div onClick={() => router.push('/seapod-production')} className={getLinkClass('/seapod-production')} title={isCollapsed ? "Seapod Production" : ""}>
-          <Factory size={20} />
-          {!isCollapsed && <span>Seapod Production</span>}
-        </div>
+        <NavItem href="/seapod-production" icon={Factory} label="Seapod Production" />
 
         {(role === 'admin' || role === 'operation') && (
-            <div onClick={() => router.push('/admin/addresses')} className={getLinkClass('/admin/addresses')} title={isCollapsed ? "Addresses" : ""}>
-                <MapPin size={20} />{!isCollapsed && <span>Addresses</span>}
-            </div>
+            <NavItem href="/admin/addresses" icon={MapPin} label="Addresses" />
         )}
 
         {isAdmin && (
-            <div onClick={() => router.push('/travel')} className={getLinkClass('/travel')} title={isCollapsed ? "Travel Manifest" : ""}>
-                <Plane size={20} />{!isCollapsed && <span>Travel Manifest</span>}
-            </div>
+            <NavItem href="/travel" icon={Plane} label="Travel Manifest" />
         )}
         </>
         )}
@@ -114,26 +128,19 @@ export default function Sidebar() {
                {isCollapsed ? '---' : 'Admin Controls'}
             </div>
 
-            <div onClick={() => router.push('/admin/items')} className={getLinkClass('/admin/items')} title="Master Items">
-                <Tag size={20} />{!isCollapsed && <span>Master Items</span>}
-            </div>
-            <div onClick={() => router.push('/admin/kits')} className={getLinkClass('/admin/kits')} title="Manage Kits">
-                <Package size={20} />{!isCollapsed && <span>Manage Kits</span>}
-            </div>
-            <div onClick={() => router.push('/admin/seapod-templates')} className={getLinkClass('/admin/seapod-templates')} title="Templates">
-                <Cpu size={20} />{!isCollapsed && <span>Seapod Templates</span>}
-            </div>
-            <div onClick={() => router.push('/admin/users')} className={getLinkClass('/admin/users')} title="Users">
-                <Users size={20} />{!isCollapsed && <span>User Management</span>}
-            </div>
+            <NavItem href="/admin/items" icon={Tag} label="Master Items" />
+            <NavItem href="/admin/kits" icon={Package} label="Manage Kits" />
+            <NavItem href="/admin/seapod-templates" icon={Cpu} label="Seapod Templates" />
+            <NavItem href="/admin/users" icon={Users} label="User Management" />
           </>
         )}
       </nav>
 
       {/* Collapse Toggle */}
-      <div className="px-3 pb-4">
+      <div className="px-3 pb-4 hidden lg:block">
         <button 
             onClick={toggleSidebar}
+            aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
             className="w-full flex items-center justify-center p-2 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
         >
             {isCollapsed ? <ChevronRight size={20} /> : (
@@ -162,5 +169,6 @@ export default function Sidebar() {
         </button>
       </div>
     </aside>
+    </>
   );
 }

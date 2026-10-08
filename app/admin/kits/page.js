@@ -36,7 +36,7 @@ export default function KitManagement() {
   }
 
   async function deleteKit(id) {
-    if(!confirm("Delete this kit?")) return;
+    if(!await window.bzConfirm("Delete this kit?")) return;
     await supabase.from('kits').delete().eq('id', id);
     fetchKits();
   }
@@ -71,7 +71,7 @@ export default function KitManagement() {
                         {kits.map(kit => (
                             <tr key={kit.id} onClick={() => router.push(`/admin/kits/${kit.id}`)} className="group hover:bg-blue-50 cursor-pointer transition-colors">
                                 <td className="px-6 py-4 font-bold text-slate-700 flex items-center gap-3">
-                                    <div className="w-8 h-8 rounded bg-blue-100 text-[#2f7cf6] flex items-center justify-center"><Package size={16}/></div>
+                                    <div className="w-8 h-8 rounded-lg bg-blue-100 text-[#2f7cf6] flex items-center justify-center"><Package size={16}/></div>
                                     {kit.name}
                                 </td>
                                 <td className="px-6 py-4 text-sm text-slate-500">{new Date(kit.created_at).toLocaleDateString()}</td>
@@ -93,10 +93,10 @@ export default function KitManagement() {
                 <h3 className="font-bold text-lg mb-4 text-slate-800">New Kit Preset</h3>
                 <form onSubmit={handleCreateKit}>
                     <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Kit Name</label>
-                    <input name="name" autoFocus className="w-full border border-slate-300 rounded px-3 py-2 text-sm outline-none focus:border-[#2f7cf6] focus:ring-1 focus:ring-[#2f7cf6]" placeholder="e.g. Standard Seapod System" required />
+                    <input name="name" autoFocus className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#2f7cf6] focus:ring-1 focus:ring-[#2f7cf6]" placeholder="e.g. Standard Seapod System" required />
                     <div className="mt-6 flex justify-end gap-2">
-                        <button type="button" onClick={() => setShowModal(false)} className="px-4 py-2 text-sm font-bold text-slate-600 hover:bg-slate-100 rounded">Cancel</button>
-                        <button type="submit" className="px-4 py-2 text-sm font-bold text-white bg-[#2f7cf6] hover:bg-blue-700 rounded">Create</button>
+                        <button type="button" onClick={() => setShowModal(false)} className="px-4 py-2 text-sm font-bold text-slate-600 hover:bg-slate-100 rounded-lg">Cancel</button>
+                        <button type="submit" className="px-4 py-2 text-sm font-bold text-white bg-[#2f7cf6] hover:bg-blue-700 rounded-lg">Create</button>
                     </div>
                 </form>
             </div>

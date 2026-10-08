@@ -25,7 +25,7 @@ function SortableItem({ item, onDelete, onUpdate, masterItems }) {
 
       {/* Item Dropdown */}
       <select 
-        className="col-span-7 bg-transparent border border-transparent hover:border-slate-300 rounded px-2 py-1 outline-none focus:border-[#2f7cf6] text-sm"
+        className="col-span-7 bg-transparent border border-transparent hover:border-slate-300 rounded-lg px-2 py-1 outline-none focus:border-[#2f7cf6] text-sm"
         value={item.item_id || ''}
         onChange={(e) => onUpdate(item.id, 'item_id', e.target.value)}
       >
@@ -38,7 +38,7 @@ function SortableItem({ item, onDelete, onUpdate, masterItems }) {
       {/* Quantity */}
       <input 
         type="number"
-        className="col-span-2 bg-transparent border border-transparent hover:border-slate-300 rounded px-2 py-1 outline-none focus:border-[#2f7cf6] text-sm"
+        className="col-span-2 bg-transparent border border-transparent hover:border-slate-300 rounded-lg px-2 py-1 outline-none focus:border-[#2f7cf6] text-sm"
         value={item.quantity || 1}
         onChange={(e) => onUpdate(item.id, 'quantity', e.target.value)}
       />
@@ -47,7 +47,7 @@ function SortableItem({ item, onDelete, onUpdate, masterItems }) {
       <div className="col-span-2 flex justify-center">
         <button 
           onClick={() => onDelete(item.id)} 
-          className="text-red-500 hover:text-red-700 hover:bg-red-50 transition-colors p-2 rounded"
+          className="text-red-500 hover:text-red-700 hover:bg-red-50 transition-colors p-2 rounded-lg"
           type="button"
           title="Remove item from kit"
         >
@@ -123,7 +123,7 @@ export default function KitDetails({ params }) {
   }
 
   async function deleteItem(id) {
-    if (!confirm('Remove this item from the kit?')) return;
+    if (!await window.bzConfirm('Remove this item from the kit?')) return;
     setItems(items.filter(i => i.id !== id));
     await supabase.from('kit_items').delete().eq('id', id);
   }
