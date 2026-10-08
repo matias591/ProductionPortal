@@ -144,7 +144,7 @@
       "source_file": "app/page.js",
       "source_location": "L1",
       "id": "app_page_js",
-      "community": 0,
+      "community": 2,
       "norm_label": "page.js"
     },
     {
@@ -153,16 +153,16 @@
       "source_file": "app/page.js",
       "source_location": "L11",
       "id": "app_page_home",
-      "community": 0,
+      "community": 2,
       "norm_label": "home()"
     },
     {
       "label": "DrillDownCard()",
       "file_type": "code",
       "source_file": "app/page.js",
-      "source_location": "L131",
+      "source_location": "L147",
       "id": "app_page_drilldowncard",
-      "community": 0,
+      "community": 2,
       "norm_label": "drilldowncard()"
     },
     {
@@ -207,7 +207,7 @@
       "source_file": "app/context/SidebarContext.js",
       "source_location": "L1",
       "id": "app_context_sidebarcontext_js",
-      "community": 0,
+      "community": 2,
       "norm_label": "sidebarcontext.js"
     },
     {
@@ -216,7 +216,7 @@
       "source_file": "app/context/SidebarContext.js",
       "source_location": "L4",
       "id": "context_sidebarcontext_sidebarcontext",
-      "community": 0,
+      "community": 2,
       "norm_label": "sidebarcontext"
     },
     {
@@ -234,7 +234,7 @@
       "source_file": "app/context/SidebarContext.js",
       "source_location": "L46",
       "id": "context_sidebarcontext_usesidebar",
-      "community": 0,
+      "community": 2,
       "norm_label": "usesidebar()"
     },
     {
@@ -333,7 +333,7 @@
       "source_file": "app/admin/kits/page.js",
       "source_location": "L1",
       "id": "app_admin_kits_page_js",
-      "community": 0,
+      "community": 24,
       "norm_label": "page.js"
     },
     {
@@ -342,7 +342,7 @@
       "source_file": "app/admin/kits/page.js",
       "source_location": "L8",
       "id": "kits_page_kitmanagement",
-      "community": 0,
+      "community": 24,
       "norm_label": "kitmanagement()"
     },
     {
@@ -378,7 +378,7 @@
       "source_file": "app/admin/seapod-templates/page.js",
       "source_location": "L1",
       "id": "app_admin_seapod_templates_page_js",
-      "community": 0,
+      "community": 24,
       "norm_label": "page.js"
     },
     {
@@ -387,7 +387,7 @@
       "source_file": "app/admin/seapod-templates/page.js",
       "source_location": "L12",
       "id": "seapod_templates_page_sortabletemplaterow",
-      "community": 0,
+      "community": 24,
       "norm_label": "sortabletemplaterow()"
     },
     {
@@ -396,7 +396,7 @@
       "source_file": "app/admin/seapod-templates/page.js",
       "source_location": "L41",
       "id": "seapod_templates_page_seapodtemplates",
-      "community": 0,
+      "community": 24,
       "norm_label": "seapodtemplates()"
     },
     {
@@ -416,6 +416,60 @@
       "id": "id_page_seapodtemplatedetails",
       "community": 3,
       "norm_label": "seapodtemplatedetails()"
+    },
+    {
+      "label": "page.js",
+      "file_type": "code",
+      "source_file": "app/admin/sync-issues/page.js",
+      "source_location": "L1",
+      "id": "app_admin_sync_issues_page_js",
+      "community": 0,
+      "norm_label": "page.js"
+    },
+    {
+      "label": "FILTERS",
+      "file_type": "code",
+      "source_file": "app/admin/sync-issues/page.js",
+      "source_location": "L12",
+      "id": "sync_issues_page_filters",
+      "community": 0,
+      "norm_label": "filters"
+    },
+    {
+      "label": "STATUS_STYLE",
+      "file_type": "code",
+      "source_file": "app/admin/sync-issues/page.js",
+      "source_location": "L19",
+      "id": "sync_issues_page_status_style",
+      "community": 0,
+      "norm_label": "status_style"
+    },
+    {
+      "label": "timeAgo()",
+      "file_type": "code",
+      "source_file": "app/admin/sync-issues/page.js",
+      "source_location": "L25",
+      "id": "sync_issues_page_timeago",
+      "community": 0,
+      "norm_label": "timeago()"
+    },
+    {
+      "label": "SyncIssues()",
+      "file_type": "code",
+      "source_file": "app/admin/sync-issues/page.js",
+      "source_location": "L34",
+      "id": "sync_issues_page_syncissues",
+      "community": 0,
+      "norm_label": "syncissues()"
+    },
+    {
+      "label": "FragmentRow()",
+      "file_type": "code",
+      "source_file": "app/admin/sync-issues/page.js",
+      "source_location": "L256",
+      "id": "sync_issues_page_fragmentrow",
+      "community": 0,
+      "norm_label": "fragmentrow()"
     },
     {
       "label": "page.js",
@@ -459,7 +513,7 @@
       "source_file": "app/admin/items/page.js",
       "source_location": "L1",
       "id": "app_admin_items_page_js",
-      "community": 0,
+      "community": 24,
       "norm_label": "page.js"
     },
     {
@@ -468,7 +522,7 @@
       "source_file": "app/admin/items/page.js",
       "source_location": "L8",
       "id": "items_page_itemmanagement",
-      "community": 0,
+      "community": 24,
       "norm_label": "itemmanagement()"
     },
     {
@@ -531,16 +585,16 @@
       "source_file": "app/components/Sidebar.js",
       "source_location": "L1",
       "id": "app_components_sidebar_js",
-      "community": 0,
+      "community": 24,
       "norm_label": "sidebar.js"
     },
     {
       "label": "Sidebar()",
       "file_type": "code",
       "source_file": "app/components/Sidebar.js",
-      "source_location": "L9",
+      "source_location": "L10",
       "id": "components_sidebar_sidebar",
-      "community": 0,
+      "community": 2,
       "norm_label": "sidebar()"
     },
     {
@@ -625,6 +679,51 @@
       "norm_label": "authedfetch()"
     },
     {
+      "label": "syncPlaybook.js",
+      "file_type": "code",
+      "source_file": "app/lib/syncPlaybook.js",
+      "source_location": "L1",
+      "id": "app_lib_syncplaybook_js",
+      "community": 0,
+      "norm_label": "syncplaybook.js"
+    },
+    {
+      "label": "SOURCES",
+      "file_type": "code",
+      "source_file": "app/lib/syncPlaybook.js",
+      "source_location": "L4",
+      "id": "lib_syncplaybook_sources",
+      "community": 0,
+      "norm_label": "sources"
+    },
+    {
+      "label": "CATEGORIES",
+      "file_type": "code",
+      "source_file": "app/lib/syncPlaybook.js",
+      "source_location": "L12",
+      "id": "lib_syncplaybook_categories",
+      "community": 0,
+      "norm_label": "categories"
+    },
+    {
+      "label": "RULES",
+      "file_type": "code",
+      "source_file": "app/lib/syncPlaybook.js",
+      "source_location": "L71",
+      "id": "lib_syncplaybook_rules",
+      "community": 0,
+      "norm_label": "rules"
+    },
+    {
+      "label": "classify()",
+      "file_type": "code",
+      "source_file": "app/lib/syncPlaybook.js",
+      "source_location": "L80",
+      "id": "lib_syncplaybook_classify",
+      "community": 27,
+      "norm_label": "classify()"
+    },
+    {
       "label": "route.js",
       "file_type": "code",
       "source_file": "app/api/trigger-seapod-build/route.js",
@@ -634,19 +733,10 @@
       "norm_label": "route.js"
     },
     {
-      "label": "buildRecord()",
-      "file_type": "code",
-      "source_file": "app/api/trigger-seapod-build/route.js",
-      "source_location": "L5",
-      "id": "trigger_seapod_build_route_buildrecord",
-      "community": 17,
-      "norm_label": "buildrecord()"
-    },
-    {
       "label": "POST()",
       "file_type": "code",
       "source_file": "app/api/trigger-seapod-build/route.js",
-      "source_location": "L27",
+      "source_location": "L5",
       "id": "trigger_seapod_build_route_post",
       "community": 17,
       "norm_label": "post()"
@@ -664,7 +754,7 @@
       "label": "POST()",
       "file_type": "code",
       "source_file": "app/api/seapod-sync-callback/route.js",
-      "source_location": "L4",
+      "source_location": "L5",
       "id": "seapod_sync_callback_route_post",
       "community": 27,
       "norm_label": "post()"
@@ -690,6 +780,60 @@
     {
       "label": "route.js",
       "file_type": "code",
+      "source_file": "app/api/admin/sync-failures/route.js",
+      "source_location": "L1",
+      "id": "app_api_admin_sync_failures_route_js",
+      "community": 17,
+      "norm_label": "route.js"
+    },
+    {
+      "label": "GET()",
+      "file_type": "code",
+      "source_file": "app/api/admin/sync-failures/route.js",
+      "source_location": "L8",
+      "id": "sync_failures_route_get",
+      "community": 17,
+      "norm_label": "get()"
+    },
+    {
+      "label": "route.js",
+      "file_type": "code",
+      "source_file": "app/api/admin/sync-failures/[id]/resolve/route.js",
+      "source_location": "L1",
+      "id": "app_api_admin_sync_failures_id_resolve_route_js",
+      "community": 17,
+      "norm_label": "route.js"
+    },
+    {
+      "label": "POST()",
+      "file_type": "code",
+      "source_file": "app/api/admin/sync-failures/[id]/resolve/route.js",
+      "source_location": "L6",
+      "id": "resolve_route_post",
+      "community": 17,
+      "norm_label": "post()"
+    },
+    {
+      "label": "route.js",
+      "file_type": "code",
+      "source_file": "app/api/admin/sync-failures/[id]/retry/route.js",
+      "source_location": "L1",
+      "id": "app_api_admin_sync_failures_id_retry_route_js",
+      "community": 17,
+      "norm_label": "route.js"
+    },
+    {
+      "label": "POST()",
+      "file_type": "code",
+      "source_file": "app/api/admin/sync-failures/[id]/retry/route.js",
+      "source_location": "L9",
+      "id": "retry_route_post",
+      "community": 17,
+      "norm_label": "post()"
+    },
+    {
+      "label": "route.js",
+      "file_type": "code",
       "source_file": "app/api/admin/delete-user/route.js",
       "source_location": "L1",
       "id": "app_api_admin_delete_user_route_js",
@@ -704,6 +848,69 @@
       "id": "delete_user_route_post",
       "community": 17,
       "norm_label": "post()"
+    },
+    {
+      "label": "syncFailures.js",
+      "file_type": "code",
+      "source_file": "app/api/_lib/syncFailures.js",
+      "source_location": "L1",
+      "id": "app_api_lib_syncfailures_js",
+      "community": 27,
+      "norm_label": "syncfailures.js"
+    },
+    {
+      "label": "db()",
+      "file_type": "code",
+      "source_file": "app/api/_lib/syncFailures.js",
+      "source_location": "L4",
+      "id": "lib_syncfailures_db",
+      "community": 27,
+      "norm_label": "db()"
+    },
+    {
+      "label": "logSyncFailure()",
+      "file_type": "code",
+      "source_file": "app/api/_lib/syncFailures.js",
+      "source_location": "L7",
+      "id": "lib_syncfailures_logsyncfailure",
+      "community": 27,
+      "norm_label": "logsyncfailure()"
+    },
+    {
+      "label": "resolveSyncFailures()",
+      "file_type": "code",
+      "source_file": "app/api/_lib/syncFailures.js",
+      "source_location": "L30",
+      "id": "lib_syncfailures_resolvesyncfailures",
+      "community": 27,
+      "norm_label": "resolvesyncfailures()"
+    },
+    {
+      "label": "seapodBuild.js",
+      "file_type": "code",
+      "source_file": "app/api/_lib/seapodBuild.js",
+      "source_location": "L1",
+      "id": "app_api_lib_seapodbuild_js",
+      "community": 17,
+      "norm_label": "seapodbuild.js"
+    },
+    {
+      "label": "buildRecord()",
+      "file_type": "code",
+      "source_file": "app/api/_lib/seapodBuild.js",
+      "source_location": "L4",
+      "id": "lib_seapodbuild_buildrecord",
+      "community": 17,
+      "norm_label": "buildrecord()"
+    },
+    {
+      "label": "sendSeapodBuild()",
+      "file_type": "code",
+      "source_file": "app/api/_lib/seapodBuild.js",
+      "source_location": "L28",
+      "id": "lib_seapodbuild_sendseapodbuild",
+      "community": 17,
+      "norm_label": "sendseapodbuild()"
     },
     {
       "label": "requireRole.js",
@@ -722,6 +929,51 @@
       "id": "lib_requirerole_requirerole",
       "community": 17,
       "norm_label": "requirerole()"
+    },
+    {
+      "label": "shipping.js",
+      "file_type": "code",
+      "source_file": "app/api/_lib/shipping.js",
+      "source_location": "L1",
+      "id": "app_api_lib_shipping_js",
+      "community": 27,
+      "norm_label": "shipping.js"
+    },
+    {
+      "label": "norm()",
+      "file_type": "code",
+      "source_file": "app/api/_lib/shipping.js",
+      "source_location": "L4",
+      "id": "lib_shipping_norm",
+      "community": 27,
+      "norm_label": "norm()"
+    },
+    {
+      "label": "buildShippingPayloads()",
+      "file_type": "code",
+      "source_file": "app/api/_lib/shipping.js",
+      "source_location": "L7",
+      "id": "lib_shipping_buildshippingpayloads",
+      "community": 17,
+      "norm_label": "buildshippingpayloads()"
+    },
+    {
+      "label": "TARGETS",
+      "file_type": "code",
+      "source_file": "app/api/_lib/shipping.js",
+      "source_location": "L72",
+      "id": "lib_shipping_targets",
+      "community": 27,
+      "norm_label": "targets"
+    },
+    {
+      "label": "sendShippingWebhook()",
+      "file_type": "code",
+      "source_file": "app/api/_lib/shipping.js",
+      "source_location": "L79",
+      "id": "lib_shipping_sendshippingwebhook",
+      "community": 27,
+      "norm_label": "sendshippingwebhook()"
     },
     {
       "label": "route.js",
@@ -754,7 +1006,7 @@
       "label": "POST()",
       "file_type": "code",
       "source_file": "app/api/trigger-shipping/route.js",
-      "source_location": "L5",
+      "source_location": "L6",
       "id": "trigger_shipping_route_post",
       "community": 17,
       "norm_label": "post()"
@@ -765,16 +1017,16 @@
       "source_file": "app/api/check-vessel/route.js",
       "source_location": "L1",
       "id": "app_api_check_vessel_route_js",
-      "community": 17,
+      "community": 27,
       "norm_label": "route.js"
     },
     {
       "label": "POST()",
       "file_type": "code",
       "source_file": "app/api/check-vessel/route.js",
-      "source_location": "L4",
+      "source_location": "L5",
       "id": "check_vessel_route_post",
-      "community": 17,
+      "community": 27,
       "norm_label": "post()"
     },
     {
@@ -783,7 +1035,7 @@
       "source_file": "app/orders/page.js",
       "source_location": "L1",
       "id": "app_orders_page_js",
-      "community": 0,
+      "community": 24,
       "norm_label": "page.js"
     },
     {
@@ -792,7 +1044,7 @@
       "source_file": "app/orders/page.js",
       "source_location": "L9",
       "id": "orders_page_sub_type_options",
-      "community": 0,
+      "community": 24,
       "norm_label": "sub_type_options"
     },
     {
@@ -801,7 +1053,7 @@
       "source_file": "app/orders/page.js",
       "source_location": "L15",
       "id": "orders_page_orderlist",
-      "community": 0,
+      "community": 24,
       "norm_label": "orderlist()"
     },
     {
@@ -931,6 +1183,15 @@
       "norm_label": "deploy on vercel"
     },
     {
+      "label": "buildRecord()",
+      "file_type": "code",
+      "source_file": "app/api/trigger-seapod-build/route.js",
+      "source_location": "L5",
+      "community": 17,
+      "norm_label": "buildrecord()",
+      "id": "trigger_seapod_build_route_buildrecord"
+    },
+    {
       "label": "route.js",
       "file_type": "code",
       "source_file": "app/api/sync/route.js",
@@ -962,7 +1223,7 @@
       "file_type": "code",
       "source_file": "app/page.js",
       "source_location": "L192",
-      "community": 0,
+      "community": 2,
       "norm_label": "metriccard()",
       "id": "app_page_metriccard"
     },
@@ -1216,9 +1477,9 @@
       "source_file": "app/layout.js",
       "source_location": "L4",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "app_layout_js",
-      "target": "app_components_toastprovider_js",
-      "confidence_score": 1.0
+      "target": "app_components_toastprovider_js"
     },
     {
       "relation": "imports_from",
@@ -1227,9 +1488,9 @@
       "source_file": "app/layout.js",
       "source_location": "L5",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "app_layout_js",
-      "target": "app_components_a11yenhancer_js",
-      "confidence_score": 1.0
+      "target": "app_components_a11yenhancer_js"
     },
     {
       "relation": "contains",
@@ -1279,9 +1540,9 @@
       "source_file": "app/page.js",
       "source_location": "L8",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "app_page_js",
-      "target": "app_components_pageskeleton_js",
-      "confidence_score": 1.0
+      "target": "app_components_pageskeleton_js"
     },
     {
       "relation": "imports_from",
@@ -1386,9 +1647,9 @@
       "source_file": "app/order/[id]/page.js",
       "source_location": "L8",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "app_order_id_page_js",
-      "target": "app_components_pageskeleton_js",
-      "confidence_score": 1.0
+      "target": "app_components_pageskeleton_js"
     },
     {
       "relation": "contains",
@@ -1650,6 +1911,133 @@
       "relation": "imports_from",
       "context": "import",
       "confidence": "EXTRACTED",
+      "source_file": "app/admin/sync-issues/page.js",
+      "source_location": "L7",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_admin_sync_issues_page_js",
+      "target": "app_components_sidebar_js"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/admin/sync-issues/page.js",
+      "source_location": "L8",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_admin_sync_issues_page_js",
+      "target": "app_components_pageskeleton_js"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/admin/sync-issues/page.js",
+      "source_location": "L9",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_admin_sync_issues_page_js",
+      "target": "app_lib_authedfetch_js"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/admin/sync-issues/page.js",
+      "source_location": "L9",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_admin_sync_issues_page_js",
+      "target": "lib_authedfetch_authedfetch"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/admin/sync-issues/page.js",
+      "source_location": "L10",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_admin_sync_issues_page_js",
+      "target": "app_lib_syncplaybook_js"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/admin/sync-issues/page.js",
+      "source_location": "L10",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_admin_sync_issues_page_js",
+      "target": "lib_syncplaybook_sources"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/admin/sync-issues/page.js",
+      "source_location": "L10",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_admin_sync_issues_page_js",
+      "target": "lib_syncplaybook_categories"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/admin/sync-issues/page.js",
+      "source_location": "L12",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_admin_sync_issues_page_js",
+      "target": "sync_issues_page_filters"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/admin/sync-issues/page.js",
+      "source_location": "L19",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_admin_sync_issues_page_js",
+      "target": "sync_issues_page_status_style"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/admin/sync-issues/page.js",
+      "source_location": "L25",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_admin_sync_issues_page_js",
+      "target": "sync_issues_page_timeago"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/admin/sync-issues/page.js",
+      "source_location": "L34",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_admin_sync_issues_page_js",
+      "target": "sync_issues_page_syncissues"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/admin/sync-issues/page.js",
+      "source_location": "L256",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_admin_sync_issues_page_js",
+      "target": "sync_issues_page_fragmentrow"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
       "source_file": "app/admin/addresses/page.js",
       "source_location": "L6",
       "weight": 1.0,
@@ -1664,9 +2052,9 @@
       "source_file": "app/admin/addresses/page.js",
       "source_location": "L7",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "app_admin_addresses_page_js",
-      "target": "app_components_pageskeleton_js",
-      "confidence_score": 1.0
+      "target": "app_components_pageskeleton_js"
     },
     {
       "relation": "contains",
@@ -1825,9 +2213,9 @@
       "source_file": "app/seapod-production/[id]/page.js",
       "source_location": "L9",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "app_seapod_production_id_page_js",
-      "target": "app_components_pageskeleton_js",
-      "confidence_score": 1.0
+      "target": "app_components_pageskeleton_js"
     },
     {
       "relation": "contains",
@@ -1845,9 +2233,31 @@
       "source_file": "app/components/ToastProvider.js",
       "source_location": "L10",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "app_components_toastprovider_js",
-      "target": "components_toastprovider_toastprovider",
-      "confidence_score": 1.0
+      "target": "components_toastprovider_toastprovider"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/components/Sidebar.js",
+      "source_location": "L8",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_components_sidebar_js",
+      "target": "app_lib_authedfetch_js"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/components/Sidebar.js",
+      "source_location": "L8",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_components_sidebar_js",
+      "target": "lib_authedfetch_authedfetch"
     },
     {
       "relation": "contains",
@@ -1877,9 +2287,9 @@
       "source_file": "app/travel/page.js",
       "source_location": "L7",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "app_travel_page_js",
-      "target": "app_components_sidebar_js",
-      "confidence_score": 1.0
+      "target": "app_components_sidebar_js"
     },
     {
       "relation": "contains",
@@ -1887,9 +2297,9 @@
       "source_file": "app/components/PageSkeleton.js",
       "source_location": "L2",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "app_components_pageskeleton_js",
-      "target": "components_pageskeleton_pageskeleton",
-      "confidence_score": 1.0
+      "target": "components_pageskeleton_pageskeleton"
     },
     {
       "relation": "contains",
@@ -1897,9 +2307,9 @@
       "source_file": "app/components/A11yEnhancer.js",
       "source_location": "L11",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "app_components_a11yenhancer_js",
-      "target": "components_a11yenhancer_enhance",
-      "confidence_score": 1.0
+      "target": "components_a11yenhancer_enhance"
     },
     {
       "relation": "contains",
@@ -1907,9 +2317,9 @@
       "source_file": "app/components/A11yEnhancer.js",
       "source_location": "L37",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "app_components_a11yenhancer_js",
-      "target": "components_a11yenhancer_a11yenhancer",
-      "confidence_score": 1.0
+      "target": "components_a11yenhancer_a11yenhancer"
     },
     {
       "relation": "contains",
@@ -1917,9 +2327,9 @@
       "source_file": "app/components/AuthShell.js",
       "source_location": "L4",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "app_components_authshell_js",
-      "target": "components_authshell_authshell",
-      "confidence_score": 1.0
+      "target": "components_authshell_authshell"
     },
     {
       "relation": "imports_from",
@@ -1928,9 +2338,9 @@
       "source_file": "app/login/page.js",
       "source_location": "L6",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "app_login_page_js",
-      "target": "app_components_authshell_js",
-      "confidence_score": 1.0
+      "target": "app_components_authshell_js"
     },
     {
       "relation": "contains",
@@ -1941,6 +2351,79 @@
       "confidence_score": 1.0,
       "source": "app_lib_authedfetch_js",
       "target": "lib_authedfetch_authedfetch"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/lib/syncPlaybook.js",
+      "source_location": "L4",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_lib_syncplaybook_js",
+      "target": "lib_syncplaybook_sources"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/lib/syncPlaybook.js",
+      "source_location": "L12",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_lib_syncplaybook_js",
+      "target": "lib_syncplaybook_categories"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/lib/syncPlaybook.js",
+      "source_location": "L71",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_lib_syncplaybook_js",
+      "target": "lib_syncplaybook_rules"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/lib/syncPlaybook.js",
+      "source_location": "L80",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_lib_syncplaybook_js",
+      "target": "lib_syncplaybook_classify"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/api/_lib/syncFailures.js",
+      "source_location": "L2",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_api_lib_syncfailures_js",
+      "target": "app_lib_syncplaybook_js"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/api/_lib/syncFailures.js",
+      "source_location": "L2",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_api_lib_syncfailures_js",
+      "target": "lib_syncplaybook_classify"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app/api/_lib/syncFailures.js",
+      "source_location": "L11",
+      "weight": 1.0,
+      "source": "lib_syncfailures_logsyncfailure",
+      "target": "lib_syncplaybook_classify"
     },
     {
       "relation": "imports_from",
@@ -1965,14 +2448,26 @@
       "target": "lib_requirerole_requirerole"
     },
     {
-      "relation": "contains",
+      "relation": "imports_from",
+      "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "app/api/trigger-seapod-build/route.js",
-      "source_location": "L4",
+      "source_location": "L2",
       "weight": 1.0,
       "confidence_score": 1.0,
       "source": "app_api_trigger_seapod_build_route_js",
-      "target": "trigger_seapod_build_route_buildrecord"
+      "target": "app_api_lib_seapodbuild_js"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/api/trigger-seapod-build/route.js",
+      "source_location": "L2",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_api_trigger_seapod_build_route_js",
+      "target": "lib_seapodbuild_sendseapodbuild"
     },
     {
       "relation": "contains",
@@ -1983,6 +2478,16 @@
       "confidence_score": 1.0,
       "source": "app_api_trigger_seapod_build_route_js",
       "target": "trigger_seapod_build_route_post"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/api/trigger-seapod-build/route.js",
+      "source_location": "L4",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_api_trigger_seapod_build_route_js",
+      "target": "trigger_seapod_build_route_buildrecord"
     },
     {
       "relation": "calls",
@@ -1996,6 +2501,50 @@
       "target": "lib_requirerole_requirerole"
     },
     {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app/api/trigger-seapod-build/route.js",
+      "source_location": "L15",
+      "weight": 1.0,
+      "source": "trigger_seapod_build_route_post",
+      "target": "lib_seapodbuild_sendseapodbuild"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/api/seapod-sync-callback/route.js",
+      "source_location": "L3",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_api_seapod_sync_callback_route_js",
+      "target": "app_api_lib_syncfailures_js"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/api/seapod-sync-callback/route.js",
+      "source_location": "L3",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_api_seapod_sync_callback_route_js",
+      "target": "lib_syncfailures_logsyncfailure"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/api/seapod-sync-callback/route.js",
+      "source_location": "L3",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_api_seapod_sync_callback_route_js",
+      "target": "lib_syncfailures_resolvesyncfailures"
+    },
+    {
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "app/api/seapod-sync-callback/route.js",
@@ -2004,6 +2553,28 @@
       "confidence_score": 1.0,
       "source": "app_api_seapod_sync_callback_route_js",
       "target": "seapod_sync_callback_route_post"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app/api/seapod-sync-callback/route.js",
+      "source_location": "L37",
+      "weight": 1.0,
+      "source": "seapod_sync_callback_route_post",
+      "target": "lib_syncfailures_resolvesyncfailures"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app/api/seapod-sync-callback/route.js",
+      "source_location": "L39",
+      "weight": 1.0,
+      "source": "seapod_sync_callback_route_post",
+      "target": "lib_syncfailures_logsyncfailure"
     },
     {
       "relation": "imports_from",
@@ -2052,6 +2623,223 @@
       "relation": "imports_from",
       "context": "import",
       "confidence": "EXTRACTED",
+      "source_file": "app/api/admin/sync-failures/route.js",
+      "source_location": "L1",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_api_admin_sync_failures_route_js",
+      "target": "app_api_lib_requirerole_js"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/api/admin/sync-failures/route.js",
+      "source_location": "L1",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_api_admin_sync_failures_route_js",
+      "target": "lib_requirerole_requirerole"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/api/admin/sync-failures/route.js",
+      "source_location": "L8",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_api_admin_sync_failures_route_js",
+      "target": "sync_failures_route_get"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app/api/admin/sync-failures/route.js",
+      "source_location": "L9",
+      "weight": 1.0,
+      "source": "sync_failures_route_get",
+      "target": "lib_requirerole_requirerole"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/api/admin/sync-failures/[id]/resolve/route.js",
+      "source_location": "L1",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_api_admin_sync_failures_id_resolve_route_js",
+      "target": "app_api_lib_requirerole_js"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/api/admin/sync-failures/[id]/resolve/route.js",
+      "source_location": "L1",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_api_admin_sync_failures_id_resolve_route_js",
+      "target": "lib_requirerole_requirerole"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/api/admin/sync-failures/[id]/resolve/route.js",
+      "source_location": "L6",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_api_admin_sync_failures_id_resolve_route_js",
+      "target": "resolve_route_post"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app/api/admin/sync-failures/[id]/resolve/route.js",
+      "source_location": "L7",
+      "weight": 1.0,
+      "source": "resolve_route_post",
+      "target": "lib_requirerole_requirerole"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/api/admin/sync-failures/[id]/retry/route.js",
+      "source_location": "L1",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_api_admin_sync_failures_id_retry_route_js",
+      "target": "app_api_lib_requirerole_js"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/api/admin/sync-failures/[id]/retry/route.js",
+      "source_location": "L1",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_api_admin_sync_failures_id_retry_route_js",
+      "target": "lib_requirerole_requirerole"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/api/admin/sync-failures/[id]/retry/route.js",
+      "source_location": "L2",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_api_admin_sync_failures_id_retry_route_js",
+      "target": "app_api_lib_seapodbuild_js"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/api/admin/sync-failures/[id]/retry/route.js",
+      "source_location": "L2",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_api_admin_sync_failures_id_retry_route_js",
+      "target": "lib_seapodbuild_sendseapodbuild"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/api/admin/sync-failures/[id]/retry/route.js",
+      "source_location": "L3",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_api_admin_sync_failures_id_retry_route_js",
+      "target": "app_api_lib_shipping_js"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/api/admin/sync-failures/[id]/retry/route.js",
+      "source_location": "L3",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_api_admin_sync_failures_id_retry_route_js",
+      "target": "lib_shipping_buildshippingpayloads"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/api/admin/sync-failures/[id]/retry/route.js",
+      "source_location": "L3",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_api_admin_sync_failures_id_retry_route_js",
+      "target": "lib_shipping_sendshippingwebhook"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/api/admin/sync-failures/[id]/retry/route.js",
+      "source_location": "L9",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_api_admin_sync_failures_id_retry_route_js",
+      "target": "retry_route_post"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app/api/admin/sync-failures/[id]/retry/route.js",
+      "source_location": "L10",
+      "weight": 1.0,
+      "source": "retry_route_post",
+      "target": "lib_requirerole_requirerole"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app/api/admin/sync-failures/[id]/retry/route.js",
+      "source_location": "L25",
+      "weight": 1.0,
+      "source": "retry_route_post",
+      "target": "lib_seapodbuild_sendseapodbuild"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app/api/admin/sync-failures/[id]/retry/route.js",
+      "source_location": "L31",
+      "weight": 1.0,
+      "source": "retry_route_post",
+      "target": "lib_shipping_buildshippingpayloads"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app/api/admin/sync-failures/[id]/retry/route.js",
+      "source_location": "L33",
+      "weight": 1.0,
+      "source": "retry_route_post",
+      "target": "lib_shipping_sendshippingwebhook"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
       "source_file": "app/api/admin/delete-user/route.js",
       "source_location": "L1",
       "weight": 1.0,
@@ -2090,6 +2878,221 @@
       "weight": 1.0,
       "source": "delete_user_route_post",
       "target": "lib_requirerole_requirerole"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/api/_lib/syncFailures.js",
+      "source_location": "L4",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_api_lib_syncfailures_js",
+      "target": "lib_syncfailures_db"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/api/_lib/syncFailures.js",
+      "source_location": "L7",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_api_lib_syncfailures_js",
+      "target": "lib_syncfailures_logsyncfailure"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/api/_lib/syncFailures.js",
+      "source_location": "L30",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_api_lib_syncfailures_js",
+      "target": "lib_syncfailures_resolvesyncfailures"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/api/_lib/seapodBuild.js",
+      "source_location": "L2",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_api_lib_seapodbuild_js",
+      "target": "app_api_lib_syncfailures_js"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/api/_lib/shipping.js",
+      "source_location": "L2",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_api_lib_shipping_js",
+      "target": "app_api_lib_syncfailures_js"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/api/check-vessel/route.js",
+      "source_location": "L3",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_api_check_vessel_route_js",
+      "target": "app_api_lib_syncfailures_js"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "app/api/_lib/syncFailures.js",
+      "source_location": "L9",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "lib_syncfailures_logsyncfailure",
+      "target": "lib_syncfailures_db"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "app/api/_lib/syncFailures.js",
+      "source_location": "L32",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "lib_syncfailures_resolvesyncfailures",
+      "target": "lib_syncfailures_db"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/api/_lib/seapodBuild.js",
+      "source_location": "L2",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_api_lib_seapodbuild_js",
+      "target": "lib_syncfailures_logsyncfailure"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/api/_lib/shipping.js",
+      "source_location": "L2",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_api_lib_shipping_js",
+      "target": "lib_syncfailures_logsyncfailure"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/api/check-vessel/route.js",
+      "source_location": "L3",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_api_check_vessel_route_js",
+      "target": "lib_syncfailures_logsyncfailure"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app/api/_lib/seapodBuild.js",
+      "source_location": "L47",
+      "weight": 1.0,
+      "source": "lib_seapodbuild_sendseapodbuild",
+      "target": "lib_syncfailures_logsyncfailure"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app/api/_lib/shipping.js",
+      "source_location": "L93",
+      "weight": 1.0,
+      "source": "lib_shipping_sendshippingwebhook",
+      "target": "lib_syncfailures_logsyncfailure"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app/api/check-vessel/route.js",
+      "source_location": "L34",
+      "weight": 1.0,
+      "source": "check_vessel_route_post",
+      "target": "lib_syncfailures_logsyncfailure"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/api/_lib/shipping.js",
+      "source_location": "L2",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_api_lib_shipping_js",
+      "target": "lib_syncfailures_resolvesyncfailures"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/api/check-vessel/route.js",
+      "source_location": "L3",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_api_check_vessel_route_js",
+      "target": "lib_syncfailures_resolvesyncfailures"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app/api/_lib/shipping.js",
+      "source_location": "L89",
+      "weight": 1.0,
+      "source": "lib_shipping_sendshippingwebhook",
+      "target": "lib_syncfailures_resolvesyncfailures"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app/api/check-vessel/route.js",
+      "source_location": "L37",
+      "weight": 1.0,
+      "source": "check_vessel_route_post",
+      "target": "lib_syncfailures_resolvesyncfailures"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/api/_lib/seapodBuild.js",
+      "source_location": "L4",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_api_lib_seapodbuild_js",
+      "target": "lib_seapodbuild_buildrecord"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/api/_lib/seapodBuild.js",
+      "source_location": "L28",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_api_lib_seapodbuild_js",
+      "target": "lib_seapodbuild_sendseapodbuild"
     },
     {
       "relation": "contains",
@@ -2166,6 +3169,101 @@
       "weight": 1.0,
       "source": "check_vessel_route_post",
       "target": "lib_requirerole_requirerole"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/api/_lib/shipping.js",
+      "source_location": "L4",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_api_lib_shipping_js",
+      "target": "lib_shipping_norm"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/api/_lib/shipping.js",
+      "source_location": "L7",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_api_lib_shipping_js",
+      "target": "lib_shipping_buildshippingpayloads"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/api/_lib/shipping.js",
+      "source_location": "L72",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_api_lib_shipping_js",
+      "target": "lib_shipping_targets"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/api/_lib/shipping.js",
+      "source_location": "L79",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_api_lib_shipping_js",
+      "target": "lib_shipping_sendshippingwebhook"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/api/trigger-shipping/route.js",
+      "source_location": "L2",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_api_trigger_shipping_route_js",
+      "target": "app_api_lib_shipping_js"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/api/trigger-shipping/route.js",
+      "source_location": "L2",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_api_trigger_shipping_route_js",
+      "target": "lib_shipping_buildshippingpayloads"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app/api/trigger-shipping/route.js",
+      "source_location": "L18",
+      "weight": 1.0,
+      "source": "trigger_shipping_route_post",
+      "target": "lib_shipping_buildshippingpayloads"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/api/trigger-shipping/route.js",
+      "source_location": "L2",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_api_trigger_shipping_route_js",
+      "target": "lib_shipping_sendshippingwebhook"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app/api/trigger-shipping/route.js",
+      "source_location": "L22",
+      "weight": 1.0,
+      "source": "trigger_shipping_route_post",
+      "target": "lib_shipping_sendshippingwebhook"
     },
     {
       "relation": "contains",
@@ -2489,5 +3587,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "85bcf084338097f6c4699347345663010a6e0244"
+  "built_at_commit": "7422334fb104750f43621402eaee2c320f542b39"
 }
