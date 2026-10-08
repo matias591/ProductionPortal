@@ -112,3 +112,8 @@ tbody tr:nth-child(n+10) { animation-delay: 270ms; }
 
 /* Disabled controls fade rather than snap */
 button:disabled { transition: opacity 150ms var(--bz-ease); cursor: not-allowed; }
+
+/* ---- Layout safety: flex children next to the sidebar must be allowed to shrink,
+   otherwise a wide table stretches the whole page past the viewport ---- */
+main, .flex-1.ml-64, .flex-1.ml-20 { min-width: 0; }
+button { white-space: nowrap; }
