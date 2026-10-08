@@ -196,14 +196,19 @@ export default function TravelManifest() {
   }
 
   function handleExport() {
-    const header = ['Traveler', 'From', 'To', 'From Date', 'To Date', 'Airline', 'Flight', 'Departure Airport', 'Departure (Israel time)', 'Arrival Airport', 'Arrival (Israel time)'];
-    // One row per flight journey; trips with no booked flights keep a single row with blank flight columns
+    const header = ['Traveler', 'From', 'To', 'From Date', 'To Date', 'Airline', 'Flight', 'Departure Airport', 'Departure (Israel time)', 'Arrival Airport', 'Arrival (Israel time)', 'Source'];
+    // One row per flight journey. Trips with no flight booking in Mesh get an outbound and a return row
+    // dated from the trip request (date only, no time/airline/flight number).
     const data = exportTrips.flatMap(t => {
       const base = { Traveler: t.traveler, From: t.origin || '', To: t.destination || '', 'From Date': t.from_date, 'To Date': t.to_date };
       const journeys = toJourneys(t.flights);
-      if (!journeys.length) return [base];
+      if (!journeys.length) return [
+        { ...base, 'Departure Airport': t.origin || '', 'Departure (Israel time)': t.from_date, 'Arrival Airport': t.destination || '', 'Arrival (Israel time)': t.from_date, Source: 'Trip dates (no flight booked in Mesh)' },
+        { ...base, 'Departure Airport': t.destination || '', 'Departure (Israel time)': t.to_date, 'Arrival Airport': t.origin || '', 'Arrival (Israel time)': t.to_date, Source: 'Trip dates (no flight booked in Mesh)' },
+      ];
       return journeys.map(j => ({
         ...base,
+        Source: 'Flight booking',
         Airline: [...new Set(j.map(f => f.airline).filter(Boolean))].join(' / '),
         Flight: j.map(f => `${f.airline || ''}${f.flight_number || ''}`).join(' + '),
         'Departure Airport': j[0].from || '',
@@ -213,7 +218,7 @@ export default function TravelManifest() {
       }));
     });
     const ws = XLSX.utils.json_to_sheet(data, { header });
-    ws['!cols'] = [{ wch: 28 }, { wch: 28 }, { wch: 28 }, { wch: 12 }, { wch: 12 }, { wch: 10 }, { wch: 16 }, { wch: 10 }, { wch: 22 }, { wch: 10 }, { wch: 22 }];
+    ws['!cols'] = [{ wch: 28 }, { wch: 28 }, { wch: 28 }, { wch: 12 }, { wch: 12 }, { wch: 10 }, { wch: 16 }, { wch: 10 }, { wch: 22 }, { wch: 10 }, { wch: 22 }, { wch: 38 }];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Travel');
     XLSX.writeFile(wb, `Travel_${exportFrom}_to_${exportTo}.xlsx`);
