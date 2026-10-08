@@ -31,11 +31,23 @@ export default function Home() {
   }
 
   async function fetchMetrics() {
-    const { data: seapods } = await supabase.from('seapod_production').select('status, completed_at, created_at, order_number, template_name');
-    const { data: orders } = await supabase.from('orders').select('status, shipped_at, type, sub_type, order_number');
+    const { data: seapods } = await supabase.from('seapod_production').select('serial_number, status, completed_at, created_at, order_number, template_name');
+    const { data: orders } = await supabase.from('orders').select('status, shipped_at, type, sub_type, order_number, order_items(piece, serial)');
     if (!seapods || !orders) return;
 
-    const completedList = seapods.filter(s => s.status === 'Completed');
+    // Seapods are only linked in seapod_production once the order reaches In Box/Ready/Shipped,
+    // so seapods typed into a New/In preparation order's line items are claimed from the order side.
+    const seapodBySerial = {};
+    seapods.forEach(s => { if (s.serial_number) seapodBySerial[String(s.serial_number).trim()] = s; });
+    const claimedSerials = new Set();
+    const lineItemInProgress = [];
+    orders.filter(o => o.status === 'New' || o.status === 'In preparation').forEach(o => {
+      (o.order_items || []).filter(i => i.piece && i.piece.toLowerCase().includes('seapod') && i.serial && i.serial.trim() && i.serial !== '-').forEach(i => {
+        const sp = seapodBySerial[i.serial.trim()];
+        if (sp && !claimedSerials.has(String(sp.serial_number).trim())) { claimedSerials.add(String(sp.serial_number).trim()); lineItemInProgress.push(sp); }
+      });
+    });
+    const completedList = seapods.filter(s => s.status === 'Completed' && !claimedSerials.has(String(s.serial_number).trim()));
     const completedSeapods = completedList.length;
     const inProgressSeapods = seapods.filter(s => s.status === 'In Progress').length;
     const inProgressList = orders.filter(o => o.status !== 'Shipped' && o.status !== 'Ready for Pickup');
@@ -51,8 +63,9 @@ export default function Home() {
       const orderStatus = s.order_number ? orderStatusByNumber[String(s.order_number)] : null;
       if (!orderStatus || orderStatus === 'Shipped') return;
       if (orderStatus === 'Ready for Pickup') assignedUnshippedList.push(s);
-      else assignedInProgressList.push(s);
+      else if (!claimedSerials.has(String(s.serial_number).trim())) assignedInProgressList.push(s);
     });
+    assignedInProgressList.push(...lineItemInProgress);
     const assignedUnshippedCount = assignedUnshippedList.length;
 
     const calcBreakdown = (list) => { const counts = {}; list.forEach(o => { const t = o.type || 'Unknown'; const key = o.sub_type ? `${t} - ${o.sub_type}` : t; counts[key] = (counts[key] || 0) + 1; }); return counts; };
