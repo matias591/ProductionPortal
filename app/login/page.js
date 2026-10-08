@@ -60,7 +60,6 @@ export default function Login() {
           </svg>
           Continue with Google
         </button>
-        <p className="text-center text-[12px] text-slate-500 -mt-4">@orca-ai.io accounts only</p>
 
         <div className="flex items-center gap-3">
           <div className="h-px bg-slate-200 flex-1" />
