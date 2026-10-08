@@ -63,7 +63,6 @@ export default function SeapodBuildDetails({ params }) {
 
   async function handleStatusChange(newStatus) {
     if (!isAdmin && (newStatus === 'Allocated' || seapod.status === 'Allocated')) { alert("Permission Denied: Only Admins can change the Allocated status."); return; }
-    if (newStatus === 'Ready for ATP' && seapod.status !== 'Completed') { alert("⚠️ A seapod must be 'Completed' before it can be marked 'Ready for ATP'."); return; }
     if (newStatus === 'Completed') {
         const missing = items.some(i => !i.serial || i.serial.trim() === '');
         if (missing) { alert("⚠️ Cannot complete: All Item Serial Numbers must be filled."); return; }
@@ -182,7 +181,6 @@ export default function SeapodBuildDetails({ params }) {
                         >
                             <option>In Progress</option>
                             <option>Completed</option>
-                            <option disabled={seapod.status !== 'Completed' && seapod.status !== 'Ready for ATP'}>Ready for ATP</option>
                             <option disabled>Assigned to Order</option>
                             {(isAdmin || seapod.status === 'Allocated') && <option>Allocated</option>}
                         </select>

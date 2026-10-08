@@ -76,11 +76,27 @@ export default function SeapodList() {
         }
     }
 
-    const { data: newSeapod, error } = await supabase.from('seapod_production').insert([{
-        serial_number: serialNumber, template_name: tpl.name, seapod_version: tpl.seapod_version, hw_version: tpl.hw_version, sw_version: tpl.sw_version,
-        assembly_item_id: tpl.assembly_item_id, bom_id: tpl.bom_id, bom_revision_id: tpl.bom_revision_id, status: 'In Progress',
-        created_by: userEmail
-    }]).select().single();
+    const seapodFields = {
+        template_name: tpl.name.trim(), seapod_version: tpl.seapod_version, hw_version: tpl.hw_version, sw_version: tpl.sw_version,
+        assembly_item_id: tpl.assembly_item_id, bom_id: tpl.bom_id, bom_revision_id: tpl.bom_revision_id, status: 'In Progress'
+    };
+    let newSeapod, error;
+    // serial_number is UNIQUE: a refurbished template on a taken serial re-opens that unit instead of inserting a duplicate
+    const { data: takenSeapod } = isRefurbishedTemplate
+        ? await supabase.from('seapod_production').select('*').eq('serial_number', serialNumber).maybeSingle()
+        : { data: null };
+    if (takenSeapod) {
+        if (takenSeapod.status === 'Allocated' || takenSeapod.status === 'Assigned to Order') {
+            alert(`Serial "${serialNumber}" is currently ${takenSeapod.status}${takenSeapod.order_number ? ' on order ' + takenSeapod.order_number : ''}. Unassign it first before refurbishing.`);
+            return;
+        }
+        const ok = await window.bzConfirm(`Serial "${serialNumber}" already exists (${takenSeapod.template_name.trim()}, ${takenSeapod.status}).\n\nRe-open it as a refurbished unit? Its component list will be rebuilt from the template.`, { confirmLabel: 'Yes, refurbish', cancelLabel: 'Cancel' });
+        if (!ok) return;
+        await supabase.from('seapod_items').delete().eq('seapod_id', takenSeapod.id);
+        ({ data: newSeapod, error } = await supabase.from('seapod_production').update({ ...seapodFields, completed_at: null, synced_to_netsuite: false, netsuite_synced_at: null, last_sync_error: null, order_number: null }).eq('id', takenSeapod.id).select().single());
+    } else {
+        ({ data: newSeapod, error } = await supabase.from('seapod_production').insert([{ serial_number: serialNumber, ...seapodFields, created_by: userEmail }]).select().single());
+    }
 
     if (error) { alert("Error: " + error.message); return; }
 
@@ -100,10 +116,10 @@ export default function SeapodList() {
     router.push(`/seapod-production/${newSeapod.id}`);
   }
 
-  const unsyncedSeapods = seapods.filter(s => ['Completed', 'Ready for ATP', 'Assigned to Order'].includes(s.status) && !s.synced_to_netsuite);
+  const unsyncedSeapods = seapods.filter(s => ['Completed', 'Assigned to Order'].includes(s.status) && !s.synced_to_netsuite);
 
   async function pushUnsyncedToNS() {
-    if (unsyncedSeapods.length === 0) { alert("Nothing to push — all Completed / Ready for ATP / Assigned to Order seapods are already synced to NetSuite."); return; }
+    if (unsyncedSeapods.length === 0) { alert("Nothing to push — all Completed / Assigned to Order seapods are already synced to NetSuite."); return; }
     if (!await window.bzConfirm(`Push ${unsyncedSeapods.length} seapod(s) to NetSuite?\n\n${unsyncedSeapods.map(s => s.serial_number).join(', ')}`)) return;
 
     setPushing(true);
@@ -135,7 +151,7 @@ export default function SeapodList() {
     <div className="flex min-h-screen bg-[#f5f7fb] font-sans">
       <Sidebar />
       <main className="flex-1 ml-64 p-8">
-        <div className="flex justify-between items-center mb-6"><h1 className="text-3xl font-bold text-slate-900">Seapod Production</h1><div className="flex gap-2"><button onClick={exportList} className="px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-lg font-bold shadow-sm flex items-center gap-2 hover:bg-slate-50"><Download size={16}/> Export List</button><button onClick={pushUnsyncedToNS} disabled={pushing} className="px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-lg font-bold shadow-sm flex items-center gap-2 hover:bg-slate-50 disabled:opacity-50"><UploadCloud size={16}/> Push to NS{unsyncedSeapods.length > 0 && ` (${unsyncedSeapods.length})`}</button><button onClick={() => setShowModal(true)} className="px-4 py-2 bg-[#2f7cf6] text-white rounded-lg font-bold shadow flex items-center gap-2"><Plus size={16}/> Start Build</button></div></div>
+        <div className="flex justify-between items-center mb-6"><h1 className="text-3xl font-bold text-slate-900">Production</h1><div className="flex gap-2"><button onClick={exportList} className="px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-lg font-bold shadow-sm flex items-center gap-2 hover:bg-slate-50"><Download size={16}/> Export List</button><button onClick={pushUnsyncedToNS} disabled={pushing} className="px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-lg font-bold shadow-sm flex items-center gap-2 hover:bg-slate-50 disabled:opacity-50"><UploadCloud size={16}/> Push to NS{unsyncedSeapods.length > 0 && ` (${unsyncedSeapods.length})`}</button><button onClick={() => setShowModal(true)} className="px-4 py-2 bg-[#2f7cf6] text-white rounded-lg font-bold shadow flex items-center gap-2"><Plus size={16}/> Start Build</button></div></div>
         <div className="bg-white p-4 rounded-lg shadow-sm border border-slate-200 mb-6"><div className="relative max-w-md"><Search className="absolute left-3 top-2.5 text-slate-500" size={18}/><input className="w-full pl-10 pr-4 py-2 border rounded-lg outline-none focus:border-[#2f7cf6]" placeholder="Search Serial Number..." onChange={e => setSearchTerm(e.target.value)} /></div></div>
         <div className="bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden">
             <table className="w-full text-left">
@@ -162,7 +178,7 @@ export default function SeapodList() {
                                 {s.created_by && <div className="flex items-center gap-1 mt-1 text-[11px]"><User size={10}/> {s.created_by}</div>}
                             </td>
 
-                            <td className="px-6 py-4"><div className="flex flex-col items-start gap-1.5"><span className={`px-2 py-1 rounded-lg text-xs font-bold border ${s.status === 'Completed' ? 'bg-green-100 text-green-700 border-green-200' : s.status === 'Assigned to Order' ? 'bg-purple-100 text-purple-700 border-purple-200' : s.status === 'Allocated' ? 'bg-amber-100 text-amber-700 border-amber-200' : s.status === 'Ready for ATP' ? 'bg-sky-100 text-sky-700 border-sky-200' : 'bg-slate-100 text-slate-600'}`}>{s.status}</span>{s.order_number && (<span className="text-[11px] font-bold text-slate-500 flex items-center gap-1"><Box size={10} /> Order #{s.order_number}</span>)}</div></td>
+                            <td className="px-6 py-4"><div className="flex flex-col items-start gap-1.5"><span className={`px-2 py-1 rounded-lg text-xs font-bold border ${s.status === 'Completed' ? 'bg-green-100 text-green-700 border-green-200' : s.status === 'Assigned to Order' ? 'bg-purple-100 text-purple-700 border-purple-200' : s.status === 'Allocated' ? 'bg-amber-100 text-amber-700 border-amber-200' : 'bg-slate-100 text-slate-600'}`}>{s.status}</span>{s.order_number && (<span className="text-[11px] font-bold text-slate-500 flex items-center gap-1"><Box size={10} /> Order #{s.order_number}</span>)}</div></td>
                             <td className="px-6 py-4 text-right flex items-center justify-end gap-3"><ChevronRight className="text-slate-500" size={18}/>{isAdmin && (<button onClick={(e) => handleDelete(e, s.id)} className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"><Trash2 size={16}/></button>)}</td>
                         </tr>
                     ))}

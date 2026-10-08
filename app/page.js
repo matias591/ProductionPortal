@@ -11,7 +11,7 @@ import { useSidebar } from './context/SidebarContext';
 export default function Home() {
   const { isCollapsed } = useSidebar();
   
-  const [stats, setStats] = useState({ completedSeapods: 0, readyForAtpSeapods: 0, inProgressSeapods: 0, assignedUnshippedSeapods: 0, inProgressOrders: 0, readyOrders: 0, shippedOrdersCount: 0, builtSeapodsCount: 0, breakdownInProgress: {}, breakdownReady: {}, breakdownShipped: {}, breakdownAvailable: {}, breakdownAtp: {}, breakdownAssigned: {} });
+  const [stats, setStats] = useState({ completedSeapods: 0, inProgressAssignedSeapods: 0, inProgressSeapods: 0, assignedUnshippedSeapods: 0, inProgressOrders: 0, readyOrders: 0, shippedOrdersCount: 0, builtSeapodsCount: 0, breakdownInProgress: {}, breakdownReady: {}, breakdownShipped: {}, breakdownAvailable: {}, breakdownInProgressAssigned: {}, breakdownAssigned: {} });
   const [chartData, setChartData] = useState([]);
   const [timeFilter, setTimeFilter] = useState('year'); 
   const [loading, setLoading] = useState(true);
@@ -37,44 +37,60 @@ export default function Home() {
 
     const completedList = seapods.filter(s => s.status === 'Completed');
     const completedSeapods = completedList.length;
-    const atpList = seapods.filter(s => s.status === 'Ready for ATP');
     const inProgressSeapods = seapods.filter(s => s.status === 'In Progress').length;
     const inProgressList = orders.filter(o => o.status !== 'Shipped' && o.status !== 'Ready for Pickup');
     const readyList = orders.filter(o => o.status === 'Ready for Pickup');
     const shippedList = orders.filter(o => o.status === 'Shipped');
 
-    const activeOrderNumbers = orders.filter(o => o.status !== 'Shipped').map(o => String(o.order_number));
-    const assignedUnshippedList = seapods.filter(s => s.status === 'Assigned to Order' && s.order_number && activeOrderNumbers.includes(String(s.order_number)));
+    const orderStatusByNumber = {};
+    orders.forEach(o => { orderStatusByNumber[String(o.order_number)] = o.status; });
+    const assignedStatuses = ['Assigned to Order', 'Allocated'];
+    const assignedInProgressList = [];
+    const assignedUnshippedList = [];
+    seapods.filter(s => assignedStatuses.includes(s.status)).forEach(s => {
+      const orderStatus = s.order_number ? orderStatusByNumber[String(s.order_number)] : null;
+      if (orderStatus === 'Shipped') return;
+      if (orderStatus === 'Ready for Pickup') assignedUnshippedList.push(s);
+      else assignedInProgressList.push(s);
+    });
     const assignedUnshippedCount = assignedUnshippedList.length;
 
     const calcBreakdown = (list) => { const counts = {}; list.forEach(o => { const t = o.type || 'Unknown'; const key = o.sub_type ? `${t} - ${o.sub_type}` : t; counts[key] = (counts[key] || 0) + 1; }); return counts; };
-    const calcSeapodBreakdown = (list) => { const counts = {}; list.forEach(s => { const key = s.template_name || 'Unknown'; counts[key] = (counts[key] || 0) + 1; }); return counts; };
+    const calcSeapodBreakdown = (list) => { const counts = {}; list.forEach(s => { const key = (s.template_name || 'Unknown').trim(); counts[key] = (counts[key] || 0) + 1; }); return counts; };
 
     const now = new Date();
     let startDate = new Date();
-    if (timeFilter === 'year') startDate.setFullYear(now.getFullYear(), 0, 1);
-    if (timeFilter === 'quarter') startDate.setMonth(now.getMonth() - 3);
-    if (timeFilter === 'month') startDate.setMonth(now.getMonth(), 1);
-    if (timeFilter === 'week') startDate.setDate(now.getDate() - 7);
+    if (timeFilter === 'year') startDate = new Date(now.getFullYear(), 0, 1);
+    if (timeFilter === 'quarter') startDate = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1);
+    if (timeFilter === 'month') startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+    if (timeFilter === 'week') startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6);
 
     const relevantSeapods = seapods.filter(s => s.completed_at && new Date(s.completed_at) >= startDate);
     const relevantOrders = orders.filter(o => o.shipped_at && new Date(o.shipped_at) >= startDate);
 
-    setStats({ completedSeapods, readyForAtpSeapods: atpList.length, inProgressSeapods, assignedUnshippedSeapods: assignedUnshippedCount, inProgressOrders: inProgressList.length, readyOrders: readyList.length, shippedOrdersCount: shippedList.length, builtSeapodsCount: relevantSeapods.length, breakdownInProgress: calcBreakdown(inProgressList), breakdownReady: calcBreakdown(readyList), breakdownShipped: calcBreakdown(shippedList), breakdownAvailable: calcSeapodBreakdown(completedList), breakdownAtp: calcSeapodBreakdown(atpList), breakdownAssigned: calcSeapodBreakdown(assignedUnshippedList) });
+    setStats({ completedSeapods, inProgressAssignedSeapods: assignedInProgressList.length, inProgressSeapods, assignedUnshippedSeapods: assignedUnshippedCount, inProgressOrders: inProgressList.length, readyOrders: readyList.length, shippedOrdersCount: shippedList.length, builtSeapodsCount: relevantSeapods.length, breakdownInProgress: calcBreakdown(inProgressList), breakdownReady: calcBreakdown(readyList), breakdownShipped: calcBreakdown(shippedList), breakdownAvailable: calcSeapodBreakdown(completedList), breakdownInProgressAssigned: calcSeapodBreakdown(assignedInProgressList), breakdownAssigned: calcSeapodBreakdown(assignedUnshippedList) });
     setChartData(processChartData(relevantSeapods, relevantOrders, timeFilter));
     setLastUpdated(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
     setLoading(false);
   }
 
   function processChartData(seapods, orders, filter) {
+    const now = new Date();
+    const keyOf = (date) => {
+      if (filter === 'year' || filter === 'quarter') return date.toLocaleString('en-US', { month: 'short' });
+      if (filter === 'month') return `${date.getDate()}`;
+      return date.toLocaleDateString('en-US', { weekday: 'short' });
+    };
+    // Pre-fill buckets in chronological order so the axis never depends on row order
     const dataMap = {};
+    const addBucket = (date) => { const k = keyOf(date); if (!dataMap[k]) dataMap[k] = { name: k, Built: 0, Shipped: 0 }; };
+    if (filter === 'year') for (let m = 0; m <= now.getMonth(); m++) addBucket(new Date(now.getFullYear(), m, 1));
+    else if (filter === 'quarter') for (let m = Math.floor(now.getMonth() / 3) * 3; m <= now.getMonth(); m++) addBucket(new Date(now.getFullYear(), m, 1));
+    else if (filter === 'month') for (let d = 1; d <= now.getDate(); d++) addBucket(new Date(now.getFullYear(), now.getMonth(), d));
+    else for (let d = 6; d >= 0; d--) addBucket(new Date(now.getFullYear(), now.getMonth(), now.getDate() - d));
     const addToMap = (dateStr, type) => {
-        const date = new Date(dateStr);
-        let key = '';
-        if (filter === 'year' || filter === 'quarter') key = date.toLocaleString('default', { month: 'short' });
-        else if (filter === 'month') key = `${date.getDate()}`; 
-        else if (filter === 'week') key = date.toLocaleDateString('en-US', { weekday: 'short' }); 
-        if (!dataMap[key]) dataMap[key] = { name: key, Built: 0, Shipped: 0 };
+        const key = keyOf(new Date(dateStr));
+        if (!dataMap[key]) return;
         dataMap[key][type]++;
     };
     seapods.forEach(s => addToMap(s.completed_at, 'Built'));
@@ -97,10 +113,10 @@ export default function Home() {
 
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 mb-8">
             <div className="space-y-4">
-                <div className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-wider ml-1"><Cpu size={14}/> Seapod Production</div>
+                <div className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-wider ml-1"><Cpu size={14}/> Production</div>
                 <div className="bg-white p-1 rounded-2xl shadow-sm border border-slate-200 grid grid-cols-1 sm:grid-cols-3 gap-0.5 overflow-hidden">
                     <DrillDownCard title="Seapods Available" value={stats.completedSeapods} breakdown={stats.breakdownAvailable} icon={<CheckCircle/>} color="text-green-600" bg="bg-green-50" />
-                    <DrillDownCard title="Ready for ATP" value={stats.readyForAtpSeapods} breakdown={stats.breakdownAtp} icon={<ClipboardCheck/>} color="text-amber-600" bg="bg-amber-50" />
+                    <DrillDownCard title="Assigned to Order (In Progress)" value={stats.inProgressAssignedSeapods} breakdown={stats.breakdownInProgressAssigned} icon={<ClipboardCheck/>} color="text-amber-600" bg="bg-amber-50" />
                     <DrillDownCard title="Assigned (Pending)" value={stats.assignedUnshippedSeapods} breakdown={stats.breakdownAssigned} icon={<Link/>} color="text-slate-700" bg="bg-slate-100" />
                 </div>
             </div>

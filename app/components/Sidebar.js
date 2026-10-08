@@ -117,7 +117,7 @@ export default function Sidebar() {
 
         <NavItem href="/orders" icon={List} label="Orders List" />
 
-        <NavItem href="/seapod-production" icon={Factory} label="Seapod Production" />
+        <NavItem href="/seapod-production" icon={Factory} label="Production" />
 
         {(role === 'admin' || role === 'operation') && (
             <NavItem href="/admin/addresses" icon={MapPin} label="Addresses" />
