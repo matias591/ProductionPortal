@@ -49,7 +49,7 @@ export default function Home() {
     const assignedUnshippedList = [];
     seapods.filter(s => assignedStatuses.includes(s.status)).forEach(s => {
       const orderStatus = s.order_number ? orderStatusByNumber[String(s.order_number)] : null;
-      if (orderStatus === 'Shipped') return;
+      if (!orderStatus || orderStatus === 'Shipped') return;
       if (orderStatus === 'Ready for Pickup') assignedUnshippedList.push(s);
       else assignedInProgressList.push(s);
     });
@@ -117,7 +117,7 @@ export default function Home() {
                 <div className="bg-white p-1 rounded-2xl shadow-sm border border-slate-200 grid grid-cols-1 sm:grid-cols-3 gap-0.5 overflow-hidden">
                     <DrillDownCard title="Seapods Available" value={stats.completedSeapods} breakdown={stats.breakdownAvailable} icon={<CheckCircle/>} color="text-green-600" bg="bg-green-50" />
                     <DrillDownCard title="Assigned to Order (In Progress)" value={stats.inProgressAssignedSeapods} breakdown={stats.breakdownInProgressAssigned} icon={<ClipboardCheck/>} color="text-amber-600" bg="bg-amber-50" />
-                    <DrillDownCard title="Assigned (Pending)" value={stats.assignedUnshippedSeapods} breakdown={stats.breakdownAssigned} icon={<Link/>} color="text-slate-700" bg="bg-slate-100" />
+                    <DrillDownCard title="Assigned (Pending Shipping)" value={stats.assignedUnshippedSeapods} breakdown={stats.breakdownAssigned} icon={<Link/>} color="text-slate-700" bg="bg-slate-100" />
                 </div>
             </div>
             <div className="space-y-4">
