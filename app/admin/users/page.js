@@ -101,8 +101,8 @@ export default function UserManagement() {
        <main className="flex-1 ml-64 p-8 relative">
          <div className="max-w-5xl mx-auto">
             <div className="flex justify-between items-center mb-8">
-                <div><h1 className="text-2xl font-bold text-slate-800 mb-1 flex items-center gap-2"><Shield className="text-[#0176D3]"/> User Management</h1><p className="text-slate-500 text-sm">Manage system access and roles.</p></div>
-                <button onClick={() => setShowCreateModal(true)} className="bg-[#0176D3] text-white px-4 py-2 rounded-md text-sm font-bold shadow-sm flex items-center gap-2 hover:bg-blue-700 transition-all"><UserPlus size={18}/> Invite New User</button>
+                <div><h1 className="text-2xl font-bold text-slate-800 mb-1 flex items-center gap-2"><Shield className="text-[#2f7cf6]"/> User Management</h1><p className="text-slate-500 text-sm">Manage system access and roles.</p></div>
+                <button onClick={() => setShowCreateModal(true)} className="bg-[#2f7cf6] text-white px-4 py-2 rounded-md text-sm font-bold shadow-sm flex items-center gap-2 hover:bg-blue-700 transition-all"><UserPlus size={18}/> Invite New User</button>
             </div>
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                 <div className="bg-slate-50 px-6 py-3 border-b border-slate-200 grid grid-cols-12 gap-4 text-xs font-bold text-slate-500 uppercase"><div className="col-span-5">Email</div><div className="col-span-3">Role</div><div className="col-span-3">Created</div><div className="col-span-1 text-right">Action</div></div>
@@ -140,16 +140,16 @@ export default function UserManagement() {
                     <div className="flex justify-between items-center mb-6"><h3 className="font-bold text-lg text-slate-800">Invite User</h3><button onClick={() => setShowCreateModal(false)} className="text-slate-400 hover:text-slate-700"><X size={20}/></button></div>
                     <form onSubmit={handleInviteUser} className="space-y-4">
                         <div className="bg-blue-50 p-3 rounded text-xs text-blue-700 mb-4">User will receive an email to set their own password.</div>
-                        <div><label className="block text-xs font-bold text-slate-500 uppercase mb-1">Email Address</label><input type="email" required className="w-full border border-slate-200 rounded px-3 py-2 text-sm focus:border-[#0176D3] outline-none" value={newUserEmail} onChange={e => setNewUserEmail(e.target.value)} /></div>
+                        <div><label className="block text-xs font-bold text-slate-500 uppercase mb-1">Email Address</label><input type="email" required className="w-full border border-slate-200 rounded px-3 py-2 text-sm focus:border-[#2f7cf6] outline-none" value={newUserEmail} onChange={e => setNewUserEmail(e.target.value)} /></div>
                         <div>
                             <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Role</label>
-                            <select className="w-full border border-slate-200 rounded px-3 py-2 text-sm bg-white focus:border-[#0176D3] outline-none" value={newUserRole} onChange={e => setNewUserRole(e.target.value)}>
+                            <select className="w-full border border-slate-200 rounded px-3 py-2 text-sm bg-white focus:border-[#2f7cf6] outline-none" value={newUserRole} onChange={e => setNewUserRole(e.target.value)}>
                                 <option value="vendor">Vendor</option>
                                 <option value="operation">Operation</option>
                                 <option value="admin">Admin</option>
                             </select>
                         </div>
-                        <div className="pt-4 flex gap-3"><button type="button" onClick={() => setShowCreateModal(false)} className="flex-1 py-2 border border-slate-300 rounded text-sm font-bold text-slate-600 hover:bg-slate-50">Cancel</button><button type="submit" disabled={processing} className="flex-1 py-2 bg-[#0176D3] text-white rounded text-sm font-bold hover:bg-blue-700 shadow-sm flex justify-center items-center gap-2"><Mail size={16}/> {processing ? 'Sending...' : 'Send Invitation'}</button></div>
+                        <div className="pt-4 flex gap-3"><button type="button" onClick={() => setShowCreateModal(false)} className="flex-1 py-2 border border-slate-300 rounded text-sm font-bold text-slate-600 hover:bg-slate-50">Cancel</button><button type="submit" disabled={processing} className="flex-1 py-2 bg-[#2f7cf6] text-white rounded text-sm font-bold hover:bg-blue-700 shadow-sm flex justify-center items-center gap-2"><Mail size={16}/> {processing ? 'Sending...' : 'Send Invitation'}</button></div>
                     </form>
                 </div>
             </div>

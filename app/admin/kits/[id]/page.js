@@ -25,7 +25,7 @@ function SortableItem({ item, onDelete, onUpdate, masterItems }) {
 
       {/* Item Dropdown */}
       <select 
-        className="col-span-7 bg-transparent border border-transparent hover:border-slate-300 rounded px-2 py-1 outline-none focus:border-[#0176D3] text-sm"
+        className="col-span-7 bg-transparent border border-transparent hover:border-slate-300 rounded px-2 py-1 outline-none focus:border-[#2f7cf6] text-sm"
         value={item.item_id || ''}
         onChange={(e) => onUpdate(item.id, 'item_id', e.target.value)}
       >
@@ -38,7 +38,7 @@ function SortableItem({ item, onDelete, onUpdate, masterItems }) {
       {/* Quantity */}
       <input 
         type="number"
-        className="col-span-2 bg-transparent border border-transparent hover:border-slate-300 rounded px-2 py-1 outline-none focus:border-[#0176D3] text-sm"
+        className="col-span-2 bg-transparent border border-transparent hover:border-slate-300 rounded px-2 py-1 outline-none focus:border-[#2f7cf6] text-sm"
         value={item.quantity || 1}
         onChange={(e) => onUpdate(item.id, 'quantity', e.target.value)}
       />
@@ -160,7 +160,7 @@ export default function KitDetails({ params }) {
             </button>
 
             <div className="flex items-center gap-3 mb-8">
-                <div className="w-12 h-12 bg-white border border-slate-200 rounded-lg flex items-center justify-center text-[#0176D3] shadow-sm">
+                <div className="w-12 h-12 bg-white border border-slate-200 rounded-lg flex items-center justify-center text-[#2f7cf6] shadow-sm">
                     <Package size={24}/>
                 </div>
                 <div>
@@ -194,7 +194,7 @@ export default function KitDetails({ params }) {
                     </SortableContext>
                 </DndContext>
 
-                <button onClick={addItem} className="w-full py-4 text-sm font-bold text-slate-500 hover:text-[#0176D3] border-t border-slate-200 flex items-center justify-center gap-2 bg-slate-50/50 hover:bg-slate-50">
+                <button onClick={addItem} className="w-full py-4 text-sm font-bold text-slate-500 hover:text-[#2f7cf6] border-t border-slate-200 flex items-center justify-center gap-2 bg-slate-50/50 hover:bg-slate-50">
                     <Plus size={16}/> Add Line Item
                 </button>
             </div>

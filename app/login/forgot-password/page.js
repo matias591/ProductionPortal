@@ -33,20 +33,21 @@ export default function ForgotPassword() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 font-sans">
-      <div className="max-w-md w-full bg-white p-8 rounded-xl shadow-lg border border-slate-200">
+    <div className="min-h-screen flex items-center justify-center bg-[#f5f7fb] px-4 font-sans">
+      <div className="bz-fade-up max-w-md w-full bg-white p-10 rounded-2xl shadow-[0_12px_40px_rgba(12,31,75,0.08)] border border-slate-200">
+        <img src="/bizzapps-symbol.svg" alt="BizzApps" className="mx-auto mb-4 h-10 w-auto" />
         <button onClick={() => router.push('/login')} className="text-xs font-bold text-slate-500 hover:text-black mb-6 flex items-center gap-2">
             <ArrowLeft size={14} /> Back to Login
         </button>
 
         {sent ? (
             <div className="text-center py-8">
-                <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4 bz-check">
                     <CheckCircle size={32} />
                 </div>
                 <h2 className="text-xl font-bold text-slate-900">Check your email</h2>
                 <p className="text-sm text-slate-500 mt-2">We sent a password reset link to <strong>{email}</strong></p>
-                <button onClick={() => router.push('/login')} className="mt-8 text-[#0176D3] text-sm font-bold hover:underline">Return to Sign In</button>
+                <button onClick={() => router.push('/login')} className="mt-8 text-[#2f7cf6] text-sm font-bold hover:underline">Return to Sign In</button>
             </div>
         ) : (
             <>
@@ -63,7 +64,7 @@ export default function ForgotPassword() {
                             <input 
                                 type="email" 
                                 required 
-                                className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg text-sm focus:border-[#0176D3] focus:ring-1 focus:ring-[#0176D3] outline-none" 
+                                className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg text-sm focus:border-[#2f7cf6] focus:ring-1 focus:ring-[#2f7cf6] outline-none" 
                                 value={email} 
                                 onChange={(e) => setEmail(e.target.value)} 
                                 placeholder="name@company.com"
@@ -71,7 +72,7 @@ export default function ForgotPassword() {
                         </div>
                     </div>
 
-                    <button type="submit" disabled={loading} className="w-full py-2.5 bg-[#0176D3] text-white rounded-lg font-bold hover:bg-blue-700 shadow-sm transition-all">
+                    <button type="submit" disabled={loading} className="w-full h-10 bg-[#2f7cf6] text-white rounded-xl font-semibold hover:bg-blue-700 shadow-sm">
                         {loading ? 'Sending Link...' : 'Send Reset Link'}
                     </button>
                 </form>

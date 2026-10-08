@@ -31,10 +31,11 @@ export default function UpdatePassword() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 font-sans">
-      <div className="max-w-md w-full bg-white p-8 rounded-xl shadow-lg border border-slate-200">
+    <div className="min-h-screen flex items-center justify-center bg-[#f5f7fb] px-4 font-sans">
+      <div className="bz-fade-up max-w-md w-full bg-white p-10 rounded-2xl shadow-[0_12px_40px_rgba(12,31,75,0.08)] border border-slate-200">
+        <img src="/bizzapps-symbol.svg" alt="BizzApps" className="mx-auto mb-4 h-10 w-auto" />
         <div className="text-center mb-8">
-            <div className="w-12 h-12 bg-blue-100 text-[#0176D3] rounded-full flex items-center justify-center mx-auto mb-4">
+            <div className="w-12 h-12 bg-blue-100 text-[#2f7cf6] rounded-full flex items-center justify-center mx-auto mb-4">
                 <Lock size={24} />
             </div>
             <h2 className="text-2xl font-bold text-slate-900">Set New Password</h2>
@@ -49,7 +50,7 @@ export default function UpdatePassword() {
                         type={showPassword ? "text" : "password"} 
                         required 
                         minLength={6}
-                        className="w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm focus:border-[#0176D3] focus:ring-1 focus:ring-[#0176D3] outline-none" 
+                        className="w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm focus:border-[#2f7cf6] focus:ring-1 focus:ring-[#2f7cf6] outline-none" 
                         value={password} 
                         onChange={(e) => setPassword(e.target.value)} 
                         placeholder="••••••••"
@@ -60,7 +61,7 @@ export default function UpdatePassword() {
                 </div>
             </div>
 
-            <button type="submit" disabled={loading} className="w-full py-2.5 bg-[#0176D3] text-white rounded-lg font-bold hover:bg-blue-700 shadow-sm transition-all flex justify-center">
+            <button type="submit" disabled={loading} className="w-full h-10 bg-[#2f7cf6] text-white rounded-xl font-semibold hover:bg-blue-700 shadow-sm flex items-center justify-center">
                 {loading ? 'Updating...' : 'Set Password & Login'}
             </button>
         </form>

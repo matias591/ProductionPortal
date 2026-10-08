@@ -29,7 +29,7 @@ function SortableTemplateRow({ template, onClick, onDelete }) {
             </div>
         </div>
         <div className="flex items-center gap-4">
-            <span onClick={onClick} className="cursor-pointer text-xs font-bold text-[#0176D3] flex items-center gap-1 group-hover:underline">Edit Items <ChevronRight size={14}/></span>
+            <span onClick={onClick} className="cursor-pointer text-xs font-bold text-[#2f7cf6] flex items-center gap-1 group-hover:underline">Edit Items <ChevronRight size={14}/></span>
             {/* Z-index to ensure click registers over drag layer */}
             <button onClick={(e) => { e.stopPropagation(); onDelete(template.id); }} className="text-slate-300 hover:text-red-500 z-10 relative"><Trash2 size={16}/></button>
         </div>
@@ -112,9 +112,9 @@ export default function SeapodTemplates() {
          <div className="max-w-5xl mx-auto">
             <div className="flex justify-between items-center mb-8">
                 <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
-                    <Cpu className="text-[#0176D3]"/> Seapod Templates
+                    <Cpu className="text-[#2f7cf6]"/> Seapod Templates
                 </h1>
-                <button onClick={() => setShowModal(true)} className="bg-[#0176D3] text-white px-4 py-2 rounded font-bold shadow-sm flex items-center gap-2">
+                <button onClick={() => setShowModal(true)} className="bg-[#2f7cf6] text-white px-4 py-2 rounded font-bold shadow-sm flex items-center gap-2">
                     <Plus size={16}/> New Template
                 </button>
             </div>
@@ -147,25 +147,25 @@ export default function SeapodTemplates() {
                 <form onSubmit={createTemplate} className="space-y-4">
                     <div>
                         <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Template Name</label>
-                        <input name="name" className="w-full border border-slate-300 rounded px-3 py-2 text-sm outline-none focus:border-[#0176D3]" placeholder="e.g. Standard Seapod V3" required />
+                        <input name="name" className="w-full border border-slate-300 rounded px-3 py-2 text-sm outline-none focus:border-[#2f7cf6]" placeholder="e.g. Standard Seapod V3" required />
                     </div>
                     <div>
                         <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Seapod Version</label>
-                        <input name="seapod_version" className="w-full border border-slate-300 rounded px-3 py-2 text-sm outline-none focus:border-[#0176D3]" placeholder="e.g. Generation 3.5" />
+                        <input name="seapod_version" className="w-full border border-slate-300 rounded px-3 py-2 text-sm outline-none focus:border-[#2f7cf6]" placeholder="e.g. Generation 3.5" />
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                         <div>
                             <label className="block text-xs font-bold text-slate-500 uppercase mb-1">HW Version</label>
-                            <input name="hw" className="w-full border border-slate-300 rounded px-3 py-2 text-sm outline-none focus:border-[#0176D3]" placeholder="v1.0" />
+                            <input name="hw" className="w-full border border-slate-300 rounded px-3 py-2 text-sm outline-none focus:border-[#2f7cf6]" placeholder="v1.0" />
                         </div>
                         <div>
                             <label className="block text-xs font-bold text-slate-500 uppercase mb-1">SW Version</label>
-                            <input name="sw" className="w-full border border-slate-300 rounded px-3 py-2 text-sm outline-none focus:border-[#0176D3]" placeholder="v2.4.1" />
+                            <input name="sw" className="w-full border border-slate-300 rounded px-3 py-2 text-sm outline-none focus:border-[#2f7cf6]" placeholder="v2.4.1" />
                         </div>
                     </div>
                     <div className="flex justify-end gap-2 pt-2">
                         <button type="button" onClick={() => setShowModal(false)} className="px-4 py-2 border rounded font-bold text-slate-600 hover:bg-slate-50">Cancel</button>
-                        <button type="submit" className="px-4 py-2 bg-[#0176D3] text-white rounded font-bold hover:bg-blue-700">Create</button>
+                        <button type="submit" className="px-4 py-2 bg-[#2f7cf6] text-white rounded font-bold hover:bg-blue-700">Create</button>
                     </div>
                 </form>
             </div>

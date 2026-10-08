@@ -73,14 +73,14 @@ export default function AddressManagement() {
   }
 
   if (loading) return (
-    <div className="flex min-h-screen bg-[#F3F4F6]">
+    <div className="flex min-h-screen bg-[#f5f7fb]">
       <Sidebar />
       <div className="ml-64 p-10 text-slate-500">Loading...</div>
     </div>
   );
 
   return (
-    <div className="flex min-h-screen bg-[#F3F4F6] font-sans">
+    <div className="flex min-h-screen bg-[#f5f7fb] font-sans">
       <Sidebar />
       <div className="flex-1 ml-64">
 
@@ -98,7 +98,7 @@ export default function AddressManagement() {
             </div>
             <button
               onClick={openCreate}
-              className="flex items-center gap-2 bg-[#0176D3] text-white font-bold px-4 py-2 rounded-lg text-sm shadow-sm hover:bg-blue-700"
+              className="flex items-center gap-2 bg-[#2f7cf6] text-white font-bold px-4 py-2 rounded-lg text-sm shadow-sm hover:bg-blue-700"
             >
               <Plus size={16} /> New Address
             </button>
@@ -132,7 +132,7 @@ export default function AddressManagement() {
                       <td className="px-5 py-3 text-sm text-slate-600">{addr.pic || '—'}</td>
                       <td className="px-5 py-3">
                         <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button onClick={() => openEdit(addr)} className="text-slate-400 hover:text-[#0176D3]"><Pencil size={15} /></button>
+                          <button onClick={() => openEdit(addr)} className="text-slate-400 hover:text-[#2f7cf6]"><Pencil size={15} /></button>
                           <button onClick={() => deleteAddress(addr.id)} className="text-slate-400 hover:text-red-600"><Trash2 size={15} /></button>
                         </div>
                       </td>
@@ -155,13 +155,13 @@ export default function AddressManagement() {
 
               <div className="p-6 space-y-3">
                 <input
-                  className="w-full border border-slate-200 rounded px-3 py-2 text-sm focus:border-[#0176D3] outline-none"
+                  className="w-full border border-slate-200 rounded px-3 py-2 text-sm focus:border-[#2f7cf6] outline-none"
                   placeholder="Company name *"
                   value={form.company_name}
                   onChange={e => setForm(p => ({ ...p, company_name: e.target.value }))}
                 />
                 <textarea
-                  className="w-full border border-slate-200 rounded px-3 py-2 text-sm focus:border-[#0176D3] outline-none resize-none"
+                  className="w-full border border-slate-200 rounded px-3 py-2 text-sm focus:border-[#2f7cf6] outline-none resize-none"
                   placeholder="Address *"
                   rows={3}
                   value={form.address}
@@ -170,7 +170,7 @@ export default function AddressManagement() {
                 <div className="flex gap-2 items-center">
                   <span className="text-xs font-bold text-slate-400 uppercase w-14 shrink-0">Phone</span>
                   <input
-                    className="flex-1 border border-slate-200 rounded px-3 py-2 text-sm focus:border-[#0176D3] outline-none"
+                    className="flex-1 border border-slate-200 rounded px-3 py-2 text-sm focus:border-[#2f7cf6] outline-none"
                     placeholder="+1 234 567 8900"
                     value={form.phone}
                     onChange={e => setForm(p => ({ ...p, phone: e.target.value }))}
@@ -179,7 +179,7 @@ export default function AddressManagement() {
                 <div className="flex gap-2 items-center">
                   <span className="text-xs font-bold text-slate-400 uppercase w-14 shrink-0">Email</span>
                   <input
-                    className="flex-1 border border-slate-200 rounded px-3 py-2 text-sm focus:border-[#0176D3] outline-none"
+                    className="flex-1 border border-slate-200 rounded px-3 py-2 text-sm focus:border-[#2f7cf6] outline-none"
                     placeholder="contact@company.com"
                     value={form.email}
                     onChange={e => setForm(p => ({ ...p, email: e.target.value }))}
@@ -188,7 +188,7 @@ export default function AddressManagement() {
                 <div className="flex gap-2 items-center">
                   <span className="text-xs font-bold text-slate-400 uppercase w-14 shrink-0">PIC</span>
                   <input
-                    className="flex-1 border border-slate-200 rounded px-3 py-2 text-sm focus:border-[#0176D3] outline-none"
+                    className="flex-1 border border-slate-200 rounded px-3 py-2 text-sm focus:border-[#2f7cf6] outline-none"
                     placeholder="Point of contact name"
                     value={form.pic}
                     onChange={e => setForm(p => ({ ...p, pic: e.target.value }))}
@@ -198,7 +198,7 @@ export default function AddressManagement() {
 
               <div className="px-6 py-4 border-t border-slate-100 flex gap-3">
                 <button onClick={() => setShowModal(false)} className="flex-1 px-4 py-2.5 border border-slate-300 rounded-lg text-sm font-bold text-slate-700 hover:bg-slate-50">Cancel</button>
-                <button onClick={saveAddress} className="flex-1 px-4 py-2.5 bg-[#0176D3] text-white rounded-lg text-sm font-bold hover:bg-blue-700 shadow-sm">Save</button>
+                <button onClick={saveAddress} className="flex-1 px-4 py-2.5 bg-[#2f7cf6] text-white rounded-lg text-sm font-bold hover:bg-blue-700 shadow-sm">Save</button>
               </div>
             </div>
           </div>

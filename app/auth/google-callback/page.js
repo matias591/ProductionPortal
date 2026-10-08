@@ -38,7 +38,7 @@ function GoogleCallbackContent() {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 text-slate-600 font-sans">
-      <Loader2 size={48} className="animate-spin text-[#0176D3] mb-4" />
+      <Loader2 size={48} className="animate-spin text-[#2f7cf6] mb-4" />
       <h2 className="text-lg font-bold">{message}</h2>
     </div>
   );

@@ -767,13 +767,13 @@ export default function OrderDetails({ params }) {
   }
 
   // --- RENDER ---
-  if (loading) return <div className="flex min-h-screen bg-[#F3F4F6]"><Sidebar /><div className="ml-64 p-10 text-slate-500">Loading Order...</div></div>;
-  if (!order) return <div className="flex min-h-screen bg-[#F3F4F6]"><Sidebar /><div className="ml-64 p-10 text-red-500">Order not found.</div></div>;
+  if (loading) return <div className="flex min-h-screen bg-[#f5f7fb]"><Sidebar /><div className="ml-64 p-10 text-slate-500">Loading Order...</div></div>;
+  if (!order) return <div className="flex min-h-screen bg-[#f5f7fb]"><Sidebar /><div className="ml-64 p-10 text-red-500">Order not found.</div></div>;
   
   const totalCost = items.reduce((sum, item) => sum + ((item.quantity || 0) * (item.price || 0)), 0);
 
   return (
-    <div className="flex min-h-screen bg-[#F3F4F6] font-sans">
+    <div className="flex min-h-screen bg-[#f5f7fb] font-sans">
       <Sidebar />
       <div className="flex-1 ml-64">
           
@@ -783,7 +783,7 @@ export default function OrderDetails({ params }) {
               <div className="flex flex-col md:flex-row justify-between items-start gap-4">
                 
                 <div className="flex items-center gap-4">
-                   <div className="w-12 h-12 bg-[#0176D3]/10 text-[#0176D3] border border-[#0176D3]/20 rounded-lg flex items-center justify-center">
+                   <div className="w-12 h-12 bg-[#2f7cf6]/10 text-[#2f7cf6] border border-[#2f7cf6]/20 rounded-lg flex items-center justify-center">
                      <Box size={24} />
                    </div>
                    <div>
@@ -845,7 +845,7 @@ export default function OrderDetails({ params }) {
                             value={order.status || 'New'} 
                             onChange={(e) => updateOrder('status', e.target.value)} 
                             disabled={isLocked && !canShip} 
-                            className={`bg-white border border-slate-300 text-slate-900 text-sm font-bold rounded-md shadow-sm focus:ring-2 focus:ring-[#0176D3] block w-44 p-2 outline-none ${isLocked ? 'bg-gray-100 text-gray-500' : ''}`}
+                            className={`bg-white border border-slate-300 text-slate-900 text-sm font-bold rounded-md shadow-sm focus:ring-2 focus:ring-[#2f7cf6] block w-44 p-2 outline-none ${isLocked ? 'bg-gray-100 text-gray-500' : ''}`}
                         >
                             <option value="New">New</option>
                             <option value="In preparation">In preparation</option>
@@ -873,10 +873,10 @@ export default function OrderDetails({ params }) {
                         <div>
                             <label className="flex items-center justify-between text-xs font-bold text-slate-400 uppercase mb-1.5">
                                 <span className="flex items-center gap-2"><Ship size={14} /> Vessel Name <span className="text-red-500">*</span></span>
-                                {checkingVessel && <span className="text-[#0176D3] flex items-center gap-1"><Loader2 size={12} className="animate-spin"/> Checking...</span>}
+                                {checkingVessel && <span className="text-[#2f7cf6] flex items-center gap-1"><Loader2 size={12} className="animate-spin"/> Checking...</span>}
                             </label>
                             <input 
-                                className="w-full text-sm font-medium border border-slate-200 rounded px-3 py-2 focus:border-[#0176D3] focus:ring-1 focus:ring-[#0176D3] outline-none text-slate-900" 
+                                className="w-full text-sm font-medium border border-slate-200 rounded px-3 py-2 focus:border-[#2f7cf6] focus:ring-1 focus:ring-[#2f7cf6] outline-none text-slate-900" 
                                 placeholder="Enter Name & Click Away" 
                                 value={order.vessel || ''} 
                                 disabled={!canShip || isLocked || checkingVessel} 
@@ -897,7 +897,7 @@ export default function OrderDetails({ params }) {
                         {canEditWarehouse && (
                             <div>
                                 <label className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase mb-1.5"><Warehouse size={14} /> Warehouse</label>
-                                <select className="w-full text-sm font-medium border border-slate-200 rounded px-3 py-2 focus:border-[#0176D3] outline-none bg-white text-slate-900" value={order.warehouse || 'Orca'} onChange={(e) => updateOrder('warehouse', e.target.value)} disabled={isLocked}>
+                                <select className="w-full text-sm font-medium border border-slate-200 rounded px-3 py-2 focus:border-[#2f7cf6] outline-none bg-white text-slate-900" value={order.warehouse || 'Orca'} onChange={(e) => updateOrder('warehouse', e.target.value)} disabled={isLocked}>
                                     <option value="Orca">Orca</option>
                                     <option value="Baz">Baz</option>
                                     <option value="JNSU">JNSU</option>
@@ -907,22 +907,22 @@ export default function OrderDetails({ params }) {
                         
                         <div>
                             <label className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase mb-1.5"><Calendar size={14} /> Pickup Date</label>
-                            <input type="date" className="w-full text-sm font-medium border border-slate-200 rounded px-3 py-2 focus:border-[#0176D3] outline-none text-slate-700" value={order.pickup_date || ''} disabled={isLocked} onChange={(e) => updateOrder('pickup_date', e.target.value)} />
+                            <input type="date" className="w-full text-sm font-medium border border-slate-200 rounded px-3 py-2 focus:border-[#2f7cf6] outline-none text-slate-700" value={order.pickup_date || ''} disabled={isLocked} onChange={(e) => updateOrder('pickup_date', e.target.value)} />
                         </div>
                         <div>
                             <label className="block text-xs font-bold text-slate-400 uppercase mb-1.5">Shipping Tracking Code</label>
-                            <input className="w-full text-sm font-medium border border-slate-200 rounded px-3 py-2 focus:border-[#0176D3] outline-none text-slate-900" placeholder="Enter tracking code" value={order.shipping_tracking_code || ''} disabled={isLocked} onChange={(e) => updateOrder('shipping_tracking_code', e.target.value)} />
+                            <input className="w-full text-sm font-medium border border-slate-200 rounded px-3 py-2 focus:border-[#2f7cf6] outline-none text-slate-900" placeholder="Enter tracking code" value={order.shipping_tracking_code || ''} disabled={isLocked} onChange={(e) => updateOrder('shipping_tracking_code', e.target.value)} />
                         </div>
                         <div>
                             <label className="block text-xs font-bold text-slate-400 uppercase mb-1.5">Kit Type</label>
-                            <select className="w-full text-sm font-medium border border-slate-200 rounded px-3 py-2 focus:border-[#0176D3] outline-none bg-white" value={order.type || ''} disabled={isLocked} onChange={(e) => handleTypeChange(e.target.value)} >
+                            <select className="w-full text-sm font-medium border border-slate-200 rounded px-3 py-2 focus:border-[#2f7cf6] outline-none bg-white" value={order.type || ''} disabled={isLocked} onChange={(e) => handleTypeChange(e.target.value)} >
                                 <option>Full system</option><option>Upgrade</option><option>Replacement</option><option>Spare Parts</option><option>Partial System</option>
                             </select>
                         </div>
                         {SUB_TYPE_OPTIONS[order.type] && (
                             <div>
                                 <label className="block text-xs font-bold text-slate-400 uppercase mb-1.5">Sub Type</label>
-                                <select className="w-full text-sm font-medium border border-slate-200 rounded px-3 py-2 focus:border-[#0176D3] outline-none bg-white" value={order.sub_type || ''} disabled={isLocked} onChange={(e) => updateOrder('sub_type', e.target.value || null)} >
+                                <select className="w-full text-sm font-medium border border-slate-200 rounded px-3 py-2 focus:border-[#2f7cf6] outline-none bg-white" value={order.sub_type || ''} disabled={isLocked} onChange={(e) => updateOrder('sub_type', e.target.value || null)} >
                                     <option value="">- Select -</option>
                                     {SUB_TYPE_OPTIONS[order.type].map((opt) => (<option key={opt} value={opt}>{opt}</option>))}
                                 </select>
@@ -933,25 +933,25 @@ export default function OrderDetails({ params }) {
 
                 {/* File Upload Drag & Drop */}
                 <div 
-                    className={`bg-white border rounded-lg shadow-sm overflow-hidden transition-colors ${isDragging && !isLocked ? 'border-[#0176D3] bg-blue-50/50' : 'border-slate-200'}`} 
+                    className={`bg-white border rounded-lg shadow-sm overflow-hidden transition-colors ${isDragging && !isLocked ? 'border-[#2f7cf6] bg-blue-50/50' : 'border-slate-200'}`} 
                     onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop}
                 >
                     <div className="px-5 py-3 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
                         <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wide flex items-center gap-2"><Paperclip size={14}/> Attachments ({files.length})</h3>
                         {canShip && !isLocked && (
-                            <label className="cursor-pointer text-xs font-bold text-[#0176D3] hover:underline flex items-center gap-1">
+                            <label className="cursor-pointer text-xs font-bold text-[#2f7cf6] hover:underline flex items-center gap-1">
                                 {uploading ? 'Uploading...' : '+ Upload'}
                                 <input type="file" className="hidden" onChange={onFileSelect} disabled={uploading || isLocked} />
                             </label>
                         )}
                     </div>
-                    {isDragging && !isLocked && <div className="p-4 text-center text-[#0176D3] font-bold text-sm bg-blue-50">Drop files here to upload</div>}
+                    {isDragging && !isLocked && <div className="p-4 text-center text-[#2f7cf6] font-bold text-sm bg-blue-50">Drop files here to upload</div>}
                     <div className="divide-y divide-slate-50">
                         {files.map(file => (
                             <div key={file.id} onClick={() => openFile(file.file_path)} className="px-5 py-3 flex items-center gap-3 hover:bg-blue-50 cursor-pointer transition-colors group">
                                 <div className="bg-blue-100 p-1.5 rounded text-blue-600"><FileText size={16}/></div>
                                 <div className="overflow-hidden flex-1">
-                                    <p className="text-sm font-medium text-slate-700 truncate group-hover:text-[#0176D3] group-hover:underline">{file.file_name}</p>
+                                    <p className="text-sm font-medium text-slate-700 truncate group-hover:text-[#2f7cf6] group-hover:underline">{file.file_name}</p>
                                     <p className="text-[10px] text-slate-400">Uploaded by {file.uploaded_by}</p>
                                 </div>
                                 {canShip && (
@@ -972,7 +972,7 @@ export default function OrderDetails({ params }) {
                       <h3 className="font-bold text-sm text-slate-800 uppercase tracking-wide">Line Items</h3>
                       <div className="flex items-center gap-4">
                           {canShip && (
-                              <div className="text-sm font-bold text-slate-700">Total: <span className="text-[#0176D3]">${totalCost.toFixed(2)}</span></div>
+                              <div className="text-sm font-bold text-slate-700">Total: <span className="text-[#2f7cf6]">${totalCost.toFixed(2)}</span></div>
                           )}
                           <span className="bg-white border border-slate-200 text-slate-500 text-xs font-bold px-2 py-1 rounded">{items.length} Items</span>
                       </div>
@@ -1017,7 +1017,7 @@ export default function OrderDetails({ params }) {
                             {/* RED BORDER IF SERIAL NEEDED AND EMPTY */}
                             <td className="px-6 py-3">
                                <input 
-                                   className={`w-full bg-transparent border-b ${isSerialReq && (!item.serial || item.serial.trim() === '') ? 'border-red-300 bg-red-50' : 'border-transparent'} outline-none text-[#0176D3] font-medium placeholder-slate-300`} 
+                                   className={`w-full bg-transparent border-b ${isSerialReq && (!item.serial || item.serial.trim() === '') ? 'border-red-300 bg-red-50' : 'border-transparent'} outline-none text-[#2f7cf6] font-medium placeholder-slate-300`} 
                                    value={item.serial || ''} 
                                    disabled={isLocked} 
                                    onChange={(e) => updateItem(item.id, 'serial', e.target.value)} 
@@ -1035,7 +1035,7 @@ export default function OrderDetails({ params }) {
                                         type="number"
                                         min="0"
                                         step="0.01"
-                                        className="w-24 text-right bg-transparent border-b border-transparent hover:border-slate-300 focus:border-[#0176D3] outline-none text-xs font-mono text-slate-600"
+                                        className="w-24 text-right bg-transparent border-b border-transparent hover:border-slate-300 focus:border-[#2f7cf6] outline-none text-xs font-mono text-slate-600"
                                         value={item.price || 0}
                                         disabled={isLocked}
                                         onChange={(e) => updateItem(item.id, 'price', parseFloat(e.target.value) || 0)}
@@ -1054,7 +1054,7 @@ export default function OrderDetails({ params }) {
                    </table>
                    
                    {!isLocked && (
-                       <button onClick={addItem} className="w-full py-4 text-sm font-bold text-slate-500 hover:bg-slate-50 hover:text-[#0176D3] transition-colors flex items-center justify-center gap-2 border-t border-slate-200">
+                       <button onClick={addItem} className="w-full py-4 text-sm font-bold text-slate-500 hover:bg-slate-50 hover:text-[#2f7cf6] transition-colors flex items-center justify-center gap-2 border-t border-slate-200">
                            <Plus size={16} /> Add New Line Item
                        </button>
                    )}
@@ -1069,12 +1069,12 @@ export default function OrderDetails({ params }) {
             <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
               <div className="bg-white rounded-xl shadow-2xl max-w-sm w-full p-6 animate-in fade-in zoom-in duration-200 border border-slate-200">
                 <div className="flex flex-col items-center text-center">
-                  <div className="w-12 h-12 bg-blue-100 text-[#0176D3] rounded-full flex items-center justify-center mb-4"><Ship size={24} /></div>
+                  <div className="w-12 h-12 bg-blue-100 text-[#2f7cf6] rounded-full flex items-center justify-center mb-4"><Ship size={24} /></div>
                   <h3 className="text-lg font-bold text-slate-900">Confirm Shipment?</h3>
                   <p className="text-sm text-slate-500 mt-2 mb-6">This will <strong>lock the order</strong> and send data. Cannot be undone.</p>
                   <div className="flex gap-3 w-full">
                       <button onClick={() => setShowShipModal(false)} disabled={shipping} className="flex-1 px-4 py-2.5 border border-slate-300 rounded-lg text-sm font-bold text-slate-700 hover:bg-slate-50">Cancel</button>
-                      <button onClick={confirmShipping} disabled={shipping} className="flex-1 px-4 py-2.5 bg-[#0176D3] text-white rounded-lg text-sm font-bold hover:bg-blue-700 shadow-sm">{shipping ? 'Processing...' : 'Confirm & Ship'}</button>
+                      <button onClick={confirmShipping} disabled={shipping} className="flex-1 px-4 py-2.5 bg-[#2f7cf6] text-white rounded-lg text-sm font-bold hover:bg-blue-700 shadow-sm">{shipping ? 'Processing...' : 'Confirm & Ship'}</button>
                   </div>
                 </div>
               </div>
@@ -1090,7 +1090,7 @@ export default function OrderDetails({ params }) {
                   <h3 className="text-lg font-bold text-slate-900">Seapod Already Assigned</h3>
                   <p className="text-sm text-slate-500 mt-2 mb-6">Seapod <strong>{conflictDetails.serial}</strong> is already assigned to <strong>Order #{conflictDetails.assignedTo}</strong>.<br/>Please use a different Seapod or check the number.</p>
                   <div className="flex gap-3 w-full">
-                      <button onClick={handleClearConflict} className="flex-1 px-4 py-2.5 bg-[#0176D3] text-white rounded-lg text-sm font-bold hover:bg-blue-700 shadow-sm">OK, Clear Serial</button>
+                      <button onClick={handleClearConflict} className="flex-1 px-4 py-2.5 bg-[#2f7cf6] text-white rounded-lg text-sm font-bold hover:bg-blue-700 shadow-sm">OK, Clear Serial</button>
                   </div>
                 </div>
               </div>
@@ -1118,7 +1118,7 @@ export default function OrderDetails({ params }) {
                             </select>
                             <div className="mt-8 flex gap-3 max-w-sm mx-auto w-full">
                                 <button onClick={() => setShowSeapodModal(false)} className="flex-1 px-4 py-2 border rounded font-bold text-slate-700">Cancel</button>
-                                <button onClick={goToAckStep} className="flex-1 px-4 py-2 bg-[#0176D3] text-white rounded font-bold shadow">Start Build</button>
+                                <button onClick={goToAckStep} className="flex-1 px-4 py-2 bg-[#2f7cf6] text-white rounded font-bold shadow">Start Build</button>
                             </div>
                         </div>
                     )}
@@ -1138,7 +1138,7 @@ export default function OrderDetails({ params }) {
                                                 <td className="px-4 py-2 text-sm">{item.quantity}</td>
                                                 <td className="px-4 py-2">
                                                     <input 
-                                                        className="serial-input w-full border rounded px-2 py-1 text-sm focus:border-[#0176D3] outline-none font-medium text-[#0176D3]" 
+                                                        className="serial-input w-full border rounded px-2 py-1 text-sm focus:border-[#2f7cf6] outline-none font-medium text-[#2f7cf6]" 
                                                         value={item.serial || ''} 
                                                         onChange={(e) => updateSeapodItemSerial(item.id, e.target.value)} 
                                                         placeholder="Enter Serial..." 
@@ -1166,7 +1166,7 @@ export default function OrderDetails({ params }) {
                             <div className="bg-slate-50 border border-slate-200 rounded-lg p-6 mb-8 text-left">
                                 <div className="mb-4 pb-4 border-b border-slate-200">
                                     <span className="text-[10px] font-bold text-slate-400 uppercase block">Seapod Version</span>
-                                    <span className="text-lg font-bold text-[#0176D3]">{tplDetails.seapod_version || 'N/A'}</span>
+                                    <span className="text-lg font-bold text-[#2f7cf6]">{tplDetails.seapod_version || 'N/A'}</span>
                                 </div>
                                 <div className="grid grid-cols-2 gap-4">
                                     <div><span className="text-[10px] font-bold text-slate-400 uppercase block">HW Ver</span><span className="text-xl font-bold text-slate-900">{tplDetails.hw_version}</span></div>
@@ -1175,7 +1175,7 @@ export default function OrderDetails({ params }) {
                             </div>
                             <div className="flex gap-3 max-w-sm mx-auto w-full">
                                 <button onClick={() => setSeapodStep(2)} className="flex-1 px-4 py-2 border rounded font-bold text-slate-700">Back</button>
-                                <button onClick={finalWizardSubmit} className="flex-1 px-4 py-2 bg-[#0176D3] text-white rounded font-bold shadow">I Acknowledge</button>
+                                <button onClick={finalWizardSubmit} className="flex-1 px-4 py-2 bg-[#2f7cf6] text-white rounded font-bold shadow">I Acknowledge</button>
                             </div>
                         </div>
                     )}
@@ -1196,7 +1196,7 @@ export default function OrderDetails({ params }) {
                   <div>
                     <label className="block text-xs font-bold text-slate-400 uppercase mb-1.5">Currency Used</label>
                     <select
-                      className="w-full border border-slate-200 rounded px-3 py-2 text-sm font-medium focus:border-[#0176D3] outline-none bg-white text-slate-900"
+                      className="w-full border border-slate-200 rounded px-3 py-2 text-sm font-medium focus:border-[#2f7cf6] outline-none bg-white text-slate-900"
                       value={invoiceForm.currency}
                       onChange={e => setInvoiceForm(p => ({ ...p, currency: e.target.value }))}
                     >
@@ -1209,7 +1209,7 @@ export default function OrderDetails({ params }) {
                   <div>
                     <label className="block text-xs font-bold text-slate-400 uppercase mb-1.5">Terms of Freight</label>
                     <select
-                      className="w-full border border-slate-200 rounded px-3 py-2 text-sm font-medium focus:border-[#0176D3] outline-none bg-white text-slate-900"
+                      className="w-full border border-slate-200 rounded px-3 py-2 text-sm font-medium focus:border-[#2f7cf6] outline-none bg-white text-slate-900"
                       value={invoiceForm.termsOfFreight}
                       onChange={e => setInvoiceForm(p => ({ ...p, termsOfFreight: e.target.value }))}
                     >
@@ -1223,7 +1223,7 @@ export default function OrderDetails({ params }) {
                   <div>
                     <label className="block text-xs font-bold text-slate-400 uppercase mb-1.5">No of Packages</label>
                     <select
-                      className="w-full border border-slate-200 rounded px-3 py-2 text-sm font-medium focus:border-[#0176D3] outline-none bg-white text-slate-900"
+                      className="w-full border border-slate-200 rounded px-3 py-2 text-sm font-medium focus:border-[#2f7cf6] outline-none bg-white text-slate-900"
                       value={invoiceForm.packages}
                       onChange={e => setInvoiceForm(p => ({ ...p, packages: Number(e.target.value) }))}
                     >
@@ -1237,7 +1237,7 @@ export default function OrderDetails({ params }) {
                     <div className="flex gap-2">
                       <div className="relative flex-1">
                         <input
-                          className="w-full border border-slate-200 rounded px-3 py-2 text-sm font-medium focus:border-[#0176D3] outline-none text-slate-900"
+                          className="w-full border border-slate-200 rounded px-3 py-2 text-sm font-medium focus:border-[#2f7cf6] outline-none text-slate-900"
                           placeholder="Search address..."
                           value={addressSearch}
                           onChange={e => {
@@ -1261,7 +1261,7 @@ export default function OrderDetails({ params }) {
                                     setAddressSearch(a.company_name + (a.pic ? ` — ${a.pic}` : ''));
                                     setShowAddressList(false);
                                   }}
-                                  className="px-3 py-2 text-sm cursor-pointer hover:bg-blue-50 hover:text-[#0176D3] flex items-center justify-between"
+                                  className="px-3 py-2 text-sm cursor-pointer hover:bg-blue-50 hover:text-[#2f7cf6] flex items-center justify-between"
                                 >
                                   <span className="font-medium">{a.company_name}</span>
                                   {a.pic && <span className="text-slate-400 text-xs ml-2">{a.pic}</span>}
@@ -1290,7 +1290,7 @@ export default function OrderDetails({ params }) {
                   <div>
                     <label className="block text-xs font-bold text-slate-400 uppercase mb-1.5">Package Type</label>
                     <select
-                      className="w-full border border-slate-200 rounded px-3 py-2 text-sm font-medium focus:border-[#0176D3] outline-none bg-white text-slate-900"
+                      className="w-full border border-slate-200 rounded px-3 py-2 text-sm font-medium focus:border-[#2f7cf6] outline-none bg-white text-slate-900"
                       value={selectedPackage}
                       onChange={e => {
                         setSelectedPackage(e.target.value);
@@ -1329,22 +1329,22 @@ export default function OrderDetails({ params }) {
                             {packageItems.map((item, idx) => (
                               <tr key={idx} className="hover:bg-slate-50">
                                 <td className="px-2 py-1.5">
-                                  <input className="w-full bg-transparent outline-none text-slate-900 text-xs border-b border-transparent focus:border-[#0176D3]" value={item.description} onChange={e => updatePackageItem(idx, 'description', e.target.value)} />
+                                  <input className="w-full bg-transparent outline-none text-slate-900 text-xs border-b border-transparent focus:border-[#2f7cf6]" value={item.description} onChange={e => updatePackageItem(idx, 'description', e.target.value)} />
                                 </td>
                                 <td className="px-2 py-1.5">
-                                  <input className="w-full bg-transparent outline-none text-slate-600 text-xs border-b border-transparent focus:border-[#0176D3]" value={item.hs} onChange={e => updatePackageItem(idx, 'hs', e.target.value)} />
+                                  <input className="w-full bg-transparent outline-none text-slate-600 text-xs border-b border-transparent focus:border-[#2f7cf6]" value={item.hs} onChange={e => updatePackageItem(idx, 'hs', e.target.value)} />
                                 </td>
                                 <td className="px-2 py-1.5">
-                                  <input className="w-full bg-transparent outline-none text-slate-600 text-xs border-b border-transparent focus:border-[#0176D3]" value={item.unitValue} onChange={e => updatePackageItem(idx, 'unitValue', e.target.value)} />
+                                  <input className="w-full bg-transparent outline-none text-slate-600 text-xs border-b border-transparent focus:border-[#2f7cf6]" value={item.unitValue} onChange={e => updatePackageItem(idx, 'unitValue', e.target.value)} />
                                 </td>
                                 <td className="px-2 py-1.5 text-center">
-                                  <input className="w-full bg-transparent outline-none text-slate-600 text-xs text-center border-b border-transparent focus:border-[#0176D3]" value={item.quantity} onChange={e => updatePackageItem(idx, 'quantity', e.target.value)} />
+                                  <input className="w-full bg-transparent outline-none text-slate-600 text-xs text-center border-b border-transparent focus:border-[#2f7cf6]" value={item.quantity} onChange={e => updatePackageItem(idx, 'quantity', e.target.value)} />
                                 </td>
                                 <td className="px-2 py-1.5">
-                                  <input className="w-full bg-transparent outline-none text-slate-600 text-xs border-b border-transparent focus:border-[#0176D3]" value={item.weight} onChange={e => updatePackageItem(idx, 'weight', e.target.value)} />
+                                  <input className="w-full bg-transparent outline-none text-slate-600 text-xs border-b border-transparent focus:border-[#2f7cf6]" value={item.weight} onChange={e => updatePackageItem(idx, 'weight', e.target.value)} />
                                 </td>
                                 <td className="px-2 py-1.5">
-                                  <input className="w-full bg-transparent outline-none text-slate-600 text-xs border-b border-transparent focus:border-[#0176D3]" value={item.value} onChange={e => updatePackageItem(idx, 'value', e.target.value)} />
+                                  <input className="w-full bg-transparent outline-none text-slate-600 text-xs border-b border-transparent focus:border-[#2f7cf6]" value={item.value} onChange={e => updatePackageItem(idx, 'value', e.target.value)} />
                                 </td>
                                 <td className="px-2 py-1.5">
                                   <button onClick={() => deletePackageItem(idx)} className="text-slate-300 hover:text-red-500"><Trash2 size={12} /></button>
@@ -1361,7 +1361,7 @@ export default function OrderDetails({ params }) {
                   <div>
                     <label className="block text-xs font-bold text-slate-400 uppercase mb-1.5">Generate Packing List with Prices</label>
                     <select
-                      className="w-full border border-slate-200 rounded px-3 py-2 text-sm font-medium focus:border-[#0176D3] outline-none bg-white text-slate-900"
+                      className="w-full border border-slate-200 rounded px-3 py-2 text-sm font-medium focus:border-[#2f7cf6] outline-none bg-white text-slate-900"
                       value={generatePackingList}
                       onChange={e => setGeneratePackingList(e.target.value)}
                     >
@@ -1402,13 +1402,13 @@ export default function OrderDetails({ params }) {
 
                 <div className="p-6 space-y-3">
                   <input
-                    className="w-full border border-slate-200 rounded px-3 py-2 text-sm focus:border-[#0176D3] outline-none"
+                    className="w-full border border-slate-200 rounded px-3 py-2 text-sm focus:border-[#2f7cf6] outline-none"
                     placeholder="Company name *"
                     value={newAddress.company_name}
                     onChange={e => setNewAddress(p => ({ ...p, company_name: e.target.value }))}
                   />
                   <textarea
-                    className="w-full border border-slate-200 rounded px-3 py-2 text-sm focus:border-[#0176D3] outline-none resize-none"
+                    className="w-full border border-slate-200 rounded px-3 py-2 text-sm focus:border-[#2f7cf6] outline-none resize-none"
                     placeholder="Address *"
                     rows={3}
                     value={newAddress.address}
@@ -1417,7 +1417,7 @@ export default function OrderDetails({ params }) {
                   <div className="flex gap-2">
                     <span className="text-sm font-bold text-slate-500 self-center w-14 shrink-0">Phone</span>
                     <input
-                      className="flex-1 border border-slate-200 rounded px-3 py-2 text-sm focus:border-[#0176D3] outline-none"
+                      className="flex-1 border border-slate-200 rounded px-3 py-2 text-sm focus:border-[#2f7cf6] outline-none"
                       placeholder="+1 234 567 8900"
                       value={newAddress.phone}
                       onChange={e => setNewAddress(p => ({ ...p, phone: e.target.value }))}
@@ -1426,7 +1426,7 @@ export default function OrderDetails({ params }) {
                   <div className="flex gap-2">
                     <span className="text-sm font-bold text-slate-500 self-center w-14 shrink-0">Email</span>
                     <input
-                      className="flex-1 border border-slate-200 rounded px-3 py-2 text-sm focus:border-[#0176D3] outline-none"
+                      className="flex-1 border border-slate-200 rounded px-3 py-2 text-sm focus:border-[#2f7cf6] outline-none"
                       placeholder="contact@company.com"
                       value={newAddress.email}
                       onChange={e => setNewAddress(p => ({ ...p, email: e.target.value }))}
@@ -1435,7 +1435,7 @@ export default function OrderDetails({ params }) {
                   <div className="flex gap-2">
                     <span className="text-sm font-bold text-slate-500 self-center w-14 shrink-0">PIC</span>
                     <input
-                      className="flex-1 border border-slate-200 rounded px-3 py-2 text-sm focus:border-[#0176D3] outline-none"
+                      className="flex-1 border border-slate-200 rounded px-3 py-2 text-sm focus:border-[#2f7cf6] outline-none"
                       placeholder="Point of contact name"
                       value={newAddress.pic}
                       onChange={e => setNewAddress(p => ({ ...p, pic: e.target.value }))}
@@ -1452,7 +1452,7 @@ export default function OrderDetails({ params }) {
                   </button>
                   <button
                     onClick={createNewAddress}
-                    className="flex-1 px-4 py-2.5 bg-[#0176D3] text-white rounded-lg text-sm font-bold hover:bg-blue-700 shadow-sm"
+                    className="flex-1 px-4 py-2.5 bg-[#2f7cf6] text-white rounded-lg text-sm font-bold hover:bg-blue-700 shadow-sm"
                   >
                     Save Address
                   </button>

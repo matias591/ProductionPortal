@@ -2,11 +2,16 @@
 import { useState } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { useRouter } from 'next/navigation';
+import { Check, AlertCircle } from 'lucide-react';
+import AuthShell from '../components/AuthShell';
 
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [error, setError] = useState('');
+  const [shakeKey, setShakeKey] = useState(0);
   const router = useRouter();
 
   const supabase = createClient(
@@ -17,13 +22,16 @@ export default function Login() {
   async function handleLogin(e) {
     e.preventDefault();
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) {
-      alert(error.message);
+    setError('');
+    const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
+    if (authError) {
+      setError(authError.message);
+      setShakeKey(k => k + 1);
+      setLoading(false);
     } else {
-      router.push('/');
+      setSuccess(true);
+      setTimeout(() => router.push('/'), 650);
     }
-    setLoading(false);
   }
 
   async function handleGoogleLogin() {
@@ -37,20 +45,12 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 font-sans">
-      <div className="max-w-md w-full space-y-8 p-10 bg-white rounded-xl shadow-lg border border-slate-200">
-        <div className="text-center">
-          <div className="w-12 h-12 bg-[#0176D3] rounded-lg flex items-center justify-center shadow-lg shadow-blue-200/50 mx-auto mb-4">
-             <span className="text-white font-bold text-xl tracking-tight">OA</span>
-          </div>
-          <h2 className="text-3xl font-bold text-slate-900">Welcome Back</h2>
-          <p className="mt-2 text-sm text-slate-500">Sign in to Orca Production Portal</p>
-        </div>
-
+    <AuthShell key={shakeKey} shake={shakeKey > 0} title="Welcome back" subtitle="Sign in to Production Portal">
+      <div className="space-y-6">
         <button
           type="button"
           onClick={handleGoogleLogin}
-          className="w-full flex items-center justify-center gap-2 py-2.5 px-4 border border-slate-300 rounded-lg text-sm font-bold text-slate-700 bg-white hover:bg-slate-50 shadow-sm transition-all"
+          className="w-full flex items-center justify-center gap-2 h-10 px-4 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 shadow-sm"
         >
           <svg width="16" height="16" viewBox="0 0 48 48" aria-hidden="true">
             <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3c-1.6 4.7-6.1 8-11.3 8-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.6 6.1 29.6 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.7-.4-3.5z"/>
@@ -71,25 +71,32 @@ export default function Login() {
         <form className="space-y-6" onSubmit={handleLogin}>
           <div className="space-y-4">
               <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Email</label>
-                <input type="email" required className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:ring-1 focus:ring-[#0176D3] focus:border-[#0176D3] outline-none" placeholder="name@company.com" value={email} onChange={(e) => setEmail(e.target.value)} />
+                <label className="block text-xs font-medium text-slate-500 mb-1.5">Email</label>
+                <input type="email" required className="w-full px-3 h-10 border border-slate-200 rounded-xl text-sm outline-none" placeholder="name@company.com" value={email} onChange={(e) => setEmail(e.target.value)} />
               </div>
               <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Password</label>
-                <input type="password" required className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:ring-1 focus:ring-[#0176D3] focus:border-[#0176D3] outline-none" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} />
+                <label className="block text-xs font-medium text-slate-500 mb-1.5">Password</label>
+                <input type="password" required className="w-full px-3 h-10 border border-slate-200 rounded-xl text-sm outline-none" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} />
                 {/* FORGOT PASSWORD LINK */}
                 <div className="text-right mt-1">
-                    <button type="button" onClick={() => router.push('/login/forgot-password')} className="text-xs text-[#0176D3] hover:underline font-bold">
+                    <button type="button" onClick={() => router.push('/login/forgot-password')} className="text-xs text-[#2f7cf6] hover:underline font-bold">
                         Forgot Password?
                     </button>
                 </div>
               </div>
           </div>
-          <button type="submit" disabled={loading} className="w-full flex justify-center py-2.5 px-4 border border-transparent text-sm font-bold rounded-lg text-white bg-[#0176D3] hover:bg-blue-700 shadow-sm transition-all focus:outline-none">
-            {loading ? 'Signing in...' : 'Sign in'}
+          {error && (
+            <div role="alert" className="bz-fade-up flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-[13px] text-red-700">
+              <AlertCircle size={16} className="mt-0.5 shrink-0" /> {error}
+            </div>
+          )}
+          <button type="submit" disabled={loading || success} className={`w-full flex h-10 items-center justify-center gap-2 rounded-xl text-sm font-semibold text-white shadow-sm disabled:cursor-default ${success ? 'bg-[#17915f]' : 'bg-[#2f7cf6] hover:bg-blue-700'}`}>
+            {success ? (<><Check size={16} className="bz-check" /> Signed in</>)
+              : loading ? (<><span className="bz-spinner inline-block h-4 w-4 rounded-full border-2 border-white/40 border-t-white" /> Signing in</>)
+              : 'Sign in'}
           </button>
         </form>
       </div>
-    </div>
+    </AuthShell>
   );
 }

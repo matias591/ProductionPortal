@@ -53,7 +53,7 @@ export default function KitManagement() {
                     </h1>
                     <p className="text-slate-500 text-sm mt-1">Manage presets for faster order creation.</p>
                 </div>
-                <button onClick={() => setShowModal(true)} className="bg-[#0176D3] text-white px-4 py-2 rounded-md text-sm font-bold shadow-sm flex items-center gap-2 hover:bg-blue-700">
+                <button onClick={() => setShowModal(true)} className="bg-[#2f7cf6] text-white px-4 py-2 rounded-md text-sm font-bold shadow-sm flex items-center gap-2 hover:bg-blue-700">
                     <Plus size={16}/> Create New Kit
                 </button>
             </div>
@@ -71,12 +71,12 @@ export default function KitManagement() {
                         {kits.map(kit => (
                             <tr key={kit.id} onClick={() => router.push(`/admin/kits/${kit.id}`)} className="group hover:bg-blue-50 cursor-pointer transition-colors">
                                 <td className="px-6 py-4 font-bold text-slate-700 flex items-center gap-3">
-                                    <div className="w-8 h-8 rounded bg-blue-100 text-[#0176D3] flex items-center justify-center"><Package size={16}/></div>
+                                    <div className="w-8 h-8 rounded bg-blue-100 text-[#2f7cf6] flex items-center justify-center"><Package size={16}/></div>
                                     {kit.name}
                                 </td>
                                 <td className="px-6 py-4 text-sm text-slate-500">{new Date(kit.created_at).toLocaleDateString()}</td>
                                 <td className="px-6 py-4 text-right flex justify-end items-center gap-4">
-                                    <span className="text-xs font-bold text-[#0176D3] flex items-center gap-1 group-hover:underline">Edit Items <ChevronRight size={14}/></span>
+                                    <span className="text-xs font-bold text-[#2f7cf6] flex items-center gap-1 group-hover:underline">Edit Items <ChevronRight size={14}/></span>
                                     <button onClick={(e) => { e.stopPropagation(); deleteKit(kit.id); }} className="text-slate-300 hover:text-red-500"><Trash2 size={16}/></button>
                                 </td>
                             </tr>
@@ -93,10 +93,10 @@ export default function KitManagement() {
                 <h3 className="font-bold text-lg mb-4 text-slate-800">New Kit Preset</h3>
                 <form onSubmit={handleCreateKit}>
                     <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Kit Name</label>
-                    <input name="name" autoFocus className="w-full border border-slate-300 rounded px-3 py-2 text-sm outline-none focus:border-[#0176D3] focus:ring-1 focus:ring-[#0176D3]" placeholder="e.g. Standard Seapod System" required />
+                    <input name="name" autoFocus className="w-full border border-slate-300 rounded px-3 py-2 text-sm outline-none focus:border-[#2f7cf6] focus:ring-1 focus:ring-[#2f7cf6]" placeholder="e.g. Standard Seapod System" required />
                     <div className="mt-6 flex justify-end gap-2">
                         <button type="button" onClick={() => setShowModal(false)} className="px-4 py-2 text-sm font-bold text-slate-600 hover:bg-slate-100 rounded">Cancel</button>
-                        <button type="submit" className="px-4 py-2 text-sm font-bold text-white bg-[#0176D3] hover:bg-blue-700 rounded">Create</button>
+                        <button type="submit" className="px-4 py-2 text-sm font-bold text-white bg-[#2f7cf6] hover:bg-blue-700 rounded">Create</button>
                     </div>
                 </form>
             </div>

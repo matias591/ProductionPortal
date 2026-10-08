@@ -41,28 +41,26 @@ export default function Sidebar() {
 
   const getLinkClass = (path) => {
     const isActive = path === '/' ? pathname === '/' : pathname.startsWith(path);
-    return `flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-all duration-200 cursor-pointer mb-1 relative group
-      ${isActive ? 'bg-[#0176D3]/10 text-[#0176D3]' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'}
+    return `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer mb-1 relative group
+      ${isActive ? 'bg-[#e8f0fe] text-[#2f7cf6]' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'}
       ${isCollapsed ? 'justify-center' : ''}
     `;
   };
 
   return (
     <aside 
-      className={`bg-white border-r border-slate-200 h-screen fixed left-0 top-0 flex flex-col z-50 transition-all duration-300 ease-in-out
+      className={`bg-white/80 backdrop-blur-xl border-r border-slate-200 h-screen fixed left-0 top-0 flex flex-col z-50 transition-all duration-300 ease-in-out
         ${isCollapsed ? 'w-20' : 'w-64'}
       `}
     >
       {/* --- LOGO HEADER --- */}
-      <div className={`h-16 flex items-center border-b border-slate-100 ${isCollapsed ? 'justify-center px-0' : 'px-6'}`}>
-         {/* Using standard img tag for external URL to avoid next.config issues */}
-         <img 
-            src="https://www.orca-ai.io/wp-content/themes/orca/images/logo-primary.png" 
-            alt="Orca AI"
-            className={`object-contain transition-all duration-300 ${isCollapsed ? 'w-10' : 'w-28'}`}
-         />
+      <div className={`h-16 flex items-center border-b border-slate-200 ${isCollapsed ? 'justify-center px-0' : 'px-5 gap-3'}`}>
+         <img src="/bizzapps-symbol.svg" alt="BizzApps" className="h-8 w-auto shrink-0" />
          {!isCollapsed && (
-             <span className="text-xs font-bold text-slate-400 tracking-wider ml-2 mt-1 uppercase">Production</span>
+             <div className="leading-tight">
+               <p className="text-[15px] font-semibold tracking-tight text-[#0c1f4b]">Production</p>
+               <p className="text-[11px] text-slate-500">by BizzApps</p>
+             </div>
          )}
       </div>
 
@@ -147,9 +145,9 @@ export default function Sidebar() {
       </div>
 
       {/* User Footer */}
-      <div className={`p-4 border-t border-slate-100 bg-slate-50 ${isCollapsed ? 'flex flex-col items-center' : ''}`}>
+      <div className={`p-4 border-t border-slate-200 bg-slate-50/70 ${isCollapsed ? 'flex flex-col items-center' : ''}`}>
         <div className={`flex items-center gap-3 mb-3 ${isCollapsed ? 'justify-center' : ''}`}>
-           <div className="w-8 h-8 rounded-full bg-[#0176D3]/20 text-[#0176D3] flex items-center justify-center font-bold text-xs border border-[#0176D3]/10 shrink-0">
+           <div className="w-8 h-8 rounded-full bg-[#2f7cf6]/20 text-[#2f7cf6] flex items-center justify-center font-bold text-xs border border-[#2f7cf6]/10 shrink-0">
               {email.charAt(0).toUpperCase()}
            </div>
            {!isCollapsed && (

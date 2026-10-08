@@ -132,11 +132,11 @@ export default function SeapodList() {
   const filtered = seapods.filter(s => s.serial_number.toLowerCase().includes(searchTerm.toLowerCase()));
 
   return (
-    <div className="flex min-h-screen bg-[#F3F4F6] font-sans">
+    <div className="flex min-h-screen bg-[#f5f7fb] font-sans">
       <Sidebar />
       <main className="flex-1 ml-64 p-8">
-        <div className="flex justify-between items-center mb-6"><h1 className="text-3xl font-bold text-slate-900">Seapod Production</h1><div className="flex gap-2"><button onClick={exportList} className="px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded font-bold shadow-sm flex items-center gap-2 hover:bg-slate-50"><Download size={16}/> Export List</button><button onClick={pushUnsyncedToNS} disabled={pushing} className="px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded font-bold shadow-sm flex items-center gap-2 hover:bg-slate-50 disabled:opacity-50"><UploadCloud size={16}/> Push to NS{unsyncedSeapods.length > 0 && ` (${unsyncedSeapods.length})`}</button><button onClick={() => setShowModal(true)} className="px-4 py-2 bg-[#0176D3] text-white rounded font-bold shadow flex items-center gap-2"><Plus size={16}/> Start Build</button></div></div>
-        <div className="bg-white p-4 rounded-lg shadow-sm border border-slate-200 mb-6"><div className="relative max-w-md"><Search className="absolute left-3 top-2.5 text-slate-400" size={18}/><input className="w-full pl-10 pr-4 py-2 border rounded outline-none focus:border-[#0176D3]" placeholder="Search Serial Number..." onChange={e => setSearchTerm(e.target.value)} /></div></div>
+        <div className="flex justify-between items-center mb-6"><h1 className="text-3xl font-bold text-slate-900">Seapod Production</h1><div className="flex gap-2"><button onClick={exportList} className="px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded font-bold shadow-sm flex items-center gap-2 hover:bg-slate-50"><Download size={16}/> Export List</button><button onClick={pushUnsyncedToNS} disabled={pushing} className="px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded font-bold shadow-sm flex items-center gap-2 hover:bg-slate-50 disabled:opacity-50"><UploadCloud size={16}/> Push to NS{unsyncedSeapods.length > 0 && ` (${unsyncedSeapods.length})`}</button><button onClick={() => setShowModal(true)} className="px-4 py-2 bg-[#2f7cf6] text-white rounded font-bold shadow flex items-center gap-2"><Plus size={16}/> Start Build</button></div></div>
+        <div className="bg-white p-4 rounded-lg shadow-sm border border-slate-200 mb-6"><div className="relative max-w-md"><Search className="absolute left-3 top-2.5 text-slate-400" size={18}/><input className="w-full pl-10 pr-4 py-2 border rounded outline-none focus:border-[#2f7cf6]" placeholder="Search Serial Number..." onChange={e => setSearchTerm(e.target.value)} /></div></div>
         <div className="bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden">
             <table className="w-full text-left">
                 <thead className="bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase">
@@ -152,7 +152,7 @@ export default function SeapodList() {
                 <tbody className="divide-y divide-slate-100">
                     {filtered.map(s => (
                         <tr key={s.id} onClick={() => router.push(`/seapod-production/${s.id}`)} className="hover:bg-blue-50 cursor-pointer group">
-                            <td className="px-6 py-4 font-bold text-[#0176D3]">{s.serial_number}</td>
+                            <td className="px-6 py-4 font-bold text-[#2f7cf6]">{s.serial_number}</td>
                             <td className="px-6 py-4 text-sm">{s.template_name}</td>
                             <td className="px-6 py-4 text-xs text-slate-500"><div>Ver: {s.seapod_version || '-'}</div><div className="text-[10px]">HW: {s.hw_version} | SW: {s.sw_version}</div></td>
                             
@@ -171,7 +171,7 @@ export default function SeapodList() {
         </div>
       </main>
 
-      {showModal && (<div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4"><div className="bg-white rounded-lg shadow-2xl p-6 w-full max-w-md"><h3 className="font-bold text-lg mb-4 text-slate-800">Start Seapod Build</h3><form onSubmit={handleCreate} className="space-y-4"><div><label className="block text-xs font-bold text-slate-500 uppercase mb-1">Seapod Serial #</label><input name="serial" className="w-full border rounded p-2 outline-none focus:border-[#0176D3]" required placeholder="e.g. SP-29291" /></div><div><label className="block text-xs font-bold text-slate-500 uppercase mb-1">Select Template</label><select name="template" className="w-full border rounded p-2 bg-white" required>{templates.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}</select></div><div className="flex justify-end gap-2 pt-4"><button type="button" onClick={() => setShowModal(false)} className="px-4 py-2 border rounded font-bold text-slate-600">Cancel</button><button type="submit" className="px-4 py-2 bg-[#0176D3] text-white rounded font-bold">Create</button></div></form></div></div>)}
+      {showModal && (<div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4"><div className="bg-white rounded-lg shadow-2xl p-6 w-full max-w-md"><h3 className="font-bold text-lg mb-4 text-slate-800">Start Seapod Build</h3><form onSubmit={handleCreate} className="space-y-4"><div><label className="block text-xs font-bold text-slate-500 uppercase mb-1">Seapod Serial #</label><input name="serial" className="w-full border rounded p-2 outline-none focus:border-[#2f7cf6]" required placeholder="e.g. SP-29291" /></div><div><label className="block text-xs font-bold text-slate-500 uppercase mb-1">Select Template</label><select name="template" className="w-full border rounded p-2 bg-white" required>{templates.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}</select></div><div className="flex justify-end gap-2 pt-4"><button type="button" onClick={() => setShowModal(false)} className="px-4 py-2 border rounded font-bold text-slate-600">Cancel</button><button type="submit" className="px-4 py-2 bg-[#2f7cf6] text-white rounded font-bold">Create</button></div></form></div></div>)}
     </div>
   );
 }
